@@ -106,7 +106,19 @@ jobs:
         run: bash tests/test_lib_functions.sh
 
       - name: python resolver tests
-        run: python3 -m pytest tests/ -q --cov=scripts --cov=mcp --cov-report=term-missing
+        run: >
+          python3 -m pytest tests/ -q
+          --cov=scripts --cov=mcp
+          --cov-report=term-missing
+          --cov-report=xml:coverage.xml
+
+      - name: upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          flags: python
+          fail_ci_if_error: false
 
   typecheck:
     runs-on: ubuntu-latest
