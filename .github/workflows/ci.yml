@@ -65,6 +65,12 @@ jobs:
       - name: bash artifact-path handoff tests
         run: bash tests/test_artifact_path.sh
 
+      - name: bash mount_path_for tests
+        run: bash tests/test_mount_path.sh
+
+      - name: bash read_units (fingerprint) tests
+        run: bash tests/test_fingerprint.sh
+
       - name: python resolver tests
         run: |
           python3 -m pip install --quiet pytest pyyaml
