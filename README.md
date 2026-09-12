@@ -41,20 +41,6 @@ Two cross-cutting layers apply to all of them:
   `collect-submodules.py` recovers the pinned commit from the parent's tree
   object and fills them in.
 
-## Two ways to use it
-
-| Mode | What you need | Where to read |
-|------|---------------|---------------|
-| **(A) Use a running host's services over the LAN** | A browser or an MCP client | [docs/setup.md](docs/setup.md) §1 |
-| **(B) Build the whole thing yourself** | A Linux host **and a valid Red Hat subscription** | [docs/setup.md](docs/setup.md) §2-5 |
-
-Mode (A) has two entry points, both read-only:
-
-- **OpenGrok web UI** at `http://<casket-host>:8080/` — symbol search, cross
-  references, source browsing ([opengrok/README.md](opengrok/README.md))
-- **casket-mcp** — search and read the sources from Claude or any other MCP
-  client ([setup, registration and LAN access](mcp/README.md))
-
 ## Repository layout
 
 ```
