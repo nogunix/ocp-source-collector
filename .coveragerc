@@ -1,0 +1,11 @@
+# Coverage config for the network-free python test suite (see .github/workflows/ci.yml).
+[run]
+branch = true
+
+[report]
+exclude_also =
+    # module entry points: the tests import these modules and call main()
+    # directly, so the guard itself is never executed
+    if __name__ == .__main__.:
+    # defensive re-raise of an already-reported error
+    raise NotImplementedError

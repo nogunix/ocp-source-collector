@@ -37,9 +37,19 @@ bash tests/test_reclaim.sh
 bash tests/test_freshness.sh
 bash tests/test_artifact_path.sh
 python3 -m pytest tests/ -q
+
+# Python coverage (as CI measures it)
+python3 -m pytest tests/ -q --cov=scripts --cov=mcp --cov-branch \
+  --cov-report=term-missing
 ```
 
 All of these run in CI on every push and pull request.
+
+`scripts/*.py` and `mcp/*.py` are at 100% statement and branch coverage, and CI
+fails below that (`--cov-fail-under=100`). New Python code therefore needs tests
+covering both sides of every branch. Exclusions live in `.coveragerc`; adding one
+is a deliberate choice, not a way around a missing test. The suite must stay
+network-free — mock `urllib.request.urlopen`, and build fixtures under `tmp_path`.
 
 ## Code conventions
 

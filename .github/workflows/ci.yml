@@ -108,9 +108,10 @@ jobs:
       - name: python resolver tests
         run: >
           python3 -m pytest tests/ -q
-          --cov=scripts --cov=mcp
+          --cov=scripts --cov=mcp --cov-branch
           --cov-report=term-missing
           --cov-report=xml:coverage.xml
+          --cov-fail-under=100
 
       - name: upload coverage to Codecov
         if: always()

@@ -56,3 +56,10 @@ backfill-submodules-*.log
 # being published, it does not un-publish what is already committed.
 /handover.md
 /analysis/
+
+# coverage / pytest artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
