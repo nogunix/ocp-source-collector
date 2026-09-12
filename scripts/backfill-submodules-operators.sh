@@ -6,11 +6,13 @@
 #
 # Usage (kill-resistant, per the systemd-run lesson in CLAUDE.md):
 #   systemd-run --user --unit=casket-backfill-sm --collect \
-#     %h/casket-work/scripts/backfill-submodules-operators.sh
+#     %h/ocp-source-collector/scripts/backfill-submodules-operators.sh
 # Read progress from the log named below (also on the user journal).
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CASKET_WORK="${CASKET_WORK:-$HOME/casket-work}"
+# CASKET_WORK defaults to THIS checkout (parent of scripts/), never $HOME:
+# the repo directory is renameable, and under sudo $HOME is /root.
+: "${CASKET_WORK:=$(dirname "$SCRIPT_DIR")}"
 OUT_DIR="${CASKET_OUT:-/mnt/hdd/casket-ocp}"
 DATE="$(date -u +%Y%m%d)"
 LOG="$CASKET_WORK/backfill-submodules-$DATE.log"

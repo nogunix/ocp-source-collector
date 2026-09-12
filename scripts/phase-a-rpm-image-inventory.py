@@ -31,7 +31,10 @@ import time
 import urllib.parse
 import urllib.request
 
-CASKET_WORK = os.environ.get("CASKET_WORK", os.path.expanduser("~/casket-work"))
+# This checkout (parent of scripts/), not $HOME: the repo directory is
+# renameable, and under sudo $HOME is /root.
+CASKET_WORK = os.environ.get("CASKET_WORK") or os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))
 POOL = "/srv/sources-ocp-srpms/srpms"
 PYXIS = "https://catalog.redhat.com/api/containers/v1"
 OUT_DIR = os.path.join(CASKET_WORK, "phase-a-rpm")

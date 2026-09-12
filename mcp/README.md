@@ -3,7 +3,7 @@
 MCP server exposing the OpenShift / CNV / RHEL source caskets mounted at
 `/srv/sources-*` for search and reading. Design: `../docs/casket-mcp-design.md`.
 
-`$CASKET_WORK` below is this repo's checkout root (default `~/casket-work`,
+`$CASKET_WORK` below is this repo's checkout root (default `~/ocp-source-collector`,
 see `../scripts/lib.sh`).
 
 **Stage 1 + 2 (current).** Stage 1 = filesystem navigation + ripgrep. Stage 2 =

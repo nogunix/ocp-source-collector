@@ -9,14 +9,14 @@
 # Run:
 #   cd ansible && ansible-playbook -i inventory.ini casket-host.yml
 #
-# Override the checkout path (defaults to $CASKET_WORK, then ~/casket-work):
-#   ansible-playbook -i inventory.ini casket-host.yml -e casket_repo=/path/to/casket-work
+# Override the checkout path (defaults to $CASKET_WORK, then ~/ocp-source-collector):
+#   ansible-playbook -i inventory.ini casket-host.yml -e casket_repo=/path/to/ocp-source-collector
 
 - name: casket-host search infrastructure (casket-mounts, casket-mcp, OpenGrok)
   hosts: localhost
   gather_facts: true
   vars:
-    casket_repo: "{{ lookup('env', 'CASKET_WORK') | default(ansible_env.HOME + '/casket-work', true) }}"
+    casket_repo: "{{ lookup('env', 'CASKET_WORK') | default(ansible_env.HOME + '/ocp-source-collector', true) }}"
     casket_user: "{{ ansible_user_id }}"
     user_systemd_dir: "{{ ansible_env.HOME }}/.config/systemd/user"
 

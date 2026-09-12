@@ -13,13 +13,13 @@ Wants=network-online.target
 
 [Service]
 # %h = this user's home dir (systemd specifier). Matches lib.sh's default
-# CASKET_WORK=~/casket-work -- edit both paths below if you customized it.
+# CASKET_WORK=~/ocp-source-collector -- edit the paths below if you renamed it.
 # ExecStartPre self-heals .venv if it's ever missing (gitignored -- an
 # accidental rm/cleanup leaves the ExecStart python nonexistent, which
 # systemd reports as status=203/EXEC and crash-loops on silently).
-ExecStartPre=%h/casket-work/mcp/ensure-venv.sh
-ExecStart=%h/casket-work/mcp/.venv/bin/python %h/casket-work/mcp/casket_mcp.py http
-WorkingDirectory=%h/casket-work/mcp
+ExecStartPre=%h/ocp-source-collector/mcp/ensure-venv.sh
+ExecStart=%h/ocp-source-collector/mcp/.venv/bin/python %h/ocp-source-collector/mcp/casket_mcp.py http
+WorkingDirectory=%h/ocp-source-collector/mcp
 Restart=on-failure
 RestartSec=3
 # Read-only server; still keep it least-privileged.

@@ -34,7 +34,11 @@ done
 # upper/work MUST sit on the same filesystem as the dep store: collect-deps
 # hardlinks the store into the upper dir, and a cross-device link silently
 # degrades to a full copy (GBs of deps into /tmp, which is tmpfs = RAM).
-TMPBASE="${CASKET_REPACK_TMP:-${CASKET_WORK:-$HOME/casket-work}/.repack-tmp}"
+# CASKET_WORK defaults to THIS checkout (parent of scripts/), never $HOME:
+# the repo directory is renameable, and under sudo $HOME is /root.
+_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${CASKET_WORK:=$(dirname "$_SELF_DIR")}"
+TMPBASE="${CASKET_REPACK_TMP:-$CASKET_WORK/.repack-tmp}"
 mkdir -p "$TMPBASE"
 UPPER=$(mktemp -d -p "$TMPBASE"); WORKD=$(mktemp -d -p "$TMPBASE"); MERGED=$(mktemp -d -p "$TMPBASE")
 cleanup() {

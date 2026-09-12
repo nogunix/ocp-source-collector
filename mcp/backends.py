@@ -24,6 +24,9 @@ SRV = "/srv"
 # (a / a-rpm / b / b-certified / b-community / b-operand) since 2026-06-08.
 OPENGROK_URL = os.environ.get("OPENGROK_URL", "http://localhost:8080").rstrip("/")
 OPENGROK_SRC = os.environ.get("OPENGROK_SRC", "/srv/opengrok-src")
+# This checkout (parent of mcp/), not $HOME: the repo directory is renameable.
+CASKET_WORK = os.environ.get("CASKET_WORK") or os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))
 
 
 # ------------------------------------------------------------------ discovery
@@ -856,7 +859,7 @@ def coverage_report(version: str) -> dict:
                                    "ocp_version": pv, "srpms": n}
     # expected b-operand products from the repo config (absence = gap)
     expected = []
-    cfg = os.path.expanduser("~/casket-work/config/phase-b-operand-products.tsv")
+    cfg = os.path.join(CASKET_WORK, "config", "phase-b-operand-products.tsv")
     try:
         with open(cfg) as f:
             for line in f:

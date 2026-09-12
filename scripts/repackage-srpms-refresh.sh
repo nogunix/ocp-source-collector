@@ -40,7 +40,11 @@ RPMDB="${RPMDB:-$MOUNT/meta/rpmdb}"
 # holds every newly-extracted SRPM tree — the 2026-07-19 container-RPM batch
 # (~2,200 SRPMs, >100G) filled tmpfs instantly. upperdir/workdir must share
 # one filesystem; root has the space.
-TMP_BASE="${CASKET_WORK:-$HOME/casket-work}/.refresh-tmp"
+# CASKET_WORK defaults to THIS checkout (parent of scripts/), never $HOME:
+# the repo directory is renameable, and under sudo $HOME is /root.
+_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${CASKET_WORK:=$(dirname "$_SELF_DIR")}"
+TMP_BASE="$CASKET_WORK/.refresh-tmp"
 mkdir -p "$TMP_BASE"
 if [[ -n "$UPPER_PERSIST" ]]; then mkdir -p "$UPPER_PERSIST"; UPPER="$UPPER_PERSIST"; else UPPER=$(mktemp -d -p "$TMP_BASE"); fi
 WORKD=$(mktemp -d -p "$TMP_BASE"); MERGED=$(mktemp -d -p "$TMP_BASE")

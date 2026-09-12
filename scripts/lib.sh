@@ -5,7 +5,7 @@ set -euo pipefail
 
 # Default CASKET_WORK to this checkout (parent of scripts/), not $HOME: the
 # documented `sudo ./scripts/casket-swap.sh --apply` otherwise resolves to
-# /root/casket-work and can't see the registry.
+# /root/<repo> and can't see the registry.
 _CASKET_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${CASKET_WORK:=$(dirname "$_CASKET_LIB_DIR")}"
 export CASKET_WORK

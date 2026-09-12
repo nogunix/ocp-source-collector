@@ -39,6 +39,11 @@ import time
 import urllib.error
 import urllib.request
 
+# This checkout (parent of scripts/), not $HOME: the repo directory is
+# renameable, and under sudo $HOME is /root.
+CASKET_WORK = os.environ.get("CASKET_WORK") or os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import submodulelib as sml  # noqa: E402
 
@@ -225,7 +230,7 @@ def main():
                     help="nested submodule recursion cap")
     ap.add_argument("--store", default=os.environ.get(
         "CASKET_SUBMODULE_STORE",
-        os.path.join(os.environ.get("CASKET_WORK", os.path.expanduser("~/casket-work")),
+        os.path.join(CASKET_WORK,
                      "submodule-store")))
     args = ap.parse_args()
 

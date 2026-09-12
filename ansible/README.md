@@ -22,10 +22,10 @@ ansible-playbook -i inventory.ini casket-host.yml
 
 Needs passwordless (or interactive) sudo for the system-level tasks
 (SELinux relabel, `casket-mounts.service`, firewalld). Override the checkout
-path if it's not `$CASKET_WORK` / `~/casket-work`:
+path if it's not `$CASKET_WORK` / `~/ocp-source-collector`:
 
 ```bash
-ansible-playbook -i inventory.ini casket-host.yml -e casket_repo=/path/to/casket-work
+ansible-playbook -i inventory.ini casket-host.yml -e casket_repo=/path/to/ocp-source-collector
 ```
 
 ## What it fixes, and why it's here

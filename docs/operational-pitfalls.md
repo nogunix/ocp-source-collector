@@ -258,7 +258,7 @@ working form for a root-needing script is to keep the unit in the user manager
 and put sudo *inside* it:
 
     systemd-run --user --unit=casket-stage --collect \
-      /usr/bin/sudo -n /home/<user>/casket-work/opengrok/scripts/stage-sources.sh
+      /usr/bin/sudo -n /home/<user>/ocp-source-collector/opengrok/scripts/stage-sources.sh
 
 Read its output from the **system** journal, not `journalctl --user` — sudo
 re-execs as root, so the lines land with `_UID=0`. `run-opengrok.sh` itself

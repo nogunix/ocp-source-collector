@@ -75,13 +75,13 @@ else:
 ### Registering with Claude Code
 
 ```bash
-# Local (stdio). $CASKET_WORK is this repo's checkout (default ~/casket-work)
+# Local (stdio). $CASKET_WORK is this repo's checkout (default ~/ocp-source-collector)
 claude mcp add casket -- python "$CASKET_WORK"/mcp/casket_mcp.py
 
 # Or via .mcp.json (checked into repo for team sharing, use absolute paths)
 { "mcpServers": {
     "casket": { "command": "python",
-                "args": ["/path/to/casket-work/mcp/casket_mcp.py"] } } }
+                "args": ["/path/to/ocp-source-collector/mcp/casket_mcp.py"] } } }
 
 # LAN sharing (HTTP). Server: python casket_mcp.py http
 { "mcpServers": {

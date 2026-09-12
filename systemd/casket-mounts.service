@@ -14,7 +14,7 @@ RemainAfterExit=yes
 # This path is a placeholder. Do not edit it by hand — run
 # `sudo ./scripts/install-mounts-service.sh`, which rewrites ExecStart with
 # THIS checkout's absolute path (a system unit cannot use %h).
-ExecStart=/path/to/casket-work/scripts/casket-mounts.sh --apply
+ExecStart=/path/to/ocp-source-collector/scripts/casket-mounts.sh --apply
 
 [Install]
 WantedBy=multi-user.target

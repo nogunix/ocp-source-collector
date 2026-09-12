@@ -32,7 +32,11 @@ done
 export CASKET_DEP_STORE="${CASKET_DEP_STORE:-/mnt/hdd/casket-dep-store}"
 export CASKET_DEP_CACHE="${CASKET_DEP_CACHE:-/mnt/hdd/casket-dep-cache}"
 export CASKET_REPACK_TMP="${CASKET_REPACK_TMP:-/mnt/hdd/.repack-tmp}"
-LOG_DIR="${CASKET_WORK:-$HOME/casket-work}/scratch/fleet-deps-$DATE"
+# CASKET_WORK defaults to THIS checkout (parent of scripts/), never $HOME:
+# the repo directory is renameable, and under sudo $HOME is /root.
+_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${CASKET_WORK:=$(dirname "$_SELF_DIR")}"
+LOG_DIR="$CASKET_WORK/scratch/fleet-deps-$DATE"
 mkdir -p "$LOG_DIR"
 
 # mount -> flavor -> output basename

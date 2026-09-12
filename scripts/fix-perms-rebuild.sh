@@ -25,7 +25,11 @@ PROBE_USER="${CASKET_USER:-${SUDO_USER:-$(stat -c %U "$(dirname "${BASH_SOURCE[0
     echo "cannot determine an unprivileged user; set CASKET_USER=<name>" >&2; exit 1; }
 
 CASKET_DIR="${CASKET_OUT:-/mnt/hdd/casket-ocp}"
-WORK_ROOT="${CASKET_WORK:-$HOME/casket-work}/scratch/rebuild-perms"
+# CASKET_WORK defaults to THIS checkout (parent of scripts/), never $HOME:
+# the repo directory is renameable, and under sudo $HOME is /root.
+_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+: "${CASKET_WORK:=$(dirname "$_SELF_DIR")}"
+WORK_ROOT="$CASKET_WORK/scratch/rebuild-perms"
 ALL_VERS=(4.14 4.15 4.16 4.17 4.18 4.19 4.20)
 
 VERS=( "${@:-${ALL_VERS[@]}}" )

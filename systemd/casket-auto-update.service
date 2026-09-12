@@ -24,7 +24,8 @@ Environment=PATH=%h/bin:/usr/local/bin:/usr/bin:/bin
 # Same reason as PATH: a user unit starts from a minimal environment, and
 # collect-deps.py falls back to $CASKET_WORK/dep-store when this is unset --
 # i.e. onto the root fs, inside the repo, ignoring the shared HDD cache. The
-# 2026-07-31 run did exactly that: 160G into ~/casket-work and every archive
+# 2026-07-31 run did exactly that: 160G into the checkout (then named
+# ~/casket-work) and every archive
 # re-downloaded even though /mnt/hdd/casket-dep-store already had it. The
 # store and its -cache sibling are pure cache, which is why they belong on the
 # HDD while the stage stays on the SSD.
@@ -32,7 +33,7 @@ Environment=CASKET_DEP_STORE=/mnt/hdd/casket-dep-store
 # Submodule expansion (2026-08-19) has both of the same problems. The store is
 # hardlinked into the stage, so it must be on the SAME filesystem as the work
 # tree -- unlike the dep store it does NOT belong on the HDD.
-Environment=CASKET_SUBMODULE_STORE=%h/casket-work/submodule-store
+Environment=CASKET_SUBMODULE_STORE=%h/ocp-source-collector/submodule-store
 # And the pinned submodule commit is only readable from the GitHub trees API,
 # which allows 60 requests/hour unauthenticated while one operators casket
 # needs ~70. Without a token the run does not fail -- it quietly falls back to
@@ -52,7 +53,7 @@ EnvironmentFile=-%h/.config/casket/auto-update.env
 # timer only wakes weekly (systemd OnCalendar cannot say "every 3rd week").
 # The guard reads state/auto-update.last-run, which is stamped only when a run
 # COMPLETES, so a killed run is retried at the next weekly wake.
-ExecStart=%h/casket-work/scripts/casket-auto-update.sh --apply --min-interval-days 21
+ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-interval-days 21
 # Builds can take a while when several minors moved at once. This limit has
 # now been raised FOUR times (4h -> 12h -> 24h -> 48h -> 72h) and every bump
 # so far was spent by the *next* growth in b-operand, so re-measure before

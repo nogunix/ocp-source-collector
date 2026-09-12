@@ -78,7 +78,8 @@ ocp-source-collector/
 ## Quick start
 
 `$CASKET_WORK` is the environment variable pointing at your checkout of this
-repository (default `~/casket-work` in `scripts/lib.sh`, overridable).
+repository (`scripts/lib.sh` derives it from the checkout location, so it
+follows the directory wherever it is; override it to point elsewhere).
 
 ```bash
 cd "$CASKET_WORK"

@@ -37,6 +37,11 @@ import urllib.error
 import urllib.request
 import zipfile
 
+# This checkout (parent of scripts/), not $HOME: the repo directory is
+# renameable, and under sudo $HOME is /root.
+CASKET_WORK = os.environ.get("CASKET_WORK") or os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__)))
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import deplib  # noqa: E402
 
@@ -199,7 +204,7 @@ def main():
                     help="comma-separated ecosystems to collect")
     ap.add_argument("--store", default=os.environ.get(
         "CASKET_DEP_STORE",
-        os.path.join(os.environ.get("CASKET_WORK", os.path.expanduser("~/casket-work")),
+        os.path.join(CASKET_WORK,
                      "dep-store")))
     ap.add_argument("--max-depth", type=int, default=2)
     args = ap.parse_args()
@@ -219,7 +224,8 @@ def main():
     # and it lands the store INSIDE the repo on the root fs. A systemd unit or a
     # systemd-run job starts from a minimal environment, so the var goes missing
     # exactly where nobody is watching: the 2026-07-31 auto-update run wrote 160G
-    # into ~/casket-work and re-downloaded every archive that
+    # into the repo checkout (then named ~/casket-work) and re-downloaded
+    # every archive that
     # /mnt/hdd/casket-dep-store already held. Say so loudly rather than
     # hardcoding a path.
     if not os.environ.get("CASKET_DEP_STORE"):

@@ -19,7 +19,7 @@
   hosts: localhost
   gather_facts: true
   vars:
-    casket_repo: "{{ lookup('env', 'CASKET_WORK') | default(ansible_env.HOME + '/casket-work', true) }}"
+    casket_repo: "{{ lookup('env', 'CASKET_WORK') | default(ansible_env.HOME + '/ocp-source-collector', true) }}"
     casket_user: "{{ ansible_user_id }}"
     user_systemd_dir: "{{ ansible_env.HOME }}/.config/systemd/user"
     purge_venv: false
