@@ -4,6 +4,7 @@
 [![upstream-link-check](https://github.com/nogunix/ocp-source-collector/actions/workflows/upstream-link-check.yml/badge.svg)](https://github.com/nogunix/ocp-source-collector/actions/workflows/upstream-link-check.yml)
 [![license: MIT](https://img.shields.io/github/license/nogunix/ocp-source-collector)](LICENSE)
 [![OCP 4.14–4.22](https://img.shields.io/badge/OCP-4.14–4.22-blue)](config/minors.txt)
+[![codecov](https://codecov.io/gh/nogunix/ocp-source-collector/branch/main/graph/badge.svg)](https://codecov.io/gh/nogunix/ocp-source-collector)
 [![ShellCheck](https://img.shields.io/badge/lint-ShellCheck-brightgreen)](https://www.shellcheck.net/)
 [![Ruff](https://img.shields.io/badge/lint-Ruff-purple)](https://docs.astral.sh/ruff/)
 
