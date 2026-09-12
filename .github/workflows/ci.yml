@@ -4,6 +4,8 @@ name: ci
 # The actual pipeline (a / a-rpm / b / b-operand) needs `oc`, a registry.redhat.io pull secret
 # and mksquashfs, so it can't run on GitHub-hosted runners — this guards the
 # pure logic (resolution strategies, label parsing) and script syntax instead.
+#
+# All jobs run inside UBI 9 containers to match the production RHEL environment.
 
 on:
   push:
@@ -14,12 +16,28 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi9/ubi:latest
     steps:
+      - name: install toolchain
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            python3 python3-pip findutils git-core curl tar xz
+          dnf clean all
+          # ShellCheck static binary (not in UBI9 default repos)
+          SC_VER=v0.10.0
+          curl -sL "https://github.com/koalaman/shellcheck/releases/download/${SC_VER}/shellcheck-${SC_VER}.linux.x86_64.tar.xz" \
+            | tar -xJf - --strip-components=1 -C /usr/local/bin "shellcheck-${SC_VER}/shellcheck"
+          shellcheck --version
+          python3 -m pip install --quiet ruff
+          echo "--- versions ---"
+          bash --version | head -1
+          python3 --version
+
       - uses: actions/checkout@v4
 
       - name: shellcheck + bash -n (all *.sh)
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
           rc=0
           # tracked shell scripts only (work dirs are gitignored anyway)
           mapfile -t sh < <(git ls-files '*.sh')
@@ -36,7 +54,6 @@ jobs:
 
       - name: python syntax + ruff
         run: |
-          python3 -m pip install --quiet ruff
           mapfile -t py < <(git ls-files '*.py')
           for f in "${py[@]}"; do
             python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$f" \
@@ -47,7 +64,19 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    container:
+      image: registry.access.redhat.com/ubi9/ubi:latest
     steps:
+      - name: install runtime
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            python3 python3-pip findutils git-core
+          dnf clean all
+          python3 -m pip install --quiet pytest
+          echo "--- versions ---"
+          bash --version | head -1
+          python3 --version
+
       - uses: actions/checkout@v4
 
       - name: bash resolution regression tests
@@ -72,6 +101,4 @@ jobs:
         run: bash tests/test_fingerprint.sh
 
       - name: python resolver tests
-        run: |
-          python3 -m pip install --quiet pytest pyyaml
-          python3 -m pytest tests/ -q
+        run: python3 -m pytest tests/ -q
