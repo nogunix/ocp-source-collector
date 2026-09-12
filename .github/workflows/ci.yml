@@ -22,7 +22,7 @@ jobs:
       - name: install toolchain
         run: |
           dnf install -y --setopt=install_weak_deps=False \
-            python3 python3-pip findutils git-core curl tar xz
+            python3 python3-pip findutils git-core tar xz
           dnf clean all
           # ShellCheck static binary (not in UBI9 default repos)
           SC_VER=v0.10.0
