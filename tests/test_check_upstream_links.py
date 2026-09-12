@@ -12,6 +12,7 @@ import pathlib
 import types
 import urllib.error
 import urllib.request
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -69,107 +70,100 @@ class TestRowKey:
         assert _mod.row_key(row) == "https://github.com/org/repo\thead"
 
 
-# The module's urllib.request reference — monkeypatch needs to target
-# the same module object that the loaded script uses internally.
-_urllib_request = _mod.urllib.request
-
-
 # ------------------------------------------------------------------ http_status
 class TestHttpStatus:
-    def test_success(self, monkeypatch):
-        resp = types.SimpleNamespace(status=200)
-        resp.__enter__ = lambda s: s
-        resp.__exit__ = lambda s, *a: None
-        monkeypatch.setattr(_urllib_request, "urlopen",
-                            lambda req, timeout=20: resp)
+    @patch("urllib.request.urlopen")
+    def test_success(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.status = 200
+        mock_urlopen.return_value = mock_resp
         assert _mod.http_status("https://example.com") == 200
 
-    def test_http_error(self, monkeypatch):
-        def raise_404(req, timeout=20):
-            raise urllib.error.HTTPError("url", 404, "Not Found", {}, None)
-        monkeypatch.setattr(_urllib_request, "urlopen", raise_404)
+    @patch("urllib.request.urlopen")
+    def test_http_error(self, mock_urlopen):
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            "url", 404, "Not Found", {}, None)
         assert _mod.http_status("https://example.com") == 404
 
-    def test_connection_error(self, monkeypatch):
-        def raise_err(req, timeout=20):
-            raise ConnectionError("refused")
-        monkeypatch.setattr(_urllib_request, "urlopen", raise_err)
+    @patch("urllib.request.urlopen")
+    def test_connection_error(self, mock_urlopen):
+        mock_urlopen.side_effect = ConnectionError("refused")
         assert _mod.http_status("https://example.com") == 0
 
-    def test_token_header(self, monkeypatch):
-        captured = {}
-        resp = types.SimpleNamespace(status=200)
-        resp.__enter__ = lambda s: s
-        resp.__exit__ = lambda s, *a: None
-        def capture(req, timeout=20):
-            captured["auth"] = req.get_header("Authorization")
-            return resp
-        monkeypatch.setattr(_urllib_request, "urlopen", capture)
+    @patch("urllib.request.urlopen")
+    def test_token_header(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.status = 200
+        mock_urlopen.return_value = mock_resp
         _mod.http_status("https://api.github.com/repos/x/y", token="tok123")
-        assert captured["auth"] == "Bearer tok123"
+        req = mock_urlopen.call_args[0][0]
+        assert req.get_header("Authorization") == "Bearer tok123"
 
-    def test_no_token_for_non_github(self, monkeypatch):
-        captured = {}
-        resp = types.SimpleNamespace(status=200)
-        resp.__enter__ = lambda s: s
-        resp.__exit__ = lambda s, *a: None
-        def capture(req, timeout=20):
-            captured["auth"] = req.get_header("Authorization")
-            return resp
-        monkeypatch.setattr(_urllib_request, "urlopen", capture)
+    @patch("urllib.request.urlopen")
+    def test_no_token_for_non_github(self, mock_urlopen):
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_resp.status = 200
+        mock_urlopen.return_value = mock_resp
         _mod.http_status("https://example.com/foo", token="tok123")
-        assert captured["auth"] is None
+        req = mock_urlopen.call_args[0][0]
+        assert req.get_header("Authorization") is None
 
 
 # ------------------------------------------------------------------ check_repo
 class TestCheckRepo:
-    def _mock_urlopen(self, monkeypatch, full_name, status=200):
-        body = json.dumps({"full_name": full_name}).encode()
-        import io as _io
-        real_resp = types.SimpleNamespace()
-        real_resp.__enter__ = lambda s: _io.BytesIO(body)
-        real_resp.__exit__ = lambda s, *a: None
-        monkeypatch.setattr(_urllib_request, "urlopen",
-                            lambda req, timeout=20: real_resp)
-
-    def test_ok(self, monkeypatch):
-        self._mock_urlopen(monkeypatch, "org/repo")
+    @patch("urllib.request.urlopen")
+    def test_ok(self, mock_urlopen):
+        body = json.dumps({"full_name": "org/repo"}).encode()
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=io.BytesIO(body))
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "ok"
 
-    def test_moved(self, monkeypatch):
-        self._mock_urlopen(monkeypatch, "new-org/repo")
+    @patch("urllib.request.urlopen")
+    def test_moved(self, mock_urlopen):
+        body = json.dumps({"full_name": "new-org/repo"}).encode()
+        mock_resp = MagicMock()
+        mock_resp.__enter__ = MagicMock(return_value=io.BytesIO(body))
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        mock_urlopen.return_value = mock_resp
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "moved"
         assert detail == "new-org/repo"
 
-    def test_gone_404(self, monkeypatch):
-        def raise_404(req, timeout=20):
-            raise urllib.error.HTTPError("url", 404, "Not Found", {}, None)
-        monkeypatch.setattr(_urllib_request, "urlopen", raise_404)
+    @patch("urllib.request.urlopen")
+    def test_gone_404(self, mock_urlopen):
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            "url", 404, "Not Found", {}, None)
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "gone"
         assert "404" in detail
 
-    def test_gone_451(self, monkeypatch):
-        def raise_451(req, timeout=20):
-            raise urllib.error.HTTPError("url", 451, "Unavailable", {}, None)
-        monkeypatch.setattr(_urllib_request, "urlopen", raise_451)
+    @patch("urllib.request.urlopen")
+    def test_gone_451(self, mock_urlopen):
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            "url", 451, "Unavailable", {}, None)
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "gone"
 
-    def test_error_500(self, monkeypatch):
-        def raise_500(req, timeout=20):
-            raise urllib.error.HTTPError("url", 500, "ISE", {}, None)
-        monkeypatch.setattr(_urllib_request, "urlopen", raise_500)
+    @patch("urllib.request.urlopen")
+    def test_error_500(self, mock_urlopen):
+        mock_urlopen.side_effect = urllib.error.HTTPError(
+            "url", 500, "ISE", {}, None)
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "error"
         assert "500" in detail
 
-    def test_connection_error(self, monkeypatch):
-        def raise_err(req, timeout=20):
-            raise ConnectionError("timeout")
-        monkeypatch.setattr(_urllib_request, "urlopen", raise_err)
+    @patch("urllib.request.urlopen")
+    def test_connection_error(self, mock_urlopen):
+        mock_urlopen.side_effect = ConnectionError("timeout")
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "error"
 
