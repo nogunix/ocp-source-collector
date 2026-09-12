@@ -4,6 +4,7 @@ The module file name has dashes, so load it via importlib. Network-free.
 Run: pytest tests/test_resolve_labels.py
 """
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -16,6 +17,24 @@ _SRC = os.path.join(_HERE, "..", "scripts", "phase-b-operand-resolve-labels.py")
 _spec = importlib.util.spec_from_file_location("phase_b_operand_resolve_labels", _SRC)
 rl = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(rl)
+
+
+def _make_image_json(labels):
+    return json.dumps({"config": {"config": {"Labels": labels}}})
+
+
+def _run_main(monkeypatch, capsys, labels, component="", csv_ver=""):
+    """Run main() in-process for coverage. Returns (exit_code, stdout_line)."""
+    argv = ["resolve-labels.py"]
+    if component:
+        argv.append(component)
+    if csv_ver:
+        argv.append(csv_ver)
+    monkeypatch.setattr(sys, "argv", argv)
+    monkeypatch.setattr(sys, "stdin", io.StringIO(_make_image_json(labels)))
+    rc = rl.main()
+    out = capsys.readouterr().out.rstrip("\n")
+    return rc, out
 
 
 @pytest.mark.parametrize("url, expect", [
@@ -153,3 +172,236 @@ def test_z_none_products_now_map_via_csv_version(component, repo):
 ])
 def test_deliberately_unmapped_products_stay_unmapped(component):
     assert component not in rl.COMPONENT_MAP
+
+
+# --- in-process main() tests (counted by --cov=scripts) ----------------------
+
+@pytest.mark.parametrize("url, expect", [
+    ("https://github.com/konflux-ci/mintmaker", True),
+    ("https://github.com/konflux-ci/konflux-ci", True),
+    ("https://github.com/konflux-ci/build-definitions", True),
+    ("https://github.com/kubevirt/kubevirt", False),
+    ("", False),
+])
+def test_is_infra(url, expect):
+    assert rl.is_infra(url) is expect
+
+
+def test_is_infra_none():
+    assert rl.is_infra(None) is False
+
+
+def test_main_rule_a_upstream_vcs(monkeypatch, capsys):
+    labels = {
+        "upstream-vcs-url": "https://github.com/org/repo",
+        "upstream-vcs-ref": "abc123",
+        "upstream-version": "1.0.0",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert rc == 0
+    assert parts == ["https://github.com/org/repo", "abc123", "1.0.0", "a:upstream-vcs"]
+
+
+def test_main_rule_a_git_describe_version(monkeypatch, capsys):
+    labels = {
+        "upstream-vcs-url": "https://github.com/org/repo.git",
+        "upstream-vcs-ref": "def456",
+        "upstream-version": "v2.3.0-10-gabcdef",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/org/repo"
+    assert parts[2] == "2.3.0"
+    assert parts[3] == "a:upstream-vcs"
+
+
+def test_main_rule_b_tag_mode(monkeypatch, capsys):
+    labels = {"version": "1.4.0"}
+    rc, out = _run_main(monkeypatch, capsys, labels, component="virt-operator")
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/kubevirt/kubevirt"
+    assert parts[1] == ""
+    assert parts[2] == "1.4.0"
+    assert parts[3] == "b:component-map"
+
+
+def test_main_rule_b_upstream_commit_mode(monkeypatch, capsys):
+    labels = {
+        "upstream-vcs-ref": "commitabc",
+        "upstream-version": "4.18.0",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels, component="odf-rhel9-operator")
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/red-hat-storage/odf-operator"
+    assert parts[1] == "commitabc"
+    assert parts[3] == "b:component-map"
+
+
+def test_main_rule_b_commit_mode(monkeypatch, capsys):
+    labels = {"vcs-ref": "sha789", "version": "1.8.0"}
+    rc, out = _run_main(monkeypatch, capsys, labels, component="osc-monitor")
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/kata-containers/kata-containers"
+    assert parts[1] == "sha789"
+    assert parts[3] == "b:component-map"
+
+
+def test_main_rule_b_tag_csv(monkeypatch, capsys):
+    rc, out = _run_main(monkeypatch, capsys, {},
+                        component="apicurio-registry-sql", csv_ver="2.6.13-r4")
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/Apicurio/apicurio-registry"
+    assert parts[2] == "2.6.13"
+    assert parts[3] == "b:component-map"
+
+
+def test_main_rule_c_source_label(monkeypatch, capsys):
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/stolostron/hub",
+        "org.opencontainers.image.revision": "abc123",
+        "version": "2.12.0",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/stolostron/hub"
+    assert parts[1] == "abc123"
+    assert parts[3] == "c:source-label"
+
+
+def test_main_rule_c_source_location_key(monkeypatch, capsys):
+    labels = {
+        "source-location": "https://github.com/stackrox/stackrox",
+        "vcs-ref": "def456",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/stackrox/stackrox"
+    assert parts[3] == "c:source-label"
+
+
+def test_main_rule_d_upstream_tag(monkeypatch, capsys):
+    labels = {
+        "upstream-vcs-url": "https://github.com/org/repo",
+        "upstream-version": "3.0.0",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/org/repo"
+    assert parts[1] == ""
+    assert parts[2] == "3.0.0"
+    assert parts[3] == "d:upstream-tag"
+
+
+def test_main_rule_e_source_tag(monkeypatch, capsys):
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/org/repo",
+        "version": "1.5.0",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/org/repo"
+    assert parts[1] == ""
+    assert parts[3] == "e:source-tag"
+
+
+def test_main_z_none(monkeypatch, capsys):
+    rc, out = _run_main(monkeypatch, capsys, {"description": "some image"})
+    assert out.split("\t")[3] == "z:none"
+
+
+def test_main_z_none_empty_labels(monkeypatch, capsys):
+    rc, out = _run_main(monkeypatch, capsys, {})
+    assert out.split("\t")[3] == "z:none"
+
+
+def test_main_z_infra_label(monkeypatch, capsys):
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/konflux-ci/mintmaker",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    assert out.split("\t")[3] == "z:infra-label"
+
+
+def test_main_z_noinfo(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["resolve-labels.py"])
+    monkeypatch.setattr(sys, "stdin", io.StringIO("not valid json {{{"))
+    rc = rl.main()
+    out = capsys.readouterr().out.rstrip("\n")
+    assert rc == 0
+    assert out.split("\t")[3] == "z:noinfo"
+
+
+def test_main_null_json(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["resolve-labels.py"])
+    monkeypatch.setattr(sys, "stdin", io.StringIO("null"))
+    rc = rl.main()
+    out = capsys.readouterr().out.rstrip("\n")
+    assert out.split("\t")[3] == "z:none"
+
+
+def test_main_comma_ref_takes_first(monkeypatch, capsys):
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/org/repo",
+        "vcs-ref": "sha111,sha222",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[1] == "sha111"
+    assert parts[3] == "c:source-label"
+
+
+def test_main_infra_skipped_real_found(monkeypatch, capsys):
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/konflux-ci/mintmaker",
+        "vcs-url": "https://github.com/real/repo",
+        "vcs-ref": "abc",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/real/repo"
+    assert parts[3] == "c:source-label"
+
+
+def test_main_infra_upstream_cleared(monkeypatch, capsys):
+    labels = {
+        "upstream-vcs-url": "https://github.com/konflux-ci/mintmaker",
+        "upstream-vcs-ref": "abc",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    assert out.split("\t")[3] in ("z:infra-label", "z:none")
+
+
+def test_main_build_source_location_key(monkeypatch, capsys):
+    labels = {
+        "io.openshift.build.source-location": "https://github.com/org/repo",
+        "io.openshift.build.commit.id": "commit999",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/org/repo"
+    assert parts[1] == "commit999"
+    assert parts[3] == "c:source-label"
+
+
+def test_main_upstream_version_from_labels(monkeypatch, capsys):
+    labels = {
+        "org.opencontainers.image.source": "https://github.com/org/repo",
+        "org.opencontainers.image.revision": "sha123",
+        "upstream-version": "5.0.0",
+    }
+    rc, out = _run_main(monkeypatch, capsys, labels)
+    parts = out.split("\t")
+    assert parts[2] == "5.0.0"
+    assert parts[3] == "c:source-label"
+
+
+def test_main_invalid_backslash_json(monkeypatch, capsys):
+    raw = r'{"config":{"config":{"Labels":{"url":"https://github.com/o/r","vcs-ref":"abc","version":"1.0","note":"path \x00"}}}}'
+    monkeypatch.setattr(sys, "argv", ["resolve-labels.py"])
+    monkeypatch.setattr(sys, "stdin", io.StringIO(raw))
+    rc = rl.main()
+    out = capsys.readouterr().out.rstrip("\n")
+    parts = out.split("\t")
+    assert parts[0] == "https://github.com/o/r"
+    assert parts[3] == "c:source-label"
