@@ -14,8 +14,6 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp"))
 import backends as be
 
-_HAS_TOMLLIB = sys.version_info >= (3, 11)
-
 
 def _setup_srv(tmp_path, monkeypatch):
     srv = tmp_path / "srv"
@@ -185,7 +183,7 @@ def test_find_lockfiles_limit(tmp_path):
 
 
 # -------------------------------------------------------------- _cargo_lock_matches
-@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
+
 def test_cargo_lock_exact_match(tmp_path):
     lock = tmp_path / "Cargo.lock"
     lock.write_text("""\
@@ -214,7 +212,7 @@ dependencies = ["rustls"]
     assert matches[0]["kind"] == "cargo"
 
 
-@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
+
 def test_cargo_lock_substring_match(tmp_path):
     lock = tmp_path / "Cargo.lock"
     lock.write_text("""\
@@ -227,7 +225,7 @@ version = "0.101.0"
     assert matches[0]["name"] == "rustls-webpki"
 
 
-@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
+
 def test_cargo_lock_no_match(tmp_path):
     lock = tmp_path / "Cargo.lock"
     lock.write_text("""\
@@ -239,7 +237,7 @@ version = "1.0.0"
     assert matches == []
 
 
-@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
+
 def test_cargo_lock_malformed(tmp_path):
     lock = tmp_path / "Cargo.lock"
     lock.write_text("not valid toml {{{{")
@@ -297,7 +295,7 @@ def test_go_mod_no_match(tmp_path):
 
 
 # ---------------------------------------------------------- resolve_dependency
-@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
+
 def test_resolve_dependency_cargo(tmp_path, monkeypatch):
     srv = _setup_srv(tmp_path, monkeypatch)
     mount = srv / "sources-ocp4.20.22"
