@@ -129,15 +129,42 @@ See [docs/operations.md](docs/operations.md) for the full flow.
 | [mcp/README.md](mcp/README.md) | casket-mcp: MCP server for searching and reading the sources |
 | [opengrok/README.md](opengrok/README.md) | OpenGrok source browser (Web UI) |
 
-## Requirements
+## Prerequisites
 
-`oc`, `jq`, `curl`, `awk`, `sha256sum`, `mksquashfs`, `xz`.
+### System
 
-**A valid Red Hat subscription is a hard prerequisite** for building: obtaining a
-pull secret, pulling operator catalogs from `registry.redhat.io`, registering the
-RHEL 9 VM used by A-rpm, and fetching EUS SRPMs all depend on it. Without one,
-only Phase A's GitHub fetching works. The pull secret defaults to
-`~/.docker/config.json` (override with `AUTHFILE`).
+| Requirement | Purpose | Required? |
+|-------------|---------|-----------|
+| Linux (RHEL 9 recommended) | Pipeline host — squashfs, overlayfs, loopback mounts | **Yes** |
+| Bash 4+ | All pipeline scripts | **Yes** |
+| Python 3.9+ | `collect-deps.py`, `collect-submodules.py`, `build-source-index.py`, `registry.py` | **Yes** |
+| Red Hat subscription | Pull secret, operator catalogs, RHEL 9 VM for A-rpm, EUS SRPMs | **Yes** (Phase A GitHub-only without it) |
+
+### CLI tools
+
+| Tool | Purpose | Required? |
+|------|---------|-----------|
+| `oc` | `oc adm release info --commits` — the source of truth for payload components | **Yes** |
+| `jq` | JSON processing throughout the pipeline | **Yes** |
+| `curl` | GitHub archive downloads, API calls | **Yes** |
+| `mksquashfs` | Final `.sqfs.xz` archive creation (`-comp xz`) | **Yes** |
+| `xz` | Compression (used by mksquashfs internally) | **Yes** |
+| `sha256sum` | Manifest checksums | **Yes** |
+| `awk` | Text processing in shell scripts | **Yes** |
+| [ShellCheck](https://www.shellcheck.net/) | Shell linting (CI) | For development |
+| [Ruff](https://docs.astral.sh/ruff/) | Python linting (CI) | For development |
+| `pytest` + `pyyaml` | Python test suite | For development |
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CASKET_WORK` | This checkout (derived in `lib.sh`) | Work root for all phases |
+| `AUTHFILE` | `~/.docker/config.json` | Registry pull secret |
+| `RELEASE_REGISTRY` | `quay.io/openshift-release-dev/ocp-release` | OCP release image registry |
+| `CASKET_OUT` | `/mnt/hdd/casket-ocp` | Final `.sqfs.xz` output directory |
+| `CASKET_DEP_STORE` | `$CASKET_WORK/dep-store` | Language dependency archive store |
+| `CASKET_SUBMODULE_STORE` | `$CASKET_WORK/submodule-store` | Submodule archive store |
 
 Run `./scripts/casket-doctor.sh --build` to check tools, registry auth and free
 space before starting.
