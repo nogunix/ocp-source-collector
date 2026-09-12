@@ -169,7 +169,9 @@ def resolve_npm_lock(text):
             continue  # "" is the root project itself
         # "node_modules/a/node_modules/b" -> "b"; scoped names keep their @scope
         name = path.split("node_modules/")[-1]
-        add(meta.get("name") or name, meta)
+        # a non-dict value is legal-ish in the wild and add() rejects it, but
+        # only if we get there -- meta.get() on a str/bool raises first.
+        add(meta.get("name") or name if isinstance(meta, dict) else name, meta)
 
     def walk_v1(deps):
         for name, meta in (deps or {}).items():
