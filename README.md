@@ -1,6 +1,11 @@
 # ocp-source-collector — an offline source corpus for OpenShift releases
 
 [![ci](https://github.com/nogunix/ocp-source-collector/actions/workflows/ci.yml/badge.svg)](https://github.com/nogunix/ocp-source-collector/actions/workflows/ci.yml)
+[![upstream-link-check](https://github.com/nogunix/ocp-source-collector/actions/workflows/upstream-link-check.yml/badge.svg)](https://github.com/nogunix/ocp-source-collector/actions/workflows/upstream-link-check.yml)
+[![license: MIT](https://img.shields.io/github/license/nogunix/ocp-source-collector)](LICENSE)
+[![OCP 4.14–4.22](https://img.shields.io/badge/OCP-4.14–4.22-blue)](config/minors.txt)
+[![ShellCheck](https://img.shields.io/badge/lint-ShellCheck-brightgreen)](https://www.shellcheck.net/)
+[![Ruff](https://img.shields.io/badge/lint-Ruff-purple)](https://docs.astral.sh/ruff/)
 
 ocp-source-collector collects the upstream source for **every component of an
 OpenShift release payload** and bundles it into a single archive — an internally
