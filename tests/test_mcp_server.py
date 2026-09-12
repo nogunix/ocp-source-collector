@@ -9,8 +9,6 @@ import os
 import pathlib
 import sys
 
-import pytest
-
 MCP_DIR = str(pathlib.Path(__file__).resolve().parent.parent / "mcp")
 
 # casket_mcp.py imports `backends` and `mcp.server.fastmcp`. The latter is a

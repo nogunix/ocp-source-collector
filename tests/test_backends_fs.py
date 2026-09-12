@@ -6,12 +6,15 @@ Network-free: uses monkeypatched paths and tmp_path fixtures.
 Run: pytest tests/test_backends_fs.py
 """
 import os
+import shutil
 import sys
 
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp"))
-import backends as be  # noqa: E402
+import backends as be
+
+_HAS_TOMLLIB = sys.version_info >= (3, 11)
 
 
 def _setup_srv(tmp_path, monkeypatch):
@@ -182,6 +185,7 @@ def test_find_lockfiles_limit(tmp_path):
 
 
 # -------------------------------------------------------------- _cargo_lock_matches
+@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
 def test_cargo_lock_exact_match(tmp_path):
     lock = tmp_path / "Cargo.lock"
     lock.write_text("""\
@@ -210,6 +214,7 @@ dependencies = ["rustls"]
     assert matches[0]["kind"] == "cargo"
 
 
+@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
 def test_cargo_lock_substring_match(tmp_path):
     lock = tmp_path / "Cargo.lock"
     lock.write_text("""\
@@ -222,6 +227,7 @@ version = "0.101.0"
     assert matches[0]["name"] == "rustls-webpki"
 
 
+@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
 def test_cargo_lock_no_match(tmp_path):
     lock = tmp_path / "Cargo.lock"
     lock.write_text("""\
@@ -233,6 +239,7 @@ version = "1.0.0"
     assert matches == []
 
 
+@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
 def test_cargo_lock_malformed(tmp_path):
     lock = tmp_path / "Cargo.lock"
     lock.write_text("not valid toml {{{{")
@@ -290,6 +297,7 @@ def test_go_mod_no_match(tmp_path):
 
 
 # ---------------------------------------------------------- resolve_dependency
+@pytest.mark.skipif(not _HAS_TOMLLIB, reason="tomllib requires Python 3.11+")
 def test_resolve_dependency_cargo(tmp_path, monkeypatch):
     srv = _setup_srv(tmp_path, monkeypatch)
     mount = srv / "sources-ocp4.20.22"
@@ -414,8 +422,6 @@ def test_search_refs_no_opengrok(monkeypatch):
     assert "error" in result
     assert result["count"] == 0
 
-
-import shutil
 
 @pytest.mark.skipif(shutil.which("rg") is None, reason="ripgrep not installed")
 def test_search_text_with_path_uses_ripgrep(tmp_path, monkeypatch):
