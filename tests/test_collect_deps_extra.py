@@ -379,3 +379,199 @@ class TestMain:
         rc = cd.main()
         assert rc == 0
         assert (out / "meta" / "DEPS.tsv").exists()
+
+
+# ------------------------------------------------------- extract: odd members
+class TestExtractOddMembers:
+    def test_zip_directory_entries_skipped(self, tmp_path):
+        """Explicit "dir/" entries carry no bytes and must not become files."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("top/", "")
+            z.writestr("top/sub/", "")
+            z.writestr("top/sub/a.txt", "hello")
+        dest = tmp_path / "out"
+        cd.extract(buf.getvalue(), str(dest), "1", "x.zip")
+        assert (dest / "sub" / "a.txt").read_text() == "hello"
+        assert not (dest / "sub").is_file()
+
+    def test_tar_symlink_member_skipped(self, tmp_path):
+        """A symlink is neither isfile() nor isdir() — dropped, not followed."""
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+            data = b"real"
+            info = tarfile.TarInfo("top/real.txt")
+            info.size = len(data)
+            tf.addfile(info, io.BytesIO(data))
+            link = tarfile.TarInfo("top/link.txt")
+            link.type = tarfile.SYMTYPE
+            link.linkname = "/etc/passwd"
+            tf.addfile(link)
+        dest = tmp_path / "out"
+        cd.extract(buf.getvalue(), str(dest), "1", "x.tar.gz")
+        assert (dest / "real.txt").read_text() == "real"
+        assert not (dest / "link.txt").exists()
+
+    def test_tar_unextractable_file_skipped(self, tmp_path, monkeypatch):
+        """extractfile() returning None must not blow up the whole archive."""
+        blob = _make_targz({"a.txt": "A", "b.txt": "B"})
+        real_extractfile = tarfile.TarFile.extractfile
+
+        def fake_extractfile(self, member):
+            if member.name.endswith("a.txt"):
+                return None
+            return real_extractfile(self, member)
+
+        monkeypatch.setattr(tarfile.TarFile, "extractfile", fake_extractfile)
+        dest = tmp_path / "out"
+        cd.extract(blob, str(dest), "1", "x.tar.gz")
+        assert not (dest / "a.txt").exists()
+        assert (dest / "b.txt").read_text() == "B"
+
+
+# ------------------------------------------------- link_tree hardlink fallback
+class TestLinkTreeFallback:
+    def test_copies_when_hardlink_refused(self, tmp_path, monkeypatch):
+        """Cross-filesystem store/stage: os.link raises EXDEV, copy2 saves it."""
+        src = tmp_path / "src"
+        src.mkdir()
+        (src / "a.txt").write_text("payload")
+        dst = tmp_path / "dst"
+
+        def no_link(*a, **kw):
+            raise OSError(18, "Invalid cross-device link")
+
+        monkeypatch.setattr(cd.os, "link", no_link)
+        cd.link_tree(str(src), str(dst))
+        assert (dst / "a.txt").read_text() == "payload"
+        assert os.stat(dst / "a.txt").st_nlink == 1
+
+
+# --------------------------------------------------------- main(): warn + meta
+class TestMainStoreWarning:
+    def test_warns_when_dep_store_unset(self, tmp_path, monkeypatch, capsys):
+        """The 2026-07-31 incident: an unset store silently filled the checkout."""
+        stage = tmp_path / "stage"
+        (stage / "git").mkdir(parents=True)
+        monkeypatch.delenv("CASKET_DEP_STORE", raising=False)
+        monkeypatch.setenv("CASKET_DEP_CACHE", str(tmp_path / "cache"))
+        monkeypatch.setattr(sys, "argv", [
+            "collect-deps.py", str(stage), "--store", str(tmp_path / "store")])
+        assert cd.main() == 0
+        assert "CASKET_DEP_STORE unset" in capsys.readouterr().err
+
+
+class TestMainDegradation:
+    def _stage(self, tmp_path, monkeypatch, comp, files):
+        stage = tmp_path / "stage"
+        comp_dir = stage / "git" / comp
+        comp_dir.mkdir(parents=True)
+        for name, content in files.items():
+            (comp_dir / name).write_text(content)
+        monkeypatch.setenv("CASKET_DEP_STORE", str(tmp_path / "store"))
+        monkeypatch.setenv("CASKET_DEP_CACHE", str(tmp_path / "cache"))
+        monkeypatch.setattr(sys, "argv", [
+            "collect-deps.py", str(stage),
+            "--store", str(tmp_path / "store"), "--jobs", "1"])
+        return stage
+
+    def test_tree_walk_failure_is_reported_not_fatal(self, tmp_path, monkeypatch,
+                                                     capsys):
+        """A blown-up scan_tree costs that tree only; the run continues."""
+        stage = self._stage(tmp_path, monkeypatch, "bad-comp",
+                            {"requirements.txt": "urllib3==2.2.1\n"})
+        (stage / "git" / "good-comp").mkdir()
+        (stage / "git" / "good-comp" / "requirements.txt").write_text(
+            "certifi==2024.2.2\n")
+
+        real_scan = cd.deplib.scan_tree
+
+        def boom(tree, **kw):
+            if tree.endswith("bad-comp"):
+                raise RuntimeError("walk exploded")
+            return real_scan(tree, **kw)
+
+        monkeypatch.setattr(cd.deplib, "scan_tree", boom)
+        monkeypatch.setattr(cd, "acquire", lambda dep, s, c: (dep[4], "ok", dep[3]))
+
+        assert cd.main() == 0
+        err = capsys.readouterr().err
+        assert "bad-comp: scan failed" in err
+        assert "failed to parse" in err
+
+        unc = (stage / "meta" / "DEPS-uncovered.txt").read_text()
+        assert "RuntimeError: walk exploded" in unc
+        assert "certifi" in (stage / "meta" / "DEPS.tsv").read_text()
+
+    def test_barren_manifest_listed_as_no_pinned_versions(self, tmp_path,
+                                                          monkeypatch):
+        """`requests>=2` has no single right version to fetch offline."""
+        stage = self._stage(tmp_path, monkeypatch, "comp",
+                            {"requirements.txt": "requests>=2\n",
+                             "go.sum": "golang.org/x/net v0.38.0 h1:sha\n"})
+        monkeypatch.setattr(cd, "acquire", lambda dep, s, c: (dep[4], "ok", dep[3]))
+        assert cd.main() == 0
+        unc = (stage / "meta" / "DEPS-uncovered.txt").read_text()
+        assert "no-pinned-versions" in unc
+        assert "requirements.txt" in unc
+
+    def test_stale_uncovered_file_removed(self, tmp_path, monkeypatch):
+        """A clean run must not leave the previous run's uncovered list behind."""
+        stage = self._stage(tmp_path, monkeypatch, "comp",
+                            {"requirements.txt": "urllib3==2.2.1\n"})
+        meta = stage / "meta"
+        meta.mkdir(parents=True, exist_ok=True)
+        unc = meta / "DEPS-uncovered.txt"
+        unc.write_text("# stale content from an earlier run\n")
+
+        monkeypatch.setattr(cd, "acquire", lambda dep, s, c: (dep[4], "ok", dep[3]))
+        assert cd.main() == 0
+        assert not unc.exists()
+
+    def test_progress_logged_every_500_archives(self, tmp_path, monkeypatch,
+                                                capsys):
+        self._stage(tmp_path, monkeypatch, "comp", {
+            "requirements.txt": "".join(f"pkg{i}==1.0.0\n" for i in range(501))})
+        monkeypatch.setattr(cd, "acquire", lambda dep, s, c: (dep[4], "ok", dep[3]))
+        monkeypatch.setattr(cd, "link_tree", lambda src, dst: None)
+        assert cd.main() == 0
+        assert "  500/501" in capsys.readouterr().err
+
+    def test_resolver_exception_recorded_per_manifest(self, tmp_path, monkeypatch):
+        """scan_tree yields the exception itself; it lands in the broken list."""
+        stage = self._stage(tmp_path, monkeypatch, "comp",
+                            {"go.sum": "golang.org/x/net v0.38.0 h1:sha\n",
+                             "requirements.txt": "urllib3==2.2.1\n"})
+
+        def boom(text):
+            raise ValueError("resolver exploded")
+
+        monkeypatch.setattr(
+            cd.deplib, "MANIFESTS",
+            [("go.sum", boom)] + [m for m in cd.deplib.MANIFESTS
+                                  if m[0] != "go.sum"])
+        monkeypatch.setattr(cd, "acquire", lambda dep, s, c: (dep[4], "ok", dep[3]))
+
+        assert cd.main() == 0
+        unc = (stage / "meta" / "DEPS-uncovered.txt").read_text()
+        assert "ValueError: resolver exploded" in unc
+        assert "go.sum" in unc
+
+
+class TestExtractGoPrefixDetection:
+    def test_go_zip_without_a_path_separator_keeps_full_names(self, tmp_path):
+        """A module zip whose only entry is the top-level marker: no prefix."""
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("example.com/m@v1.0.0", "marker")
+        dest = tmp_path / "out"
+        cd.extract(buf.getvalue(), str(dest), "go", "m.zip")
+        assert (dest / "example.com" / "m@v1.0.0").read_text() == "marker"
+
+    def test_zip_with_unknown_strip_keeps_full_paths(self, tmp_path):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as z:
+            z.writestr("top/a.txt", "A")
+        dest = tmp_path / "out"
+        cd.extract(buf.getvalue(), str(dest), "0", "x.zip")
+        assert (dest / "top" / "a.txt").read_text() == "A"

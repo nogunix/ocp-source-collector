@@ -262,3 +262,45 @@ def test_permalink_file_at_tree_root(casket):
     assert result["file"] == "Dockerfile"
     assert "/blob/" in result["url"]
     assert result["url"].endswith("/Dockerfile")
+
+
+# -------------------------------------------------------- unmounted / stray paths
+def test_permalink_path_under_sources_but_not_a_mount(tmp_path, monkeypatch):
+    """A path that passes safe_path but belongs to no listed mount.
+
+    list_mounts() only yields directories, so a regular file named
+    sources-* satisfies the confinement check yet matches no mount.
+    """
+    srv = tmp_path / "srv"
+    srv.mkdir()
+    stray = srv / "sources-stray"
+    stray.write_text("not a mount")
+    monkeypatch.setattr(be, "SRV", str(srv))
+    monkeypatch.setattr(be, "ROOT_PREFIX", str(srv / "sources-"))
+
+    result = be.permalink(str(stray))
+    assert "not under any mounted casket" in result["error"]
+
+
+def test_permalink_ignores_submodule_row_of_other_component(tmp_path, monkeypatch):
+    """SUBMODULES.tsv rows for a different component must not hijack the hit."""
+    src_dir = "cvo-abc123"
+    index_rows = [(src_dir, "https://github.com/openshift/cluster-version-operator",
+                   "abc123def456", "4.20.0", "cluster-version-operator")]
+    # A submodule row whose path would match, but for another component
+    submodule_rows = [
+        ("some-other-tree", "pkg", "openshift/other", "f" * 40, "1", "ok-filled"),
+        (src_dir, "vendor-sub", "openshift/sub", "e" * 40, "1", "ok-filled"),
+    ]
+    mount = _make_casket(tmp_path, mount_name="sources-ocp4.20.22",
+                         index_rows=index_rows, submodule_rows=submodule_rows)
+    f = mount / "git" / src_dir / "pkg" / "cvo.go"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("package cvo\n")
+    monkeypatch.setattr(be, "SRV", str(tmp_path / "srv"))
+    monkeypatch.setattr(be, "ROOT_PREFIX", str(tmp_path / "srv" / "sources-"))
+
+    result = be.permalink(str(f))
+    assert result["source"] == "INDEX"
+    assert result["repo"] == "https://github.com/openshift/cluster-version-operator"
+    assert result["file"] == "pkg/cvo.go"

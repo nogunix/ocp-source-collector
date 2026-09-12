@@ -406,41 +406,13 @@ class TestSubmoduleRowsShortLine:
 class TestCoverageReportARpm:
     def test_a_rpm_srpms_found(self, tmp_path, monkeypatch):
         srv = _setup_srv(tmp_path, monkeypatch)
-        srpms_root = tmp_path / "srpms-root" / "by-ocp"
-        pv_dir = srpms_root / "4.20.22"
+        pv_dir = srv / "sources-ocp-srpms" / "by-ocp" / "4.20.22"
         pv_dir.mkdir(parents=True)
         for i in range(3):
             (pv_dir / f"pkg-{i}.src.rpm").write_text("")
         monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
-        orig_coverage = be.coverage_report.__code__
 
-        import types
-        original_fn = be.coverage_report
-
-        def patched(version):
-            import builtins
-            orig_isdir = os.path.isdir
-            orig_listdir = os.listdir
-
-            def fake_isdir(p):
-                if p == "/srv/sources-ocp-srpms/by-ocp":
-                    return True
-                return orig_isdir(p)
-
-            def fake_listdir(p):
-                if p == "/srv/sources-ocp-srpms/by-ocp":
-                    return orig_listdir(str(srpms_root))
-                if p.startswith("/srv/sources-ocp-srpms/by-ocp/"):
-                    real = p.replace("/srv/sources-ocp-srpms/by-ocp", str(srpms_root))
-                    return orig_listdir(real)
-                return orig_listdir(p)
-
-            monkeypatch.setattr(os.path, "isdir", fake_isdir)
-            monkeypatch.setattr(os, "listdir", fake_listdir)
-            return original_fn(version)
-
-        result = patched("4.20")
-        assert "a-rpm" in result["phases"]
+        result = be.coverage_report("4.20")
         assert result["phases"]["a-rpm"]["srpms"] == 3
         assert result["phases"]["a-rpm"]["ocp_version"] == "4.20.22"
 

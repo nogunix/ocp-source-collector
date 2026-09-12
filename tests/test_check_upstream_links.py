@@ -335,3 +335,59 @@ class TestMain:
 
         _mod.main()
         assert len(checked_repos) == 1
+
+    def test_new_rot_list_is_capped_at_50(self, tmp_path, monkeypatch, capsys):
+        """Only the first 50 are printed; the rest are counted."""
+        import sys
+        monkeypatch.setattr(sys, "argv", ["prog"])
+
+        manifest = tmp_path / "upstream-sources.tsv"
+        manifest.write_text("".join(
+            f"https://github.com/org/repo{i}\tsha{i}\t1.0.0\tpin\t2024-01-01\n"
+            for i in range(60)))
+        monkeypatch.setattr(_mod, "MANIFEST", str(manifest))
+        monkeypatch.setattr(_mod, "BASELINE", str(tmp_path / "no-baseline.txt"))
+        monkeypatch.setenv("GITHUB_TOKEN", "")
+        monkeypatch.setattr(_mod, "check_repo", lambda r, t: ("ok", ""))
+        monkeypatch.setattr(_mod, "check_row", lambda r: ("bad", "HTTP 404"))
+
+        assert _mod.main() == 1
+        out = capsys.readouterr().out
+        assert out.count("NEW ROT:") == 50
+        assert "... and 10 more" in out
+
+    def test_renamed_repos_are_reported(self, tmp_path, monkeypatch, capsys):
+        """A redirect still fetches, so it is informational, not rot."""
+        import sys
+        monkeypatch.setattr(sys, "argv", ["prog"])
+
+        manifest = tmp_path / "upstream-sources.tsv"
+        manifest.write_text(
+            "https://github.com/org/old\tabc\t1.0.0\tpin\t2024-01-01\n")
+        monkeypatch.setattr(_mod, "MANIFEST", str(manifest))
+        monkeypatch.setattr(_mod, "BASELINE", str(tmp_path / "no-baseline.txt"))
+        monkeypatch.setenv("GITHUB_TOKEN", "")
+        monkeypatch.setattr(_mod, "check_repo", lambda r, t: ("moved", "org/new"))
+        monkeypatch.setattr(_mod, "check_row", lambda r: ("ok", "abc"))
+
+        assert _mod.main() == 0
+        out = capsys.readouterr().out
+        assert "RENAMED: https://github.com/org/old -> org/new" in out
+        assert "1 renamed" in out
+        assert "NEW ROT:" not in out
+
+    def test_truncated_manifest_row_skipped(self, tmp_path, monkeypatch, capsys):
+        import sys
+        monkeypatch.setattr(sys, "argv", ["prog"])
+        manifest = tmp_path / "upstream-sources.tsv"
+        manifest.write_text(
+            "https://github.com/org/short\tabc\n"          # only 2 columns
+            "https://github.com/org/repo\tabc\t1.0.0\tpin\t2024-01-01\n")
+        monkeypatch.setattr(_mod, "MANIFEST", str(manifest))
+        monkeypatch.setattr(_mod, "BASELINE", str(tmp_path / "no-baseline.txt"))
+        monkeypatch.setenv("GITHUB_TOKEN", "")
+        monkeypatch.setattr(_mod, "check_repo", lambda r, t: ("ok", ""))
+        monkeypatch.setattr(_mod, "check_row", lambda r: ("ok", "abc"))
+
+        assert _mod.main() == 0
+        assert "1 repos / 1 rows" in capsys.readouterr().out

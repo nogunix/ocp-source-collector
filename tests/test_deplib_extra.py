@@ -295,3 +295,89 @@ class TestScanTreeEdges:
         (gitdir / "go.sum").write_text("golang.org/x/net v0.38.0 h1:sha\n")
         rows = list(deplib.scan_tree(str(tmp_path)))
         assert rows == []
+
+
+# ------------------------------------------- npm lock: malformed entry values
+class TestNpmLockMalformedEntries:
+    def test_non_dict_meta_skipped(self):
+        """`"packages": {"node_modules/x": "1.2.3"}` — a string, not an object."""
+        text = '{"packages": {"node_modules/x": "not-an-object", '
+        text += '"node_modules/y": {"version": "1.0.0", '
+        text += '"resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"}}}'
+        deps = deplib.resolve_npm_lock(text)
+        assert [d[1] for d in deps] == ["y"]
+
+    def test_null_meta_skipped(self):
+        text = '{"dependencies": {"x": null}}'
+        assert deplib.resolve_npm_lock(text) == []
+
+    def test_duplicate_name_version_deduped(self):
+        """v2 `packages` and v1 `dependencies` both name the same dep."""
+        text = """{
+          "packages": {"node_modules/x": {"version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz"}},
+          "dependencies": {"x": {"version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz"}}
+        }"""
+        deps = deplib.resolve_npm_lock(text)
+        assert len(deps) == 1
+
+
+# ----------------------------------------------------- yarn dedup / bad blocks
+class TestYarnLockEdges:
+    def test_berry_duplicate_resolution_deduped(self):
+        text = (
+            '"x@npm:1.2.3":\n  resolution: "x@npm:1.2.3"\n  version: 1.2.3\n\n'
+            '"x@npm:^1.0.0":\n  resolution: "x@npm:1.2.3"\n  version: 1.2.3\n')
+        deps = deplib.resolve_yarn_lock(text)
+        assert len(deps) == 1
+        assert deps[0][1] == "x"
+
+    def test_v1_block_without_version_skipped(self):
+        """A `resolved` line with no `version` line cannot be pinned."""
+        text = (
+            'broken@^1.0.0:\n'
+            '  resolved "https://registry.yarnpkg.com/broken/-/broken-1.0.0.tgz#aaa"\n'
+            '\n'
+            'good@^2.0.0:\n'
+            '  version "2.0.0"\n'
+            '  resolved "https://registry.yarnpkg.com/good/-/good-2.0.0.tgz#bbb"\n')
+        deps = deplib.resolve_yarn_lock(text)
+        assert [d[1] for d in deps] == ["good"]
+
+    def test_v1_block_without_resolved_skipped(self):
+        text = 'nores@^1.0.0:\n  version "1.0.0"\n'
+        assert deplib.resolve_yarn_lock(text) == []
+
+
+# ----------------------------------------------------- scan_tree read failures
+class TestScanTreeUnreadable:
+    def test_unreadable_manifest_skipped(self, tmp_path, monkeypatch):
+        """A manifest that exists but cannot be opened is skipped, not fatal."""
+        (tmp_path / "go.sum").write_text(
+            "golang.org/x/net v0.1.0/go.mod h1:aaa=\n")
+        (tmp_path / "Cargo.lock").write_text(
+            '[[package]]\nname = "serde"\nversion = "1.0.0"\n'
+            'source = "registry+https://github.com/rust-lang/crates.io-index"\n')
+
+        real_open = open
+
+        def fake_open(path, *a, **kw):
+            if str(path).endswith("Cargo.lock"):
+                raise OSError("EACCES")
+            return real_open(path, *a, **kw)
+
+        monkeypatch.setattr("builtins.open", fake_open)
+        found = {rel for rel, _ in deplib.scan_tree(str(tmp_path))}
+        assert "go.sum" in found
+        assert "Cargo.lock" not in found
+
+
+class TestGoSumKeepsHighestVersion:
+    def test_lower_version_after_higher_is_ignored(self):
+        """go.sum lists every version ever seen; only the highest is fetched."""
+        text = ("golang.org/x/net v0.38.0 h1:aaa=\n"
+                "golang.org/x/net v0.10.0 h1:bbb=\n"
+                "golang.org/x/net v0.40.0 h1:ccc=\n")
+        deps = deplib.resolve_go_sum(text)
+        assert [(d[1], d[2]) for d in deps] == [("golang.org/x/net", "v0.40.0")]

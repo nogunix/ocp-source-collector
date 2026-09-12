@@ -286,3 +286,55 @@ class TestMain:
         tsv = (out_dir / "submodule-gaps.tsv").read_text()
         lines = [l for l in tsv.strip().split("\n") if not l.startswith("mount")]
         assert len(lines) == 0
+
+
+class TestIterUnitsUnreadable:
+    def test_mount_that_is_a_file_is_skipped(self, tmp_path):
+        """sources-* need not be a directory — a stray file must not abort."""
+        (tmp_path / "sources-stray").write_text("not a mount")
+        good = tmp_path / "sources-ocp4.20.22" / "git"
+        good.mkdir(parents=True)
+        assert [u[0] for u in iter_units(str(tmp_path))] == ["sources-ocp4.20.22"]
+
+    def test_unlistable_mount_is_skipped(self, tmp_path, monkeypatch):
+        mount = tmp_path / "sources-layered-ocp4.20"
+        mount.mkdir()
+        good = tmp_path / "sources-ocp4.20.22" / "git"
+        good.mkdir(parents=True)
+
+        real_listdir = os.listdir
+
+        def fake_listdir(p):
+            if str(p) == str(mount):
+                raise PermissionError("EACCES")
+            return real_listdir(p)
+
+        monkeypatch.setattr(_mod.os, "listdir", fake_listdir)
+        assert [u[0] for u in iter_units(str(tmp_path))] == ["sources-ocp4.20.22"]
+
+
+class TestScanUnitUnreadableGitmodules:
+    def test_unreadable_gitmodules_skipped(self, tmp_path, monkeypatch):
+        unit = tmp_path / "unit"
+        git = unit / "git"
+        (git / "bad-tree").mkdir(parents=True)
+        (git / "bad-tree" / ".gitmodules").write_text(
+            '[submodule "x"]\n\tpath = x\n\turl = https://github.com/o/x.git\n')
+
+        real_open = open
+
+        def fake_open(path, *a, **kw):
+            if str(path).endswith(".gitmodules"):
+                raise PermissionError("EACCES")
+            return real_open(path, *a, **kw)
+
+        monkeypatch.setattr("builtins.open", fake_open)
+        assert scan_unit(str(unit)) == []
+
+    def test_mount_subdir_without_git_is_not_a_unit(self, tmp_path):
+        """b-operand mounts hold product subdirs; meta/ and stray dirs are not."""
+        mount = tmp_path / "sources-layered-ocp4.20"
+        (mount / "cnv" / "git").mkdir(parents=True)
+        (mount / "meta").mkdir()
+        (mount / "README").write_text("")
+        assert [u[1] for u in iter_units(str(tmp_path))] == ["cnv"]

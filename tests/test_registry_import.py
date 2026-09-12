@@ -368,3 +368,78 @@ def test_registry_path_default():
     args = types.SimpleNamespace(registry=None)
     result = reg.registry_path(args)
     assert result.endswith("state/registry.json")
+
+
+# --------------------------------------------------------------- save() paths
+def test_save_preserves_mode_of_existing_file(tmp_path):
+    path = tmp_path / "registry.json"
+    path.write_text("{}")
+    os.chmod(path, 0o640)
+    reg.save(str(path), {"artifacts": []})
+    assert os.stat(path).st_mode & 0o777 == 0o640
+    assert json.loads(path.read_text()) == {"artifacts": []}
+
+
+def test_save_new_file_gets_0644(tmp_path):
+    path = tmp_path / "sub" / "registry.json"
+    reg.save(str(path), {"artifacts": []})
+    assert os.stat(path).st_mode & 0o777 == 0o644
+
+
+def test_save_chowns_when_running_as_root(tmp_path, monkeypatch):
+    """casket-swap.sh runs this under sudo; the file must keep its owner."""
+    path = tmp_path / "registry.json"
+    path.write_text("{}")
+    monkeypatch.setattr(reg.os, "geteuid", lambda: 0)
+    chowned = []
+    monkeypatch.setattr(reg.os, "chown",
+                        lambda p, uid, gid: chowned.append((p, uid, gid)))
+    reg.save(str(path), {"artifacts": []})
+    st = os.stat(path)
+    assert len(chowned) == 1
+    assert chowned[0][1:] == (st.st_uid, st.st_gid)
+
+
+def test_save_removes_tmp_and_reraises_on_failure(tmp_path, monkeypatch):
+    """A failed write must not leave a .registry-* turd next to the real file."""
+    path = tmp_path / "registry.json"
+    path.write_text('{"artifacts": []}')
+
+    def boom(*a, **kw):
+        raise RuntimeError("disk on fire")
+
+    monkeypatch.setattr(reg.json, "dump", boom)
+    with pytest.raises(RuntimeError, match="disk on fire"):
+        reg.save(str(path), {"artifacts": []})
+
+    assert not [p for p in os.listdir(tmp_path) if p.startswith(".registry-")]
+    assert path.read_text() == '{"artifacts": []}'   # original untouched
+
+
+# ------------------------------------------------------------------- main()
+def test_main_dispatches_to_subcommand(tmp_path, monkeypatch, capsys):
+    path = tmp_path / "registry.json"
+    monkeypatch.setattr(sys, "argv",
+                        ["registry.py", "--registry", str(path),
+                         "list", "--json"])
+    reg.main()
+    assert json.loads(capsys.readouterr().out) == []
+
+
+def test_main_rejects_unknown_subcommand(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["registry.py", "frobnicate"])
+    with pytest.raises(SystemExit) as e:
+        reg.main()
+    assert e.value.code != 0
+
+
+def test_cmd_transition_to_staged_sets_no_timestamp(tmp_path):
+    """Only live/retired carry a timestamp; staged is the default state."""
+    rp = _seed_registry(tmp_path)
+    args = types.SimpleNamespace(registry=rp, entry_id=1, to="staged",
+                                 mount_path=None, retire_previous=False)
+    reg.cmd_transition(args)
+    entry = next(e for e in reg.load(rp)["artifacts"] if e["entry_id"] == 1)
+    assert entry["status"] == "staged"
+    assert "live_since" not in entry
+    assert "retired_at" not in entry

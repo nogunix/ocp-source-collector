@@ -164,3 +164,193 @@ def test_main_skips_unlisted_dirs(tmp_path, monkeypatch):
 
     idx = (stage / "git" / "INDEX.tsv").read_text().splitlines()
     assert len(idx) == 1  # header only
+
+
+def test_main_requires_exactly_one_arg(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["build-source-index.py"])
+    with pytest.raises(SystemExit) as e:
+        bsi.main()
+    assert "stage" in str(e.value).lower() or e.value.code
+
+
+def test_main_rejects_extra_args(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", "a", "b"])
+    with pytest.raises(SystemExit):
+        bsi.main()
+
+
+def test_main_missing_manifest(tmp_path, monkeypatch):
+    stage = tmp_path / "stage"
+    (stage / "git").mkdir(parents=True)
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", str(stage)])
+    with pytest.raises(SystemExit) as e:
+        bsi.main()
+    assert "no MANIFEST.json" in str(e.value)
+
+
+def test_main_backfills_repo_ref_from_later_row(tmp_path, monkeypatch):
+    """The first row for a dedup dir may lack repo/ref; a later one fills it."""
+    stage = tmp_path / "stage"
+    (stage / "meta").mkdir(parents=True)
+    (stage / "git" / "shared-abc").mkdir(parents=True)
+
+    manifest = {"images": [
+        {"name": "comp-a", "source": {"tarball": "shared-abc.tar.gz",
+                                      "repo": "", "commit": ""}},
+        {"name": "comp-b", "source": {"tarball": "shared-abc.tar.gz",
+                                      "repo": "https://github.com/org/shared",
+                                      "commit": "abc123"}},
+    ]}
+    (stage / "meta" / "MANIFEST.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", str(stage)])
+    assert bsi.main() == 0
+
+    row = (stage / "git" / "INDEX.tsv").read_text().splitlines()[1].split("\t")
+    assert row[1] == "https://github.com/org/shared"
+    assert row[2] == "abc123"
+    assert (stage / "by-repo" / "shared").is_symlink()
+
+
+def test_main_disambiguates_same_repo_two_refs(tmp_path, monkeypatch):
+    """Two builds of one repo must not collide on by-repo/<basename>."""
+    stage = tmp_path / "stage"
+    (stage / "meta").mkdir(parents=True)
+    (stage / "git" / "shared-aaaaaaaaaaaaaa").mkdir(parents=True)
+    (stage / "git" / "shared-bbbbbbbbbbbbbb").mkdir(parents=True)
+
+    manifest = {"images": [
+        {"name": "comp-a", "source": {"tarball": "shared-aaaaaaaaaaaaaa.tar.gz",
+                                      "repo": "https://github.com/org/shared",
+                                      "commit": "aaaaaaaaaaaaaa"}},
+        {"name": "comp-b", "source": {"tarball": "shared-bbbbbbbbbbbbbb.tar.gz",
+                                      "repo": "https://github.com/org/shared",
+                                      "commit": "bbbbbbbbbbbbbb"}},
+    ]}
+    (stage / "meta" / "MANIFEST.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", str(stage)])
+    assert bsi.main() == 0
+
+    links = sorted(p.name for p in (stage / "by-repo").iterdir())
+    assert "shared" in links
+    assert len(links) == 2
+    # the second one carries a 12-char ref suffix
+    other = next(l for l in links if l != "shared")
+    assert other in ("shared-aaaaaaaaaaaa", "shared-bbbbbbbbbbbb")
+    # both point at distinct trees
+    targets = {os.readlink(stage / "by-repo" / l) for l in links}
+    assert len(targets) == 2
+
+
+def test_records_skips_failed_and_absent_sources():
+    """status != OK, an empty tarball, and the NO_SOURCE sentinel all drop out."""
+    manifest = {"images": [
+        {"name": "failed", "source": {"status": "FAILED", "tarball": "f.tar.gz",
+                                      "repo": "r", "commit": "c"}},
+        {"name": "empty", "source": {"tarball": "", "repo": "r", "commit": "c"}},
+        {"name": "none", "source": {"tarball": "NO_SOURCE", "repo": "r",
+                                    "commit": "c"}},
+        {"name": "ok", "source": {"tarball": "ok-abc.tar.gz", "repo": "r",
+                                  "commit": "abc"}},
+    ]}
+    assert [r[0] for r in bsi.records(manifest)] == ["ok"]
+
+
+def test_main_unnamed_record_creates_no_component_link(tmp_path, monkeypatch):
+    """A phase-B row with neither component nor operator name still indexes."""
+    stage = tmp_path / "stage"
+    (stage / "meta").mkdir(parents=True)
+    (stage / "git" / "anon-abc").mkdir(parents=True)
+    manifest = {"git": [{"tarball": "anon-abc.tar.gz",
+                         "source_url": "https://github.com/org/anon",
+                         "vcs_ref": "abc", "version": "1.0"}]}
+    (stage / "meta" / "MANIFEST.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", str(stage)])
+    assert bsi.main() == 0
+
+    row = (stage / "git" / "INDEX.tsv").read_text().splitlines()[1].split("\t")
+    assert row[0] == "anon-abc"
+    assert row[4] == ""
+    assert list((stage / "by-component").iterdir()) == []
+    assert (stage / "by-repo" / "anon").is_symlink()
+
+
+def test_main_component_name_collision_links_once(tmp_path, monkeypatch):
+    """_safe() flattens "org/x" and "org x" onto the same link name."""
+    stage = tmp_path / "stage"
+    (stage / "meta").mkdir(parents=True)
+    (stage / "git" / "a-1").mkdir(parents=True)
+    (stage / "git" / "b-2").mkdir(parents=True)
+    manifest = {"images": [
+        {"name": "org/x", "source": {"tarball": "a-1.tar.gz",
+                                     "repo": "https://github.com/org/a",
+                                     "commit": "1"}},
+        {"name": "org x", "source": {"tarball": "b-2.tar.gz",
+                                     "repo": "https://github.com/org/b",
+                                     "commit": "2"}},
+    ]}
+    (stage / "meta" / "MANIFEST.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", str(stage)])
+    assert bsi.main() == 0
+
+    links = sorted(p.name for p in (stage / "by-component").iterdir())
+    assert links == ["org_x"]        # second one loses; first writer wins
+
+
+def test_main_non_github_repo_gets_no_by_repo_link(tmp_path, monkeypatch):
+    stage = tmp_path / "stage"
+    (stage / "meta").mkdir(parents=True)
+    (stage / "git" / "gl-abc").mkdir(parents=True)
+    manifest = {"images": [
+        {"name": "comp", "source": {"tarball": "gl-abc.tar.gz",
+                                    "repo": "https://gitlab.com/org/thing",
+                                    "commit": "abc"}},
+    ]}
+    (stage / "meta" / "MANIFEST.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", str(stage)])
+    assert bsi.main() == 0
+
+    assert (stage / "by-component" / "comp").is_symlink()
+    assert list((stage / "by-repo").iterdir()) == []
+
+
+def test_main_by_repo_collision_on_identical_ref_links_once(tmp_path, monkeypatch):
+    """Two dirs, same repo AND same ref: the disambiguated name collides too."""
+    stage = tmp_path / "stage"
+    (stage / "meta").mkdir(parents=True)
+    (stage / "git" / "shared-v1").mkdir(parents=True)
+    (stage / "git" / "shared-v2").mkdir(parents=True)
+    manifest = {"images": [
+        {"name": "comp-a", "source": {"tarball": "shared-v1.tar.gz",
+                                      "repo": "https://github.com/org/shared",
+                                      "commit": "sameref"}},
+        {"name": "comp-b", "source": {"tarball": "shared-v2.tar.gz",
+                                      "repo": "https://github.com/org/shared",
+                                      "commit": "sameref"}},
+    ]}
+    (stage / "meta" / "MANIFEST.json").write_text(json.dumps(manifest))
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", str(stage)])
+    assert bsi.main() == 0
+
+    links = sorted(p.name for p in (stage / "by-repo").iterdir())
+    assert links == ["shared", "shared-sameref"]
+
+
+def test_main_third_dir_on_same_repo_and_ref_is_dropped(tmp_path, monkeypatch):
+    """Both by-repo names are taken; the third tree is reachable only via
+    by-component/ and INDEX.tsv."""
+    stage = tmp_path / "stage"
+    (stage / "meta").mkdir(parents=True)
+    images = []
+    for i in range(3):
+        (stage / "git" / f"shared-v{i}").mkdir(parents=True)
+        images.append({"name": f"comp-{i}",
+                       "source": {"tarball": f"shared-v{i}.tar.gz",
+                                  "repo": "https://github.com/org/shared",
+                                  "commit": "sameref"}})
+    (stage / "meta" / "MANIFEST.json").write_text(json.dumps({"images": images}))
+    monkeypatch.setattr("sys.argv", ["build-source-index.py", str(stage)])
+    assert bsi.main() == 0
+
+    assert sorted(p.name for p in (stage / "by-repo").iterdir()) == [
+        "shared", "shared-sameref"]
+    assert len((stage / "git" / "INDEX.tsv").read_text().splitlines()) == 4

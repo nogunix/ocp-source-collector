@@ -82,3 +82,28 @@ def test_gather_images_empty_work(tmp_path, monkeypatch):
     monkeypatch.setattr(inv, "CASKET_WORK", str(tmp_path))
     images = inv.gather_images()
     assert images == {}
+
+
+def test_gather_images_skips_truncated_rows(tmp_path, monkeypatch):
+    """A row with fewer columns than the format needs is skipped, not fatal."""
+    d = tmp_path / "ocp4.20" / "00-discover"
+    d.mkdir(parents=True)
+    (d / "images.tsv").write_text(
+        "name-only-no-tab\n"
+        "cvo\tregistry.redhat.io/cvo@sha256:aaa111\n")
+
+    d2 = tmp_path / "phase-b" / "4.20" / "00-discover"
+    d2.mkdir(parents=True)
+    (d2 / "containers.tsv").write_text(
+        "op\tbundle\n"                                    # missing image column
+        "op2\tbundle2\tregistry.redhat.io/op@sha256:ccc333\n")
+
+    d3 = tmp_path / "phase-b-operand" / "cnv" / "4.20" / "00-discover"
+    d3.mkdir(parents=True)
+    (d3 / "images.tsv").write_text(
+        "virt-launcher-no-tab\n"
+        "virt\tregistry.redhat.io/virt@sha256:ddd444\n")
+
+    monkeypatch.setattr(inv, "CASKET_WORK", str(tmp_path))
+    assert set(inv.gather_images()) == {"sha256:aaa111", "sha256:ccc333",
+                                        "sha256:ddd444"}

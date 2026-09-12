@@ -405,3 +405,16 @@ def test_main_invalid_backslash_json(monkeypatch, capsys):
     parts = out.split("\t")
     assert parts[0] == "https://github.com/o/r"
     assert parts[3] == "c:source-label"
+
+
+def test_component_map_hit_with_no_ref_and_no_version_falls_through(
+        monkeypatch, capsys):
+    """A mapped component still needs *something* to pin; otherwise the next
+    strategy (the source label) gets its turn."""
+    rc, out = _run_main(
+        monkeypatch, capsys,
+        {"org.opencontainers.image.source": "https://github.com/stackrox/stackrox",
+         "org.opencontainers.image.revision": "abc1234"},
+        component="apicurio-registry-sql")       # mode "tag-csv", no csv_ver
+    assert rc == 0
+    assert out.split("\t")[3] == "c:source-label"

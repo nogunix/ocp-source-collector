@@ -178,3 +178,75 @@ def test_plan_prefers_gitlink_over_branch():
            '\tbranch = main\n')
     pins, _ = sml.plan_submodules(sml.parse_gitmodules(txt), {"a": "deadbeef" * 5})
     assert pins[0].exact and pins[0].ref == "deadbeef" * 5
+
+
+# ------------------------------------------------------- value-object equality
+def test_submodule_eq_same_fields():
+    a = sml.Submodule("n", "p", "https://github.com/o/r.git", "main")
+    b = sml.Submodule("n", "p", "https://github.com/o/r.git", "main")
+    assert a == b
+
+
+def test_submodule_eq_differs_on_branch():
+    a = sml.Submodule("n", "p", "u", "main")
+    b = sml.Submodule("n", "p", "u", "release-4.20")
+    assert a != b
+
+
+def test_submodule_eq_foreign_type():
+    """__eq__ must return NotEqual, not raise, against a non-Submodule."""
+    assert sml.Submodule("n", "p", "u") != ("n", "p", "u", "")
+    assert sml.Submodule("n", "p", "u") != object()
+
+
+def test_pin_eq_same_fields():
+    a = sml.Pin("p", "o/r", "a" * 40, True, "https://github.com/o/r")
+    b = sml.Pin("p", "o/r", "a" * 40, True, "https://github.com/o/r")
+    assert a == b
+
+
+def test_pin_eq_differs_on_exact():
+    a = sml.Pin("p", "o/r", "main", False, "u")
+    b = sml.Pin("p", "o/r", "main", True, "u")
+    assert a != b
+
+
+def test_pin_eq_foreign_type():
+    assert sml.Pin("p", "o/r", "ref", True, "u") != "p"
+
+
+# ------------------------------------------------------- github_slug rejects
+def test_github_slug_rejects_unparseable_url():
+    """Neither scp-style nor scheme://host/path — no slug to be had."""
+    assert sml.github_slug("just-a-string") == ""
+    assert sml.github_slug("github.com/openshift/cvo") == ""
+    assert sml.github_slug("https://github.com") == ""
+
+
+def test_github_slug_rejects_non_github_host():
+    assert sml.github_slug("https://gitlab.com/org/repo.git") == ""
+
+
+def test_github_slug_scp_style():
+    assert sml.github_slug("git@github.com:openshift/cvo.git") == "openshift/cvo"
+
+
+# ------------------------------------------------- parse_gitmodules key lines
+def test_parse_gitmodules_ignores_unknown_keys():
+    text = ('[submodule "x"]\n'
+            '\tpath = x\n'
+            '\turl = https://github.com/o/x.git\n'
+            '\tshallow = true\n'
+            '\tupdate = none\n')
+    subs = sml.parse_gitmodules(text)
+    assert subs == [sml.Submodule("x", "x", "https://github.com/o/x.git", "")]
+
+
+def test_parse_gitmodules_ignores_non_key_lines():
+    """Continuation junk inside a stanza is neither a section nor a key."""
+    text = ('[submodule "x"]\n'
+            '\tpath = x\n'
+            '\t= orphaned value\n'
+            '\turl = https://github.com/o/x.git\n')
+    subs = sml.parse_gitmodules(text)
+    assert [s.path for s in subs] == ["x"]

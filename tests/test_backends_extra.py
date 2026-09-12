@@ -621,29 +621,52 @@ class TestCoverageReportExtra:
         assert "missing-product" in result["missing_b_operand_products"]
 
     def test_a_rpm_srpms_branch(self, tmp_path, monkeypatch):
+        """A minor version picks up the by-ocp/<patch>/ SRPM count."""
         srv = _setup_srv(tmp_path, monkeypatch)
-        srpms_root = srv / "sources-ocp-srpms" / "by-ocp"
-        pv_dir = srpms_root / "4.20.22"
+        pv_dir = srv / "sources-ocp-srpms" / "by-ocp" / "4.20.22"
         pv_dir.mkdir(parents=True)
         for i in range(5):
             (pv_dir / f"pkg-{i}.src.rpm").write_text("")
         monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
-        # Need the srpms mount to exist for list_mounts
-        (srv / "sources-ocp-srpms").mkdir(exist_ok=True)
-        # Patch the srpms_root path inside coverage_report
-        orig = be.coverage_report
 
-        def patched_coverage_report(version):
-            import types as _t
-            # We need to monkeypatch the hardcoded /srv path inside the function
-            # Instead, just call it — the srpms_root won't match since SRV is tmp
-            return orig(version)
+        result = be.coverage_report("4.20")
+        assert result["phases"]["a-rpm"] == {
+            "mount": "sources-ocp-srpms", "ocp_version": "4.20.22", "srpms": 5}
 
-        # Since coverage_report hardcodes /srv/sources-ocp-srpms/by-ocp, we
-        # can't easily test that branch without more invasive patching.
-        # Test that the function still works without a-rpm data.
+    def test_a_rpm_exact_patch_match(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        pv_dir = srv / "sources-ocp-srpms" / "by-ocp" / "4.20.22"
+        pv_dir.mkdir(parents=True)
+        (pv_dir / "pkg.src.rpm").write_text("")
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+
+        result = be.coverage_report("4.20.22")
+        assert result["phases"]["a-rpm"]["srpms"] == 1
+
+    def test_a_rpm_other_minor_ignored(self, tmp_path, monkeypatch):
+        """4.2 must not swallow 4.20.x — the prefix test appends the dot."""
+        srv = _setup_srv(tmp_path, monkeypatch)
+        pv_dir = srv / "sources-ocp-srpms" / "by-ocp" / "4.20.22"
+        pv_dir.mkdir(parents=True)
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+
+        assert "a-rpm" not in be.coverage_report("4.2")["phases"]
+
+    def test_a_rpm_unreadable_dir_skipped(self, tmp_path, monkeypatch):
+        """A by-ocp entry that is a file, not a dir, is skipped not fatal."""
+        srv = _setup_srv(tmp_path, monkeypatch)
+        by_ocp = srv / "sources-ocp-srpms" / "by-ocp"
+        by_ocp.mkdir(parents=True)
+        (by_ocp / "4.20.22").write_text("not a directory")
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+
         result = be.coverage_report("4.20")
         assert "a-rpm" not in result["phases"]
+
+    def test_no_srpms_root(self, tmp_path, monkeypatch):
+        _setup_srv(tmp_path, monkeypatch)
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+        assert "a-rpm" not in be.coverage_report("4.20")["phases"]
 
     def test_multiple_phases(self, tmp_path, monkeypatch):
         srv = _setup_srv(tmp_path, monkeypatch)
@@ -728,3 +751,178 @@ class TestSearchSymbolBranches:
         ])
         result = be.search_symbol("MyFunc", path=str(mount))
         assert "ripgrep" in result["backend"]
+
+
+# ===================================================== partial-branch coverage
+class TestMountsForVersionMinorFallback:
+    def test_patch_mount_matches_a_different_patch_of_the_same_minor(
+            self, tmp_path, monkeypatch):
+        """4.18.99 is not mounted, but the 4.18 line is — the minor still matches."""
+        srv = _setup_srv(tmp_path, monkeypatch)
+        (srv / "sources-ocp4.18.41").mkdir()
+        (srv / "sources-ocp4.20.22").mkdir()
+        names = {m.name for m in be._mounts_for_version("4.18.99")}
+        assert names == {"sources-ocp4.18.41"}
+
+    def test_different_minor_is_excluded(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        (srv / "sources-ocp4.18.41").mkdir()
+        assert be._mounts_for_version("4.19.1") == []
+
+
+class TestResolveComponentSkipsNonMatchingSubmodules:
+    def test_unrelated_submodule_row_not_returned(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        mount = srv / "sources-ocp4.20.22"
+        (mount / "git").mkdir(parents=True)
+        (mount / "meta").mkdir(parents=True)
+        (mount / "git" / "INDEX.tsv").write_text(
+            "dir\trepo\tref\tversion\tcomponents\n")
+        bycomp = mount / "by-component"
+        bycomp.mkdir()
+        for sub in ("spire", "csi"):
+            (mount / "git" / "wrapper" / sub).mkdir(parents=True)
+        (mount / "meta" / "SUBMODULES.tsv").write_text(
+            "# component\tpath\trepo\tref\texact\tstatus\n"
+            "wrapper\tspire\topenshift/spiffe-spire\t" + "a" * 40 + "\t1\tok-filled\n"
+            "wrapper\tcsi\topenshift/spiffe-csi\t" + "b" * 40 + "\t1\tok-filled\n")
+
+        hits = be.resolve_component("spiffe-csi", "4.20")
+        assert [h["component"] for h in hits] == ["spiffe-csi"]
+
+
+class TestListComponentsShortRows:
+    def test_truncated_index_row_skipped(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        mount = srv / "sources-ocp4.20.22"
+        (mount / "git").mkdir(parents=True)
+        (mount / "git" / "INDEX.tsv").write_text(
+            "dir\trepo\tref\tversion\tcomponents\n"
+            "truncated\trepo\tref\n"
+            "good\thttps://github.com/o/g\tabc\t4.20\tgood\n")
+        dirs = [c["dir"] for c in be.list_components("4.20")]
+        assert dirs == ["good"]
+
+
+class TestRipgrepIgnoreCaseFlag:
+    def test_case_sensitive_search_omits_dash_i(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        (srv / "sources-ocp4.20.22").mkdir()
+        captured = {}
+        monkeypatch.setattr(be, "_rg", lambda args: captured.setdefault("args", args) or [])
+
+        be._rg_search_text("Foo", "4.20", None, 10, False)
+        assert "-i" not in captured["args"]
+
+    def test_case_insensitive_search_adds_dash_i(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        (srv / "sources-ocp4.20.22").mkdir()
+        captured = {}
+        monkeypatch.setattr(be, "_rg", lambda args: captured.setdefault("args", args) or [])
+
+        be._rg_search_text("Foo", "4.20", None, 10, True)
+        assert "-i" in captured["args"]
+
+
+class TestFindLockfiles:
+    def test_ignores_non_lockfile_siblings(self, tmp_path):
+        (tmp_path / "Cargo.lock").write_text("")
+        (tmp_path / "Cargo.toml").write_text("")
+        (tmp_path / "README.md").write_text("")
+        assert be._find_lockfiles(str(tmp_path), {"Cargo.lock"}) == [
+            str(tmp_path / "Cargo.lock")]
+
+    def test_stops_at_limit(self, tmp_path):
+        for i in range(5):
+            d = tmp_path / f"crate{i}"
+            d.mkdir()
+            (d / "Cargo.lock").write_text("")
+        assert len(be._find_lockfiles(str(tmp_path), {"Cargo.lock"}, limit=2)) == 2
+
+    def test_skips_vendored_trees(self, tmp_path):
+        (tmp_path / "vendor").mkdir()
+        (tmp_path / "vendor" / "Cargo.lock").write_text("")
+        (tmp_path / "Cargo.lock").write_text("")
+        assert be._find_lockfiles(str(tmp_path), {"Cargo.lock"}) == [
+            str(tmp_path / "Cargo.lock")]
+
+
+class TestParseSubmodulesShortRows:
+    def test_truncated_row_skipped(self, tmp_path):
+        tsv = tmp_path / "SUBMODULES.tsv"
+        tsv.write_text(
+            "# component\tpath\trepo\tref\texact\tstatus\n"
+            "short\trow\n"
+            "wrapper\tspire\topenshift/spire\t" + "a" * 40 + "\t1\tok-filled\n")
+        rows = be._parse_submodules(str(tsv))
+        assert [r["path"] for r in rows] == ["spire"]
+
+
+class TestPermalinkMountAndUnitSelection:
+    def test_picks_the_right_mount_out_of_several(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        (srv / "sources-ocp4.18.41").mkdir()      # listed first, not the match
+        mount = srv / "sources-ocp4.20.22"
+        git = mount / "git" / "cvo-abc"
+        git.mkdir(parents=True)
+        (mount / "git" / "INDEX.tsv").write_text(
+            "dir\trepo\tref\tversion\tcomponents\n"
+            "cvo-abc\thttps://github.com/openshift/cvo\tabc123\t4.20\tcvo\n")
+        f = git / "main.go"
+        f.write_text("package main\n")
+
+        result = be.permalink(str(f))
+        assert result["mount"] == "sources-ocp4.20.22"
+        assert result["file"] == "main.go"
+
+    def test_picks_the_right_b_operand_product_unit(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        mount = srv / "sources-layered-ocp4.20"
+        for prod in ("acs", "cnv"):
+            (mount / prod / "git").mkdir(parents=True)
+            (mount / prod / "git" / "INDEX.tsv").write_text(
+                "dir\trepo\tref\tversion\tcomponents\n"
+                f"{prod}-tree\thttps://github.com/o/{prod}\t{prod}sha\t1.0\t{prod}\n")
+        f = mount / "cnv" / "git" / "cnv-tree" / "main.go"
+        f.parent.mkdir(parents=True)
+        f.write_text("package main\n")
+
+        result = be.permalink(str(f))
+        assert result["ref"] == "cnvsha"
+        assert result["repo"] == "https://github.com/o/cnv"
+
+
+class TestIndexStatsRows:
+    def test_row_without_repo_or_components(self, tmp_path, monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        mount = srv / "sources-ocp4.20.22"
+        (mount / "git").mkdir(parents=True)
+        (mount / "git" / "INDEX.tsv").write_text(
+            "dir\trepo\tref\tversion\tcomponents\n"
+            "orphan\t\t\t\t\n"                       # no repo, no components
+            "dup\thttps://github.com/o/r\tabc\t4.20\tone,,two\n"
+            "short\trow\n")
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+
+        stats = be.coverage_report("4.20")["phases"]["a"]
+        assert stats["source_dirs"] == 2       # the 2-col row is not counted
+        assert stats["repos"] == 1
+        assert stats["components"] == 2        # the empty name between commas drops
+
+
+class TestCoverageReportMountSelection:
+    def test_other_phase_mount_ignored(self, tmp_path, monkeypatch):
+        """sources-<something unrecognised> classifies as "other" and is skipped."""
+        srv = _setup_srv(tmp_path, monkeypatch)
+        (srv / "sources-scratch").mkdir()
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+        result = be.coverage_report("")
+        assert "other" not in result["phases"]
+
+    def test_mount_without_index_tsv_contributes_no_phase(self, tmp_path,
+                                                          monkeypatch):
+        srv = _setup_srv(tmp_path, monkeypatch)
+        (srv / "sources-ocp4.20.22").mkdir()      # no git/INDEX.tsv at all
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+        result = be.coverage_report("4.20")
+        assert "a" not in result["phases"]
