@@ -1,0 +1,20 @@
+# Fallback definitions for rpmautospec's %autorelease and %autochangelog.
+#
+# Specs preprocessed by rpmautospec (i.e. every src.rpm built in Koji/Copr)
+# carry an inline %define that overrides these — so this file only fires
+# for raw dist-git specs that have not been preprocessed.
+#
+# Without the package's git history the release counter cannot be computed;
+# _rpmautospec_release_number (set by the Koji plugin) provides the real
+# value when available, otherwise we fall back to 1.
+
+%autorelease(e:s:pb:n) %{?-p:0.}%{lua:
+    release_number = tonumber(rpm.expand("%{?_rpmautospec_release_number}%{!?_rpmautospec_release_number:1}"));
+    base_release_number = tonumber(rpm.expand("%{?-b*}%{!?-b:1}"));
+    print(release_number + base_release_number - 1);
+}%{?-e:.%{-e*}}%{?-s:.%{-s*}}%{!?-n:%{?dist}}
+
+%autochangelog %{lua:
+    print("* " .. os.date("%a %b %d %Y") .. " rpmautospec <rpmautospec@fedoraproject.org>\\n")
+    print("- Changelog not available (rpmautospec fallback)")
+}

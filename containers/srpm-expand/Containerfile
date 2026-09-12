@@ -26,6 +26,8 @@ RUN dnf install -y --setopt=install_weak_deps=False \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 
+COPY macros.rpmautospec /usr/lib/rpm/macros.d/macros.rpmautospec
+
 # rpmbuild warns (harmlessly) about a missing mockbuild user on every run;
 # creating it keeps the logs readable.
 RUN useradd -r -m -d /var/lib/mock -s /sbin/nologin mockbuild 2>/dev/null || true
