@@ -6,17 +6,49 @@
 [![ShellCheck](https://img.shields.io/badge/lint-ShellCheck-brightgreen)](https://www.shellcheck.net/)
 [![Ruff](https://img.shields.io/badge/lint-Ruff-purple)](https://docs.astral.sh/ruff/)
 
-ocp-source-collector collects the upstream source for **every component of an
-OpenShift release payload** and bundles it into a single archive — an internally
-xz-compressed squashfs, `casket-YYYYMMDD-ocp<ver>.sqfs.xz`. Mount it and the
-whole release reads as an ordinary directory tree, with no network access.
+**Turn an entire OpenShift release into source code you can read offline.**
 
-The problem it solves: when you need to know what a given OpenShift release
-actually shipped — the exact commit behind a container image, the source of an
-operand three hops down a catalog, the patched source of an RPM on the node OS,
-or the version of a Go module vendored into all of it — that information is
-scattered across registries, catalogs and package databases that may not be
-reachable from where you are, and that change under you when they are.
+ocp-source-collector collects the source code for every component of an
+OpenShift release payload and packages it into a mountable squashfs archive
+(`casket-YYYYMMDD-ocp<ver>.sqfs.xz`). No network required — one `mount` and
+the whole release is an ordinary directory tree.
+
+### What's inside
+
+| What | Scale |
+|------|-------|
+| OCP component sources | Git source tree at the exact build commit for every payload image (~190 images/version) |
+| Node OS SRPMs | Source RPMs for every RPM on rhel-coreos — kernel, cri-o, systemd, … (843 SRPMs, 99.86% coverage) |
+| Operator sources | FBC catalog + bundle manifests + git sources from redhat-operator-index (~120 operators/version) |
+| Layered-product operand sources | Operand image sources for **191 products** including CNV, ACS, MCE, ACM, RHOAI, ODF, and Quay |
+| Language dependencies | Go modules, Rust crates, npm packages, and PyPI sdists resolved from lockfiles |
+| Submodule trees | Git submodules recovered from empty directories left by `git archive` |
+
+**9 minor versions** (4.14–4.22) tracked continuously, auto-updated on a 3-week cycle.
+
+### Use cases
+
+- **Crash investigation** — look up the exact source for a stack trace without chasing registries
+- **CVE impact analysis** — find which versions and components contain vulnerable code
+- **Cross-version diffing** — compare component source changes across OpenShift releases
+- **Supply-chain visibility** — trace vendored Go/Rust/Node/Python dependencies end to end
+
+### How to search
+
+| Method | Description |
+|--------|-------------|
+| [OpenGrok](opengrok/README.md) | Web UI for full-text source search and browsing |
+| [casket-mcp](mcp/README.md) | MCP server for Claude Code / AI agents |
+| `ripgrep` | grep the mounted directory tree directly |
+
+### The problem it solves
+
+When you need to know what a given OpenShift release actually shipped — the
+exact commit behind a container image, the source of an operand three hops
+down a catalog, the patched source of an RPM on the node OS, or the version
+of a Go module vendored into all of it — that information is scattered across
+registries, catalogs and package databases that may not be reachable from
+where you are, and that change under you when they are.
 
 ## What gets collected
 

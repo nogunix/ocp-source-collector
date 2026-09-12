@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`ocp-source-collector` collects upstream git sources for every component of an OpenShift release payload and bundles them into a single `casket-YYYYMMDD-ocp<ver>.sqfs.xz` archive that matches the existing RHEL casket format. **All phases are complete and live in production** at `/srv/sources-*` on casket-host.
+`ocp-source-collector` collects git sources for every component of an OpenShift release payload and bundles them into a single `casket-YYYYMMDD-ocp<ver>.sqfs.xz` archive that matches the existing RHEL casket format. **All phases are complete and live in production** at `/srv/sources-*` on casket-host.
 
 Phases aren't 4 independent peers: there are 2 origins (release payload, operator
 catalog), each with a direct mode and a "go one level deeper" sub-mode. `a-rpm`
