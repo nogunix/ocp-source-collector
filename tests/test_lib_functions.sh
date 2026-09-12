@@ -161,16 +161,21 @@ eq "casket_ext: unset defaults to sqfs.xz" "sqfs.xz" \
     # If it IS available, it'll fail because we're not root, but the dispatch is correct.
     casket_mkfs "$TMP_MKFS/stage" "$TMP_MKFS/out.sqfs.xz" -Xdict-size 100% 2>/dev/null
 ) 2>/dev/null
-# We just check it doesn't produce a "unknown CASKET_FORMAT" error
-(CASKET_FORMAT=sqfs casket_mkfs /nonexistent /dev/null 2>&1) | grep -q "unknown CASKET_FORMAT" \
+# We just check it doesn't produce a "unknown CASKET_FORMAT" error.
+# NOTE: casket_mkfs starts with `rm -f "$out"`, so the output argument must be a
+# throwaway path — never /dev/null, which root (as in CI containers) can delete,
+# breaking every later step that redirects to it.
+TMP_OUT=$(mktemp -d)
+trap 'rm -rf "$TMP_OUT"' EXIT
+(CASKET_FORMAT=sqfs casket_mkfs /nonexistent "$TMP_OUT/a.img" 2>&1) | grep -q "unknown CASKET_FORMAT" \
     && bad "casket_mkfs: sqfs dispatches correctly" \
     || pass "casket_mkfs: sqfs dispatches correctly"
 
-(CASKET_FORMAT=erofs casket_mkfs /nonexistent /dev/null 2>&1) | grep -q "unknown CASKET_FORMAT" \
+(CASKET_FORMAT=erofs casket_mkfs /nonexistent "$TMP_OUT/b.img" 2>&1) | grep -q "unknown CASKET_FORMAT" \
     && bad "casket_mkfs: erofs dispatches correctly" \
     || pass "casket_mkfs: erofs dispatches correctly"
 
-(CASKET_FORMAT=bogus casket_mkfs /nonexistent /dev/null 2>&1) | grep -q "unknown CASKET_FORMAT" \
+(CASKET_FORMAT=bogus casket_mkfs /nonexistent "$TMP_OUT/c.img" 2>&1) | grep -q "unknown CASKET_FORMAT" \
     && pass "casket_mkfs: invalid format produces clear error" \
     || bad  "casket_mkfs: invalid format produces clear error"
 

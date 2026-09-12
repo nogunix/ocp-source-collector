@@ -18,7 +18,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     container:
-      image: registry.fedoraproject.org/fedora:latest
+      image: registry.fedoraproject.org/fedora:44
     steps:
       - name: install toolchain
         run: |
@@ -64,7 +64,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: registry.fedoraproject.org/fedora:latest
+      image: registry.fedoraproject.org/fedora:44
     steps:
       - name: install runtime
         run: |
@@ -125,7 +125,7 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     container:
-      image: registry.fedoraproject.org/fedora:latest
+      image: registry.fedoraproject.org/fedora:44
     steps:
       - name: install runtime
         run: |
