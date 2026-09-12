@@ -72,7 +72,7 @@ srpmix7_container_extract() {
         zsh "/srpmix7/$srpmix7_bin" expand \
             --stype=file --sloc=/work/src.rpm \
             --dtype=dir  --dloc=/work/out \
-            srpm --nodeps \
+            srpm --nobuilddep \
         >"$tmp/srpmix7-container.log" 2>&1; then
         return 0
     else
@@ -140,7 +140,7 @@ srpmix7_extract() {
     "$SRPMIX7" expand \
         --stype=file --sloc="$src" \
         --dtype=dir  --dloc="$dest" \
-        srpm --nodeps 2>"$tmp/srpmix7.log"
+        srpm --nobuilddep 2>"$tmp/srpmix7.log"
 }
 
 # --- built-in path: produce srpmix7-compatible layout ---
