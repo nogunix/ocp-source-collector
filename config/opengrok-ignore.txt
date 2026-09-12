@@ -1,0 +1,77 @@
+# opengrok-ignore.txt — directories/files the OpenGrok indexer must skip.
+#
+# One pattern per line; `#` starts a comment. Each line is passed to the
+# indexer verbatim as `-i <pattern>`, so it follows OpenGrok's Filter rules
+# (opengrok-indexer/.../configuration/Filter.java):
+#
+#   d:<pattern>   apply to directories   ('f:' or no prefix = files)
+#   no wildcard, no '/'  ->  exact basename match
+#   no wildcard, has '/' ->  absolute_path.endsWith("/" + pattern)
+#   has * or ?           ->  glob, full-matched against the BASENAME first,
+#                            then against the ABSOLUTE PATH if the pattern
+#                            contains a '/'
+#
+# The glob form is what makes these entries both precise and version-proof:
+# `*/systemd-*/test/testdata` pins the offender to systemd without naming
+# systemd-252, so a z-stream bump does not silently un-ignore it.
+#
+# WHY entries land here
+# ---------------------
+# A symlink cycle inside an indexed tree makes OpenGrok's post-index cleanup
+# (PendingFileCompleter.findFilelessChildren) recurse forever: no cycle check,
+# no depth limit, no log output, 100% of one core until it is killed by hand.
+# Only a re-index that has deletions reaches that code, which is why these
+# trees can sit indexed and harmless for months and then eat a whole day.
+# See opengrok/scripts/find-symlink-cycles.py for the mechanism and the
+# 2026-08-08 measurement (srpms-4.22.4, 2h50m of CPU, killed by hand).
+#
+# stage-sources.sh scans the staged tree for cycles on every run and names the
+# offenders. When it names one, add the containing subtree here.
+#
+# Keep this list minimal — every entry is source that stops being searchable
+# in the web UI. Ignored paths stay on the mount and stay greppable through
+# ripgrep/casket-mcp.
+#
+# The list below is the complete set found by a full scan of all 18 staged
+# projects on 2026-08-08 (54 cycles, 12 projects affected).
+
+# fwupd's mock sysfs fixture (fwupd-2.0.19, srpms-4.22.4 only — 4.18/4.20
+# carry older fwupd without it). sys/class/<cls>/<dev> -> ../../devices/…/<dev>,
+# and that device dir holds `subsystem` -> ../../../class/<cls>, closing the
+# loop. This is the one that hung the indexer on 2026-08-08.
+d:*/fwupd-*/src/tests/sys
+
+# systemd: `test/testdata -> .` — a self-referential link, in all three
+# srpms-* projects. The same class of landmine, not yet triggered.
+d:*/systemd-*/test/testdata
+
+# criu: `compel/include/uapi/compel -> .`, so that #include <compel/...>
+# resolves from within the uapi dir. Upstream-intentional. In all srpms-*.
+d:*/criu-*/compel/include/uapi/compel
+
+# hypershift vendors itself into its own dev workspace:
+# hack/workspace/hypershift -> the repo root. Hits ocp-4.18.50/4.20.32/4.22.8
+# and layered-*/mce (hypershift-cli, hypershift-rhel9-operator).
+d:*/hack/workspace/hypershift
+
+# flux's symlink-handling test fixture: internal/fs/testdata/symlinks/
+# dir-symlink -> the testdata dir above it. In all community-* projects.
+d:*/internal/fs/testdata/symlinks
+
+# kn-plugin-func (layered-*/serverless-operator) ships a whole battery of
+# deliberate path-escape fixtures — linkToRoot, linkToParent,
+# linkToCurrentDir, linkOutsideRootsParent — under one directory.
+d:*/pkg/oci/testdata/test-links
+
+# libreswan bundles the linux-system-roles ansible role, which carries the
+# usual self-referential shim so the role can resolve itself as a dependency:
+# tests/roles/linux-system-roles.vpn -> the role dir two levels up. Found
+# 2026-08-13, in srpms-*-extensions (libreswan reaches the node only through
+# the extensions layer, so it was invisible until that layer was staged).
+# Not yet triggered: these projects have never been indexed, and only a
+# re-index WITH deletions reaches the cleanup walk that spins.
+d:*/libreswan-*/testing/linux-system-roles.vpn/tests/roles
+
+# sriov-network-operator's admission controller keeps a legacy GOPATH shim:
+# .gopath/src/github.com/intel/network-resources-injector -> the repo root.
+d:.gopath

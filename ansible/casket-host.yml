@@ -1,0 +1,165 @@
+---
+# Idempotent host setup for the casket-mcp / OpenGrok / casket-mounts search
+# infrastructure (docs/setup.md section 5). Replaces the manual
+# copy-unit-file-and-systemctl-enable steps scattered across mcp/README.md,
+# opengrok/README.md and scripts/install-mounts-service.sh with one playbook
+# that can be re-run safely at any time (e.g. after a host rebuild, or to
+# pick up a repo update to any of the *.service files).
+#
+# Run:
+#   cd ansible && ansible-playbook -i inventory.ini casket-host.yml
+#
+# Override the checkout path (defaults to $CASKET_WORK, then ~/casket-work):
+#   ansible-playbook -i inventory.ini casket-host.yml -e casket_repo=/path/to/casket-work
+
+- name: casket-host search infrastructure (casket-mounts, casket-mcp, OpenGrok)
+  hosts: localhost
+  gather_facts: true
+  vars:
+    casket_repo: "{{ lookup('env', 'CASKET_WORK') | default(ansible_env.HOME + '/casket-work', true) }}"
+    casket_user: "{{ ansible_user_id }}"
+    user_systemd_dir: "{{ ansible_env.HOME }}/.config/systemd/user"
+
+  tasks:
+    # --- SELinux -------------------------------------------------------
+    # init_t (the domain *system* services run under) is denied `execute`
+    # on user_home_t by default -- casket-mounts.service is a system unit
+    # (needs root for mount(8)) whose ExecStart lives under this repo's
+    # checkout in $HOME, which trips exactly that denial. Confirmed via
+    # `ausearch -m avc -ts boot` on 2026-07-12:
+    #   avc: denied { execute } ... scontext=system_u:system_r:init_t:s0
+    #        tcontext=unconfined_u:object_r:user_home_t:s0 tclass=file
+    # `sudo <script>` doesn't hit this (interactive sudo runs unconfined),
+    # which is why it silently worked by hand while the boot-time unit
+    # crash-looped with status=203/EXEC. Fix: relabel the script bin_t.
+    - name: Ensure SELinux python bindings are installed (needed for sefcontext)
+      become: true
+      ansible.builtin.dnf:
+        name: libselinux-python3
+        state: present
+
+    - name: Label casket-mounts.sh as bin_t so init_t may execute it
+      become: true
+      community.general.sefcontext:
+        target: "{{ casket_repo }}/scripts/casket-mounts.sh"
+        setype: bin_t
+        state: present
+      register: sefcontext_result
+
+    - name: Apply the SELinux label to the file on disk
+      become: true
+      ansible.builtin.command: "restorecon -v {{ casket_repo }}/scripts/casket-mounts.sh"
+      register: restorecon_result
+      changed_when: "'Relabeled' in restorecon_result.stdout"
+
+    # --- casket-mounts.service (system unit; needs root for mount(8)) --
+    - name: Install casket-mounts.service (system unit)
+      become: true
+      ansible.builtin.copy:
+        src: "{{ casket_repo }}/systemd/casket-mounts.service"
+        dest: /etc/systemd/system/casket-mounts.service
+        mode: "0644"
+      register: mounts_unit_copy
+
+    - name: Bake this checkout's path into ExecStart (system units get no %h)
+      become: true
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/system/casket-mounts.service
+        regexp: '^ExecStart='
+        line: "ExecStart={{ casket_repo }}/scripts/casket-mounts.sh --apply"
+      register: mounts_unit_execstart
+
+    - name: Reload systemd (system) after unit changes
+      become: true
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: mounts_unit_copy.changed or mounts_unit_execstart.changed
+
+    - name: Enable + start casket-mounts.service
+      become: true
+      ansible.builtin.systemd:
+        name: casket-mounts.service
+        enabled: true
+        state: started
+
+    # --- casket-mcp (user unit; HTTP :8765) -----------------------------
+    - name: Ensure mcp/.venv exists (mirrors mcp/ensure-venv.sh)
+      ansible.builtin.command: "{{ casket_repo }}/mcp/ensure-venv.sh"
+      args:
+        creates: "{{ casket_repo }}/mcp/.venv/bin/python"
+
+    - name: Ensure ~/.config/systemd/user exists
+      ansible.builtin.file:
+        path: "{{ user_systemd_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Install casket-mcp.service (user unit)
+      ansible.builtin.copy:
+        src: "{{ casket_repo }}/mcp/casket-mcp.service"
+        dest: "{{ user_systemd_dir }}/casket-mcp.service"
+        mode: "0644"
+      register: mcp_unit_copy
+
+    # --- OpenGrok (user unit; wraps the podman container, :8080) -------
+    - name: Install opengrok.service (user unit)
+      ansible.builtin.copy:
+        src: "{{ casket_repo }}/opengrok/opengrok.service"
+        dest: "{{ user_systemd_dir }}/opengrok.service"
+        mode: "0644"
+      register: opengrok_unit_copy
+
+    - name: Reload systemd (user) after unit changes
+      ansible.builtin.systemd:
+        scope: user
+        daemon_reload: true
+      when: mcp_unit_copy.changed or opengrok_unit_copy.changed
+
+    - name: Enable + start casket-mcp.service (user)
+      ansible.builtin.systemd:
+        scope: user
+        name: casket-mcp.service
+        enabled: true
+        # Restart (not just start) when the unit file changed, so an updated
+        # ExecStart/ExecStartPre actually takes effect in one playbook run.
+        state: "{{ 'restarted' if mcp_unit_copy.changed else 'started' }}"
+
+    - name: Enable + start opengrok.service (user)
+      # Only starts an *existing* podman container; if casket-ocp-grok has
+      # never been created, run opengrok/scripts/run-opengrok.sh once first.
+      # Restart (not just start) when the unit file changed so an updated
+      # ExecStart takes effect in one playbook run.
+      ansible.builtin.systemd:
+        scope: user
+        name: opengrok.service
+        enabled: true
+        state: "{{ 'restarted' if opengrok_unit_copy.changed else 'started' }}"
+      ignore_errors: true
+      register: opengrok_start
+
+    - name: Warn if opengrok.service couldn't start (container likely missing)
+      ansible.builtin.debug:
+        msg: >-
+          opengrok.service failed to start -- if the casket-ocp-grok podman
+          container doesn't exist yet, create it once with
+          opengrok/scripts/run-opengrok.sh, then re-run this playbook.
+      when: opengrok_start is failed
+
+    # --- keep user services running without an active login session ---
+    - name: Enable lingering for {{ casket_user }} (user services survive logout)
+      become: true
+      ansible.builtin.command: "loginctl enable-linger {{ casket_user }}"
+      args:
+        creates: "/var/lib/systemd/linger/{{ casket_user }}"
+
+    # --- firewall: LAN access to casket-mcp (8765) and OpenGrok (8080) -
+    - name: Open casket-mcp / OpenGrok ports in firewalld
+      become: true
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      loop:
+        - 8765/tcp
+        - 8080/tcp

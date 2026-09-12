@@ -1,0 +1,13 @@
+# Minors covered by Phase A/RPM sources (a-rpm, formerly "Phase B" -- RHEL
+# coreos SRPM collection). Lags config/minors.txt because a-rpm needs a manual
+# subscribed-VM run per docs/casket-improvements.md item #6 -- 4.21 is PAUSED,
+# not yet collected. Add it here once a-rpm resumes.
+4.14
+4.15
+4.16
+4.17
+4.18
+4.19
+4.20
+4.21
+4.22

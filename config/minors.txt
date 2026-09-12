@@ -1,0 +1,16 @@
+# Target OCP minors for Phase A (component sources), Phase B (operator
+# sources), and Phase B/operand (b-operand -- layered-product operand
+# sources) -- all three are rolled out to the same minor set today
+# (README.md "成果物" sections).
+# One minor per line. Edit here when a new OCP minor GAs or an old one is
+# dropped from tracking; every other script/config reads from this file
+# instead of a hardcoded loop.
+4.14
+4.15
+4.16
+4.17
+4.18
+4.19
+4.20
+4.21
+4.22

@@ -1,0 +1,71 @@
+name: ci
+
+# Lint + network-free regression tests for the casket pipeline scripts.
+# The actual pipeline (a / a-rpm / b / b-operand) needs `oc`, a registry.redhat.io pull secret
+# and mksquashfs, so it can't run on GitHub-hosted runners — this guards the
+# pure logic (resolution strategies, label parsing) and script syntax instead.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck + bash -n (all *.sh)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          rc=0
+          # tracked shell scripts only (work dirs are gitignored anyway)
+          mapfile -t sh < <(git ls-files '*.sh')
+          for f in "${sh[@]}"; do
+            bash -n "$f" || { echo "::error file=$f::bash -n failed"; rc=1; }
+          done
+          # Gate on errors only (real bugs). SC1091: don't follow sourced files.
+          shellcheck -S error -e SC1091 "${sh[@]}" || rc=1
+          # Warnings are informational for now (pre-existing style nits).
+          echo "::group::shellcheck warnings (non-blocking)"
+          shellcheck -S warning -e SC1091 "${sh[@]}" || true
+          echo "::endgroup::"
+          exit $rc
+
+      - name: python syntax + ruff
+        run: |
+          python3 -m pip install --quiet ruff
+          mapfile -t py < <(git ls-files '*.py')
+          for f in "${py[@]}"; do
+            python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$f" \
+              || { echo "::error file=$f::syntax error"; exit 1; }
+          done
+          # lint, but don't fail the build on style-only findings yet
+          ruff check "${py[@]}" || true
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash resolution regression tests
+        run: bash tests/test_resolve.sh
+
+      - name: bash opengrok staging regression tests
+        run: bash tests/test_stage.sh
+
+      - name: bash stage-reclaim guard tests
+        run: bash tests/test_reclaim.sh
+
+      - name: bash freshness verdict tests
+        run: bash tests/test_freshness.sh
+
+      - name: bash artifact-path handoff tests
+        run: bash tests/test_artifact_path.sh
+
+      - name: python resolver tests
+        run: |
+          python3 -m pip install --quiet pytest pyyaml
+          python3 -m pytest tests/ -q

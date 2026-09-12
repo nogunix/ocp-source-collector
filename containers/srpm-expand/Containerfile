@@ -1,0 +1,32 @@
+# Image for expanding SRPMs with `rpmbuild -bp` (%prep actually runs).
+#
+# Why a container at all: %prep must run under the rpm of the distro the SRPM
+# was built for. This host is Fedora with rpm 6.x, which rejects the old
+# `%patchN` spelling outright ("%patchN is obsolete, use %patch N") — every
+# RHEL 8/9 spec dies in %prep. UBI9 carries rpm 4.16, which accepts it.
+# srpmix7 reached the same conclusion: its podman-srpm-expand runs the
+# expansion inside a per-distro image.
+#
+# Build (one per el family — the caskets mix el8/el9/el10):
+#   podman build -f containers/srpm-expand/Containerfile \
+#     --build-arg BASE=registry.access.redhat.com/ubi9/ubi:latest \
+#     -t casket-srpm-expand:el9 containers/srpm-expand
+#
+# The tool list is what %prep sections actually reach for. git is not
+# optional: systemd applies its 731 patches with `git init` + `git apply`,
+# and without it %prep dies on line 1 of the patch loop.
+ARG BASE=registry.access.redhat.com/ubi9/ubi:latest
+FROM ${BASE}
+
+RUN dnf install -y --setopt=install_weak_deps=False \
+        rpm-build git patch tar gzip xz bzip2 zstd \
+        findutils diffutils sed gawk grep \
+        make perl-interpreter python3 which file unzip cpio \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
+
+# rpmbuild warns (harmlessly) about a missing mockbuild user on every run;
+# creating it keeps the logs readable.
+RUN useradd -r -m -d /var/lib/mock -s /sbin/nologin mockbuild 2>/dev/null || true
+
+WORKDIR /work

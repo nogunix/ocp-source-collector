@@ -1,0 +1,24 @@
+# OCP minors to index in OpenGrok (all phases: A, B, B-certified,
+# B-community, B-operand). Minors NOT listed here are still searchable
+# via ripgrep through casket-mcp -- only the OpenGrok symbol/xref index
+# is skipped. One minor per line.
+#
+# Keep this list short (3-4 recent minors) to control index size on the
+# SSD. The full minor set lives in config/minors.txt.
+#
+# keep-patches: N caps how many z-stream releases of each listed minor get
+# indexed (newest N; 0 = unlimited). Phase A never retires an old patch --
+# every /srv/sources-ocp<patch> mount stays live forever on purpose -- so
+# without this the project list grows by ~33G of SSD (19G index + 14G xref)
+# per z-stream, per minor. Capped-out patches stay mounted and stay
+# searchable via ripgrep/casket-mcp; only the OpenGrok index skips them.
+# Affects the patch-scoped projects (ocp-<ver>, srpms-<ver>) only.
+#
+# 1 = index only the newest z-stream of each minor. Cross-patch diffing
+# within one minor then has to go through ripgrep/casket-mcp rather than the
+# web UI; cross-*minor* comparison (the usual case) is unaffected.
+keep-patches: 1
+4.18
+4.20
+4.22
+

@@ -1,0 +1,24 @@
+# Caskets mounted outside the registry lifecycle (casket-mounts.sh merges
+# these with the registry's live entries). artifact_path TAB mount_path.
+# - RHEL caskets: separate system, never in this repo's registry
+# - certified/community catalogs: rebuilt on demand (docs/pipeline.md), not registry-tracked
+/mnt/hdd/casket/casket-20251118-rhel10.sqfs.xz	/srv/sources-rhel10
+/mnt/hdd/casket/casket-20251114-rhel9-no-dotnet.sqfs.xz	/srv/sources-rhel9
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.14-certified-operators.sqfs.xz	/srv/sources-ocp4.14-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.15-certified-operators.sqfs.xz	/srv/sources-ocp4.15-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.16-certified-operators.sqfs.xz	/srv/sources-ocp4.16-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.17-certified-operators.sqfs.xz	/srv/sources-ocp4.17-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.18-certified-operators.sqfs.xz	/srv/sources-ocp4.18-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.19-certified-operators.sqfs.xz	/srv/sources-ocp4.19-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.20-certified-operators.sqfs.xz	/srv/sources-ocp4.20-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.21-certified-operators.sqfs.xz	/srv/sources-ocp4.21-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.22-certified-operators.sqfs.xz	/srv/sources-ocp4.22-certified-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.14-community-operators.sqfs.xz	/srv/sources-ocp4.14-community-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.15-community-operators.sqfs.xz	/srv/sources-ocp4.15-community-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.16-community-operators.sqfs.xz	/srv/sources-ocp4.16-community-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.17-community-operators.sqfs.xz	/srv/sources-ocp4.17-community-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.18-community-operators.sqfs.xz	/srv/sources-ocp4.18-community-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.19-community-operators.sqfs.xz	/srv/sources-ocp4.19-community-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.20-community-operators.sqfs.xz	/srv/sources-ocp4.20-community-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.21-community-operators.sqfs.xz	/srv/sources-ocp4.21-community-operators
+/mnt/hdd/casket-ocp/casket-20260726-ocp4.22-community-operators.sqfs.xz	/srv/sources-ocp4.22-community-operators

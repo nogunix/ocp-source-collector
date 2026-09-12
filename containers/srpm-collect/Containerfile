@@ -1,0 +1,54 @@
+# Image for collecting SRPMs from RHEL repos via `dnf download --source`.
+#
+# Replaces the RHEL 9 VM that ran 01-extract-rpmdb.sh / 02-fetch-srpms.sh /
+# 03-fetch-eus.sh. The container needs:
+#   - oc CLI (for `oc adm release info --rpmdb`)
+#   - dnf + subscription-manager (for `dnf download --source`)
+#   - RHEL 9 entitlements mounted at runtime
+#
+# Build:
+#   podman build -f containers/srpm-collect/Containerfile \
+#     -t casket-srpm-collect:el9 containers/srpm-collect
+#
+# Run (entitlements + pull secret mounted):
+#   podman run --rm \
+#     -v /etc/pki/entitlement:/etc/pki/entitlement:ro \
+#     -v /etc/rhsm:/etc/rhsm:ro \
+#     -v /etc/yum.repos.d/redhat.repo:/etc/yum.repos.d/redhat.repo:ro \
+#     -v ~/.docker/config.json:/run/pull-secret.json:ro \
+#     -v $PWD/out:/out:z \
+#     casket-srpm-collect:el9 \
+#     /work/collect.sh -o /out
+#
+# The host must be registered with subscription-manager so that
+# /etc/pki/entitlement and /etc/rhsm exist. The container itself
+# does not need to be registered.
+FROM registry.access.redhat.com/ubi9/ubi:latest
+
+RUN dnf install -y --setopt=install_weak_deps=False \
+        dnf-plugins-core \
+        jq \
+        subscription-manager \
+    && dnf clean all \
+    && rm -rf /var/cache/dnf
+
+# oc CLI — detect arch and download the matching binary.
+#
+# OC_VERSION MUST be recent enough to carry `oc adm release info --rpmdb`.
+# 4.17 does NOT ("error: unknown flag: --rpmdb"), and because collect.sh sent
+# that call to /dev/null it surfaced as nine separate "rpmdb extraction
+# failed" warnings rather than one missing flag. The host's own oc is 4.22.x
+# and has it. Do not pin below the newest minor in
+# config/phase-a-rpm-minors.txt: --rpmdb reads the machine-os image of every
+# release queried, and the newest payload is the one most likely to need a
+# matching client.
+ARG OC_VERSION=4.22
+RUN OC_ARCH=$(uname -m) \
+    && case "$OC_ARCH" in x86_64) OC_SUFFIX="linux" ;; aarch64) OC_SUFFIX="linux-arm64" ;; *) echo "unsupported arch: $OC_ARCH" >&2; exit 1 ;; esac \
+    && curl -sL "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${OC_VERSION}/openshift-client-${OC_SUFFIX}.tar.gz" \
+       | tar -xzf - -C /usr/local/bin oc kubectl \
+    && chmod +x /usr/local/bin/oc /usr/local/bin/kubectl
+
+WORKDIR /work
+COPY collect.sh cdn-fetch.py /work/
+RUN chmod +x /work/collect.sh /work/cdn-fetch.py

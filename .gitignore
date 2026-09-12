@@ -1,0 +1,58 @@
+mcp/.venv/
+mcp/__pycache__/
+scripts/__pycache__/
+tests/__pycache__/
+# containers/ holds python that gets imported during testing too
+containers/*/__pycache__/
+
+# disposable Phase pipeline work dirs (regenerable; final .sqfs.xz lives on /mnt/hdd)
+phase-a-rpm/
+phase-b/
+phase-b-certified/
+phase-b-community/
+phase-b-operand/
+ocp*/
+# crates.io/.crate download cache for the Rust vendor step (shared across
+# products+minors; regenerable from Cargo.lock)
+cargo-cache/
+# scratch drivers + run logs
+scratch/
+
+# Presentation decks built on a Red Hat-internal/licensed brand template —
+# not ours to redistribute publicly, and not needed to run casket-mcp.
+/decks/
+
+# casket-auto-update transient state (registry.json stays tracked)
+state/auto-update.status
+state/auto-update.lock
+# cadence stamp for --min-interval-days: mtime = last completed apply run.
+# Per-host and regenerable (a missing stamp just means the next timer wake
+# runs), so it is deliberately not tracked.
+state/auto-update.last-run
+
+# Claude Code local settings (per-machine permissions)
+.claude/
+# Language-level dependency store + download cache. These belong on the HDD
+# ($CASKET_DEP_STORE, default /mnt/hdd/casket-dep-store, and its -cache
+# sibling); collect-deps.py falls back to $CASKET_WORK/dep-store when the env
+# var is unset, which lands 160G+ in the repo and defeats the shared cache.
+dep-store/
+dep-store-cache/
+# Expanded git submodule store + download cache. Unlike the dep store this one
+# must share a filesystem with the stage (staging is hardlinks), so it stays
+# under $CASKET_WORK by default rather than moving to the HDD -- which means it
+# lands in the repo and has to be ignored here. ~8G after the 2026-08-19
+# operators backfill.
+submodule-store/
+submodule-store-cache/
+# Backfill driver logs.
+backfill-submodules-*.log
+
+# Internal working records, kept out of the published tree (2026-09-12).
+# handover.md is a running incident/handover log naming this host's failures;
+# analysis/ holds one-off investigation write-ups. Neither is needed to build
+# or run a casket, and both are written for people who already have the host.
+# NOTE: they remain in the git history -- excluding them stops new content
+# being published, it does not un-publish what is already committed.
+/handover.md
+/analysis/

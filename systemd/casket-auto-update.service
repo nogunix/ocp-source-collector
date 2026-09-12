@@ -1,0 +1,84 @@
+# Casket freshness check + staged rebuild (build is non-destructive; swap
+# stays manual). Runs every 3 weeks via the companion .timer (which wakes
+# every Fri 23:30 and lets the --min-interval-days 21 guard below decide;
+# enabled 2026-07-16, cadence widened 2026-09-12) and can also be started by
+# hand at any time -- add --force to a hand-started run that must build now
+# regardless of the guard.
+# Install (user unit, no root):
+#   ln -s $CASKET_WORK/systemd/casket-auto-update.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   loginctl enable-linger $USER     # let a hand-started run survive logout
+# Run it:
+#   systemctl --user start casket-auto-update.service      # or: ./scripts/casket-auto-update.sh --apply
+# Only if you want the unattended cadence, ALSO link+enable the timer:
+#   ln -s $CASKET_WORK/systemd/casket-auto-update.timer ~/.config/systemd/user/
+#   systemctl --user enable --now casket-auto-update.timer
+[Unit]
+Description=casket-ocp auto-update (check + build staged caskets)
+
+[Service]
+Type=oneshot
+# oc lives in ~/bin on this host; keep PATH explicit because user units
+# don't inherit the login shell profile.
+Environment=PATH=%h/bin:/usr/local/bin:/usr/bin:/bin
+# Same reason as PATH: a user unit starts from a minimal environment, and
+# collect-deps.py falls back to $CASKET_WORK/dep-store when this is unset --
+# i.e. onto the root fs, inside the repo, ignoring the shared HDD cache. The
+# 2026-07-31 run did exactly that: 160G into ~/casket-work and every archive
+# re-downloaded even though /mnt/hdd/casket-dep-store already had it. The
+# store and its -cache sibling are pure cache, which is why they belong on the
+# HDD while the stage stays on the SSD.
+Environment=CASKET_DEP_STORE=/mnt/hdd/casket-dep-store
+# Submodule expansion (2026-08-19) has both of the same problems. The store is
+# hardlinked into the stage, so it must be on the SAME filesystem as the work
+# tree -- unlike the dep store it does NOT belong on the HDD.
+Environment=CASKET_SUBMODULE_STORE=%h/casket-work/submodule-store
+# And the pinned submodule commit is only readable from the GitHub trees API,
+# which allows 60 requests/hour unauthenticated while one operators casket
+# needs ~70. Without a token the run does not fail -- it quietly falls back to
+# .gitmodules branch heads and records every row exact=0 (APPROX), which is a
+# worse outcome than failing because it looks like success.
+#
+# No token file is needed on this host: casket-auto-update.sh falls back to
+# `gh auth token` when GITHUB_TOKEN/GH_TOKEN are unset, which works here
+# because a user unit runs as the invoking user (so ~/.config/gh is readable)
+# and gh is on the PATH above. Taking the credential live avoids a second copy
+# on disk that would silently go stale behind a `gh auth login`.
+#
+# The file below stays supported and takes precedence, for a host with no gh
+# or a dedicated CI token. The leading "-" keeps the unit startable without it.
+EnvironmentFile=-%h/.config/casket/auto-update.env
+# --min-interval-days 21 is where the 3-weekly cadence actually lives; the
+# timer only wakes weekly (systemd OnCalendar cannot say "every 3rd week").
+# The guard reads state/auto-update.last-run, which is stamped only when a run
+# COMPLETES, so a killed run is retried at the next weekly wake.
+ExecStart=%h/casket-work/scripts/casket-auto-update.sh --apply --min-interval-days 21
+# Builds can take a while when several minors moved at once. This limit has
+# now been raised FOUR times (4h -> 12h -> 24h -> 48h -> 72h) and every bump
+# so far was spent by the *next* growth in b-operand, so re-measure before
+# trusting the number below rather than assuming it still holds. The 48h bump
+# lasted exactly two runs.
+#
+# 2026-08-14 run: estimated ~39h from a 30-42 / b ~38 / b-operand ~3h per
+# minor. It was NOT enough -- the run was killed at exactly 48h on 08-16 23:42
+# (status=15/TERM) during b-operand 4.22, with 4.19 also unbuilt. So the
+# estimate was already ~20% low before anything was added to the pipeline.
+#
+# 2026-08-21 run, first one carrying submodule expansion (measured live at
+# 05:20 on 08-22):
+#   a          30-43 min/minor, 5 minors in 3h06 -- unchanged, Phase A trees
+#              barely use submodules
+#   b          66-70 min/minor, against ~38 the week before: submodule
+#              collection roughly DOUBLES this phase (~60 dirs filled per
+#              minor, each a codeload archive + extract)
+#   b-operand  expected to grow similarly from its ~3h/minor base
+# At 4h/minor b-operand alone is 36h and the run lands at 08-24 01:00, i.e.
+# past a 48h deadline of 08-23 23:42. 72h covers 4h/minor with ~23h to spare
+# and still finishes days before the next Fri 23:30 timer, so a long run
+# cannot collide with the following one.
+#
+# A raise applies to an ALREADY-RUNNING unit after `systemctl --user
+# daemon-reload`, which is how this one was applied mid-run on 08-22.
+TimeoutStartSec=72h
+Nice=10
+IOSchedulingClass=idle

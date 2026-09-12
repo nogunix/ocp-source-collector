@@ -1,0 +1,32 @@
+# Unattended staging run, every 3 weeks (enabled 2026-07-16 as daily, weekly
+# from the same day, 3-weekly from 2026-09-12).
+# Builds are non-destructive: results land as `staged` registry entries and
+# the production swap stays manual (casket-swap.sh --apply). Not daily: the
+# operator-catalog digest rotates ~daily anyway (a build reads as "STALE"
+# again within hours), so daily runs would burn hours of catalog pulls for
+# near-identical content. Not weekly either, since 2026-09-12: a full run now
+# takes ~2.5-3 days end to end (08-28 23:38 -> 08-31 15:53; 09-04 23:40 ->
+# 09-07 14:50), so weekly meant the host spent close to half its time
+# rebuilding caskets whose content had barely moved.
+#
+# The 3-week interval is NOT expressed here: systemd OnCalendar has no "every
+# 3rd week" (week numbers are not a field, and day-of-month ranges only
+# approximate a month). So this stays a weekly Friday wake and
+# casket-auto-update.sh --min-interval-days 21 decides whether this week is
+# its week, off state/auto-update.last-run. Consequence worth knowing: two
+# wakes out of three log a one-line "skipping" and exit 0, and a run that was
+# killed mid-way leaves no stamp, so it retries the FOLLOWING Friday rather
+# than 3 weeks later. Change the cadence in the .service, not here.
+#
+# Friday late night so a run that starts here has the weekend in front of it
+# and the manual swap can happen once it lands.
+[Unit]
+Description=casket-ocp auto-update (3-weekly; weekly wake, guarded by --min-interval-days)
+
+[Timer]
+OnCalendar=Fri *-*-* 23:30:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

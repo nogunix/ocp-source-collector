@@ -1,0 +1,29 @@
+[Unit]
+# casket-mcp HTTP server — exposes the casket sources over MCP on the LAN.
+# Install as a systemd USER service so other PCs in the house can connect.
+#   cp casket-mcp.service ~/.config/systemd/user/
+#   loginctl enable-linger "$USER"          # run without an active login session
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now casket-mcp
+#   systemctl --user status casket-mcp      # check; journalctl --user -u casket-mcp -f
+# Then open the firewall once:  sudo firewall-cmd --add-port=8765/tcp --permanent && sudo firewall-cmd --reload
+Description=casket-mcp HTTP server (OpenShift source MCP over LAN)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# %h = this user's home dir (systemd specifier). Matches lib.sh's default
+# CASKET_WORK=~/casket-work -- edit both paths below if you customized it.
+# ExecStartPre self-heals .venv if it's ever missing (gitignored -- an
+# accidental rm/cleanup leaves the ExecStart python nonexistent, which
+# systemd reports as status=203/EXEC and crash-loops on silently).
+ExecStartPre=%h/casket-work/mcp/ensure-venv.sh
+ExecStart=%h/casket-work/mcp/.venv/bin/python %h/casket-work/mcp/casket_mcp.py http
+WorkingDirectory=%h/casket-work/mcp
+Restart=on-failure
+RestartSec=3
+# Read-only server; still keep it least-privileged.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

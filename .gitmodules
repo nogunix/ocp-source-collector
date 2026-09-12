@@ -1,0 +1,3 @@
+[submodule "srpmix7"]
+	path = srpmix7
+	url = https://github.com/nogunix/srpmix7.git

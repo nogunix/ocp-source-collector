@@ -1,0 +1,859 @@
+mount	product	tree	path	url	slug	branch	elsewhere
+sources-layered-ocp4.14	ansible-cloud-addons-operator	aap-cloud-billing-rhel8-operator-cd72f06507c3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.14	ansible-cloud-addons-operator	aap-cloud-ui-rhel8-operator-4ea578227267	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.14	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.14:by-repo/client
+sources-layered-ocp4.14	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.14:by-repo/operator
+sources-layered-ocp4.14	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.14:by-repo/client
+sources-layered-ocp4.14	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.14:by-repo/operator
+sources-layered-ocp4.14	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.14:by-repo/client
+sources-layered-ocp4.14	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.14:by-repo/operator
+sources-layered-ocp4.14	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.14:by-repo/client
+sources-layered-ocp4.14	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.14:by-repo/operator
+sources-layered-ocp4.14	loki-operator	logging-loki-0831e1446cba	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.14	loki-operator	loki-rhel9-operator-228c0378b7cb	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.14	mta-operator	mta-cli-86aee21ca10d	hack/build/windup-rulesets	https://github.com/windup/windup-rulesets	windup/windup-rulesets		
+sources-layered-ocp4.14	mta-operator	mta-go-external-provider-522dfea48b9e	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.14	mta-operator	mta-hub-23c91e53a26a	hack/build/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.14	mta-operator	mta-java-external-provider-55b6374c9e47	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.14	mta-operator	mta-nodejs-external-provider-fecd932a3171	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.14	mta-operator	mta-python-external-provider-8621c3773ce4	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.14	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.14	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.14-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.14	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.14	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.14	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.14	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.14	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.14	openshift-pipelines-operator-rh	pipelines-controller-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.14	openshift-pipelines-operator-rh	pipelines-events-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.14	openshift-pipelines-operator-rh	pipelines-webhook-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.14	service-telemetry-operator	service-telemetry-rhel8-operator-a5e1a783794b	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.14	smart-gateway-operator	smart-gateway-rhel8-operator-8f588d5f3ea6	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.15	acm	multicluster-operators-subscription-5edb404fde75	external/helm	https://github.com/helm/helm	helm/helm	v3.21.0	
+sources-layered-ocp4.15	ansible-cloud-addons-operator	aap-cloud-billing-rhel8-operator-cd72f06507c3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.15	ansible-cloud-addons-operator	aap-cloud-ui-rhel8-operator-4ea578227267	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.15	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.15:by-repo/client
+sources-layered-ocp4.15	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.15:by-repo/operator
+sources-layered-ocp4.15	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.15:by-repo/client
+sources-layered-ocp4.15	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.15:by-repo/operator
+sources-layered-ocp4.15	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.15:by-repo/client
+sources-layered-ocp4.15	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.15:by-repo/operator
+sources-layered-ocp4.15	loki-operator	logging-loki-47b68ee3de04	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.15	loki-operator	loki-rhel9-operator-47b68ee3de04	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.15	mta-operator	mta-cli-86aee21ca10d	hack/build/windup-rulesets	https://github.com/windup/windup-rulesets	windup/windup-rulesets		
+sources-layered-ocp4.15	mta-operator	mta-go-external-provider-522dfea48b9e	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.15	mta-operator	mta-hub-23c91e53a26a	hack/build/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.15	mta-operator	mta-java-external-provider-55b6374c9e47	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.15	mta-operator	mta-nodejs-external-provider-fecd932a3171	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.15	mta-operator	mta-python-external-provider-8621c3773ce4	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.15	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.15	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.15-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.15	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.15	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.15	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.15	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.15	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.15	openshift-pipelines-operator-rh	pipelines-resolvers-9a4dea14ae64	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.15	openshift-pipelines-operator-rh	pipelines-webhook-9a4dea14ae64	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.15	service-telemetry-operator	service-telemetry-rhel8-operator-a5e1a783794b	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.15	smart-gateway-operator	smart-gateway-rhel8-operator-8f588d5f3ea6	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.16	acm	multicluster-operators-subscription-64f24c6376ef	external/helm	https://github.com/helm/helm	helm/helm	v3.21.0	
+sources-layered-ocp4.16	ansible-cloud-addons-operator	aap-cloud-billing-rhel8-operator-cd72f06507c3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.16	ansible-cloud-addons-operator	aap-cloud-ui-rhel8-operator-4ea578227267	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.16	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.16:by-repo/client
+sources-layered-ocp4.16	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.16:by-repo/operator
+sources-layered-ocp4.16	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.16:by-repo/client
+sources-layered-ocp4.16	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.16:by-repo/operator
+sources-layered-ocp4.16	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.16:by-repo/client
+sources-layered-ocp4.16	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.16:by-repo/operator
+sources-layered-ocp4.16	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.16:by-repo/client
+sources-layered-ocp4.16	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.16:by-repo/operator
+sources-layered-ocp4.16	loki-operator	logging-loki-c0d6d0ce4d9b	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.16	loki-operator	loki-rhel9-operator-053ce6704994	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.16	mta-operator	mta-cli-86aee21ca10d	hack/build/windup-rulesets	https://github.com/windup/windup-rulesets	windup/windup-rulesets		
+sources-layered-ocp4.16	mta-operator	mta-go-external-provider-522dfea48b9e	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.16	mta-operator	mta-hub-23c91e53a26a	hack/build/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.16	mta-operator	mta-java-external-provider-55b6374c9e47	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.16	mta-operator	mta-nodejs-external-provider-fecd932a3171	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.16	mta-operator	mta-python-external-provider-8621c3773ce4	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.16	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.16	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.16-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.16	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.16	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.16	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.16	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.16	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.16	openshift-pipelines-operator-rh	pipelines-resolvers-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.16	policy-controller-operator	policy-controller-rhel9-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.16	skupper-netobs-operator	skupper-network-observer-rhel9-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.16	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-precache-a18da0500a1a	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.16	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-recovery-a18da0500a1a	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.17	acm	multicluster-operators-subscription-82e743ab2258	external/helm	https://github.com/helm/helm	helm/helm	v3.21.0	
+sources-layered-ocp4.17	ansible-cloud-addons-operator	aap-cloud-billing-rhel8-operator-cd72f06507c3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.17	ansible-cloud-addons-operator	aap-cloud-ui-rhel8-operator-4ea578227267	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.17	cluster-observability-operator	alertmanager-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.17:by-repo/client
+sources-layered-ocp4.17	cluster-observability-operator	alertmanager-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.17:by-repo/operator
+sources-layered-ocp4.17	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.17:by-repo/client
+sources-layered-ocp4.17	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.17:by-repo/operator
+sources-layered-ocp4.17	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.17:by-repo/client
+sources-layered-ocp4.17	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.17:by-repo/operator
+sources-layered-ocp4.17	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.17:by-repo/client
+sources-layered-ocp4.17	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.17:by-repo/operator
+sources-layered-ocp4.17	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.17:by-repo/client
+sources-layered-ocp4.17	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.17:by-repo/operator
+sources-layered-ocp4.17	loki-operator	logging-loki-72b20b0e4d07	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.17	loki-operator	loki-rhel9-operator-34450bf62128	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.17	mta-operator	mta-cli-86aee21ca10d	hack/build/windup-rulesets	https://github.com/windup/windup-rulesets	windup/windup-rulesets		
+sources-layered-ocp4.17	mta-operator	mta-go-external-provider-522dfea48b9e	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.17	mta-operator	mta-hub-23c91e53a26a	hack/build/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.17	mta-operator	mta-java-external-provider-55b6374c9e47	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.17	mta-operator	mta-nodejs-external-provider-fecd932a3171	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.17	mta-operator	mta-python-external-provider-8621c3773ce4	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.17	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.17	openshift-cert-manager-operator	cert-manager-operator-6b143f86553c	cert-manager	https://github.com/openshift/jetstack-cert-manager.git	openshift/jetstack-cert-manager		
+sources-layered-ocp4.17	openshift-cert-manager-operator	cert-manager-operator-6b143f86553c	cert-manager-istio-csr	https://github.com/openshift/cert-manager-istio-csr	openshift/cert-manager-istio-csr		
+sources-layered-ocp4.17	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.17-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.17	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.17	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.17	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.17	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.17	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-interceptor-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.17	openshift-pipelines-operator-rh	pipelines-controller-9801e9e635de	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.17	policy-controller-operator	policy-controller-rhel9-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.17	skupper-netobs-operator	skupper-network-observer-rhel9-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.17	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-aztp-3093ac5985fb	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.17	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-rhel9-operator-3093ac5985fb	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.18	acm	multicluster-operators-subscription-b93662307aec	external/helm	https://github.com/helm/helm	helm/helm	v3.21.0	
+sources-layered-ocp4.18	ansible-cloud-addons-operator	aap-cloud-billing-rhel8-operator-cd72f06507c3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.18	ansible-cloud-addons-operator	aap-cloud-ui-rhel8-operator-4ea578227267	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.18	cluster-observability-operator	alertmanager-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.18:by-repo/client
+sources-layered-ocp4.18	cluster-observability-operator	alertmanager-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.18:by-repo/operator
+sources-layered-ocp4.18	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.18:by-repo/client
+sources-layered-ocp4.18	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.18:by-repo/operator
+sources-layered-ocp4.18	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.18:by-repo/client
+sources-layered-ocp4.18	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.18:by-repo/operator
+sources-layered-ocp4.18	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.18:by-repo/client
+sources-layered-ocp4.18	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.18:by-repo/operator
+sources-layered-ocp4.18	dpu-operator	ose-dpu-daemon-e12c0e05180d	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.18	dpu-operator	ose-dpu-daemon-e12c0e05180d	ocp-traffic-flow-tests	https://github.com/wizhaoredhat/ocp-traffic-flow-tests.git	wizhaoredhat/ocp-traffic-flow-tests		
+sources-layered-ocp4.18	dpu-operator	ose-dpu-rhel9-operator-63c59ee86687	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.18	dpu-operator	ose-dpu-rhel9-operator-63c59ee86687	ocp-traffic-flow-tests	https://github.com/wizhaoredhat/ocp-traffic-flow-tests.git	wizhaoredhat/ocp-traffic-flow-tests		
+sources-layered-ocp4.18	loki-operator	logging-loki-a9d77df83680	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.18	loki-operator	loki-rhel9-operator-bc29e774cd3d	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.18	mta-operator	mta-cli-86aee21ca10d	hack/build/windup-rulesets	https://github.com/windup/windup-rulesets	windup/windup-rulesets		
+sources-layered-ocp4.18	mta-operator	mta-go-external-provider-522dfea48b9e	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.18	mta-operator	mta-hub-23c91e53a26a	hack/build/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.18	mta-operator	mta-java-external-provider-55b6374c9e47	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.18	mta-operator	mta-nodejs-external-provider-fecd932a3171	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.18	mta-operator	mta-python-external-provider-8621c3773ce4	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.18	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.18	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.18-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.18	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.18	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.18	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.18	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.18	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.18	openshift-external-secrets-operator	external-secrets-operator-459afe6ba712	bitwarden-sdk-server	https://github.com/openshift/external-secrets-bitwarden-sdk-server.git	openshift/external-secrets-bitwarden-sdk-server		
+sources-layered-ocp4.18	openshift-pipelines-operator-rh	pipelines-webhook-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.18	policy-controller-operator	policy-controller-rhel9-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.18	skupper-netobs-operator	skupper-network-observer-rhel9-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.18	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-rhel9-operator-fc72a584953e	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.19	acm	multicluster-operators-subscription-25eff3f7e2e1	external/helm	https://github.com/helm/helm	helm/helm	v3.21.0	
+sources-layered-ocp4.19	ansible-cloud-addons-operator	aap-cloud-billing-rhel8-operator-cd72f06507c3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.19	ansible-cloud-addons-operator	aap-cloud-ui-rhel8-operator-4ea578227267	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.19	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.19:by-repo/client
+sources-layered-ocp4.19	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.19:by-repo/operator
+sources-layered-ocp4.19	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.19:by-repo/client
+sources-layered-ocp4.19	cluster-observability-operator	obo-prometheus-operator-admission-webhook-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.19:by-repo/operator
+sources-layered-ocp4.19	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.19:by-repo/client
+sources-layered-ocp4.19	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.19:by-repo/operator
+sources-layered-ocp4.19	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.19:by-repo/client
+sources-layered-ocp4.19	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.19:by-repo/operator
+sources-layered-ocp4.19	dpu-operator	ose-dpu-daemon-7dde44e1f4b0	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.19	dpu-operator	ose-dpu-daemon-7dde44e1f4b0	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.19	dpu-operator	ose-dpu-rhel9-operator-f6a84cefba43	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.19	dpu-operator	ose-dpu-rhel9-operator-f6a84cefba43	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.19	loki-operator	logging-loki-8088a9a77454	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.19	loki-operator	loki-rhel9-operator-0a7d34b97970	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.19	mta-operator	mta-cli-86aee21ca10d	hack/build/windup-rulesets	https://github.com/windup/windup-rulesets	windup/windup-rulesets		
+sources-layered-ocp4.19	mta-operator	mta-go-external-provider-522dfea48b9e	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.19	mta-operator	mta-hub-23c91e53a26a	hack/build/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.19	mta-operator	mta-java-external-provider-55b6374c9e47	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.19	mta-operator	mta-nodejs-external-provider-fecd932a3171	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.19	mta-operator	mta-python-external-provider-8621c3773ce4	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.19	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.19	openshift-cert-manager-operator	cert-manager-operator-fbb480da9759	trust-manager	https://github.com/openshift/cert-manager-trust-manager.git	openshift/cert-manager-trust-manager		
+sources-layered-ocp4.19	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.19-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.19	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.19	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.19	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.19	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.19	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.19	openshift-pipelines-operator-rh	pipelines-resolvers-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.19	policy-controller-operator	policy-controller-rhel9-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.19	rhoai	odh-dashboard-ae06f04f41a2	packages/lm-eval/upstream	https://github.com/trustyai-explainability/trustyai-dashboard.git	trustyai-explainability/trustyai-dashboard		
+sources-layered-ocp4.19	rhoai	odh-mod-arch-gen-ai-2bc2f89b522e	packages/lm-eval/upstream	https://github.com/trustyai-explainability/trustyai-dashboard.git	trustyai-explainability/trustyai-dashboard		
+sources-layered-ocp4.19	rhoai	odh-pipeline-runtime-datascience-cpu-py312-2fa49680ab49	codeserver/ubi9-python-3.12/prefetch-input/code-server	https://github.com/coder/code-server.git	coder/code-server		
+sources-layered-ocp4.19	rhoai	odh-pipeline-runtime-datascience-cpu-py312-2fa49680ab49	prefetch-input/mongocli	https://github.com/mongodb/mongodb-cli	mongodb/mongodb-cli		
+sources-layered-ocp4.19	rhoai	odh-workload-variant-autoscaler-controller-c7017cede46c	sample-data	https://github.com/llm-inferno/sample-data	llm-inferno/sample-data		
+sources-layered-ocp4.19	rhoai	perses-f56f679e2a5f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.19:by-repo/client
+sources-layered-ocp4.19	rhoai	perses-f56f679e2a5f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.19:by-repo/operator
+sources-layered-ocp4.19	skupper-netobs-operator	skupper-network-observer-rhel9-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.19	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-aztp-e789bdc24da5	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.19	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-recovery-e789bdc24da5	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.20	acm	multicluster-operators-subscription-25eff3f7e2e1	external/helm	https://github.com/helm/helm	helm/helm	v3.21.0	
+sources-layered-ocp4.20	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.20:by-repo/client
+sources-layered-ocp4.20	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.20:by-repo/operator
+sources-layered-ocp4.20	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.20:by-repo/client
+sources-layered-ocp4.20	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.20:by-repo/operator
+sources-layered-ocp4.20	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.20:by-repo/client
+sources-layered-ocp4.20	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.20:by-repo/operator
+sources-layered-ocp4.20	dpu-operator	ose-dpu-daemon-f3cc4fc7e5eb	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.20	dpu-operator	ose-dpu-daemon-f3cc4fc7e5eb	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.20	dpu-operator	ose-dpu-rhel9-operator-1e7fba680d18	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.20	dpu-operator	ose-dpu-rhel9-operator-1e7fba680d18	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.20	loki-operator	logging-loki-458d057795da	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.20	loki-operator	loki-rhel9-operator-fdb9915c4304	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.20	mta-operator	mta-cli-86aee21ca10d	hack/build/windup-rulesets	https://github.com/windup/windup-rulesets	windup/windup-rulesets		
+sources-layered-ocp4.20	mta-operator	mta-go-external-provider-522dfea48b9e	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.20	mta-operator	mta-hub-23c91e53a26a	hack/build/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.20	mta-operator	mta-java-external-provider-55b6374c9e47	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.20	mta-operator	mta-nodejs-external-provider-fecd932a3171	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.20	mta-operator	mta-python-external-provider-8621c3773ce4	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.20	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.20	openshift-cert-manager-operator	jetstack-cert-manager-fbb480da9759	trust-manager	https://github.com/openshift/cert-manager-trust-manager.git	openshift/cert-manager-trust-manager		
+sources-layered-ocp4.20	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.20-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.20	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.20	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.20	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.20	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.20	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.20	openshift-pipelines-operator-rh	pipelines-controller-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.20	policy-controller-operator	policy-controller-rhel9-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.20	rhoai	odh-dashboard-ae06f04f41a2	packages/lm-eval/upstream	https://github.com/trustyai-explainability/trustyai-dashboard.git	trustyai-explainability/trustyai-dashboard		
+sources-layered-ocp4.20	rhoai	odh-mod-arch-gen-ai-2bc2f89b522e	packages/lm-eval/upstream	https://github.com/trustyai-explainability/trustyai-dashboard.git	trustyai-explainability/trustyai-dashboard		
+sources-layered-ocp4.20	rhoai	odh-pipeline-runtime-datascience-cpu-py312-2fa49680ab49	codeserver/ubi9-python-3.12/prefetch-input/code-server	https://github.com/coder/code-server.git	coder/code-server		
+sources-layered-ocp4.20	rhoai	odh-pipeline-runtime-datascience-cpu-py312-2fa49680ab49	prefetch-input/mongocli	https://github.com/mongodb/mongodb-cli	mongodb/mongodb-cli		
+sources-layered-ocp4.20	rhoai	odh-workload-variant-autoscaler-controller-c7017cede46c	sample-data	https://github.com/llm-inferno/sample-data	llm-inferno/sample-data		
+sources-layered-ocp4.20	rhoai	perses-f56f679e2a5f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.20:by-repo/client
+sources-layered-ocp4.20	rhoai	perses-f56f679e2a5f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.20:by-repo/operator
+sources-layered-ocp4.20	skupper-netobs-operator	skupper-network-observer-rhel9-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.20	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-aztp-fb139c34f1df	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.20	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-precache-fb139c34f1df	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.21	acm	multicluster-operators-subscription-25eff3f7e2e1	external/helm	https://github.com/helm/helm	helm/helm	v3.21.0	
+sources-layered-ocp4.21	ansible-cloud-addons-operator	aap-cloud-billing-rhel8-operator-cd72f06507c3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.21	ansible-cloud-addons-operator	aap-cloud-ui-rhel8-operator-4ea578227267	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.21	cluster-observability-operator	alertmanager-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.21:by-repo/client
+sources-layered-ocp4.21	cluster-observability-operator	alertmanager-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.21:by-repo/operator
+sources-layered-ocp4.21	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.21:by-repo/client
+sources-layered-ocp4.21	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.21:by-repo/operator
+sources-layered-ocp4.21	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.21:by-repo/client
+sources-layered-ocp4.21	cluster-observability-operator	prometheus-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.21:by-repo/operator
+sources-layered-ocp4.21	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.21:by-repo/client
+sources-layered-ocp4.21	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.21:by-repo/operator
+sources-layered-ocp4.21	loki-operator	logging-loki-458d057795da	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.21	loki-operator	loki-rhel9-operator-fdb9915c4304	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.21	mta-operator	mta-cli-86aee21ca10d	hack/build/windup-rulesets	https://github.com/windup/windup-rulesets	windup/windup-rulesets		
+sources-layered-ocp4.21	mta-operator	mta-go-external-provider-522dfea48b9e	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.21	mta-operator	mta-hub-23c91e53a26a	hack/build/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.21	mta-operator	mta-java-external-provider-55b6374c9e47	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.21	mta-operator	mta-nodejs-external-provider-fecd932a3171	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.21	mta-operator	mta-python-external-provider-8621c3773ce4	hack/build/tools	https://github.com/golang/tools	golang/tools		
+sources-layered-ocp4.21	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.21	openshift-cert-manager-operator	cert-manager-istio-csr-fbb480da9759	trust-manager	https://github.com/openshift/cert-manager-trust-manager.git	openshift/cert-manager-trust-manager		
+sources-layered-ocp4.21	openshift-cert-manager-operator	cert-manager-operator-fbb480da9759	trust-manager	https://github.com/openshift/cert-manager-trust-manager.git	openshift/cert-manager-trust-manager		
+sources-layered-ocp4.21	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.21-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.21	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.21	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.21	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.21	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.21	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.21	openshift-pipelines-operator-rh	pipelines-events-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.21	policy-controller-operator	policy-controller-rhel9-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.21	rhoai	odh-dashboard-ae06f04f41a2	packages/lm-eval/upstream	https://github.com/trustyai-explainability/trustyai-dashboard.git	trustyai-explainability/trustyai-dashboard		
+sources-layered-ocp4.21	rhoai	odh-mod-arch-gen-ai-2bc2f89b522e	packages/lm-eval/upstream	https://github.com/trustyai-explainability/trustyai-dashboard.git	trustyai-explainability/trustyai-dashboard		
+sources-layered-ocp4.21	rhoai	odh-pipeline-runtime-datascience-cpu-py312-2fa49680ab49	codeserver/ubi9-python-3.12/prefetch-input/code-server	https://github.com/coder/code-server.git	coder/code-server		
+sources-layered-ocp4.21	rhoai	odh-pipeline-runtime-datascience-cpu-py312-2fa49680ab49	prefetch-input/mongocli	https://github.com/mongodb/mongodb-cli	mongodb/mongodb-cli		
+sources-layered-ocp4.21	rhoai	odh-pipeline-runtime-pytorch-cuda-py312-2fa49680ab49	codeserver/ubi9-python-3.12/prefetch-input/code-server	https://github.com/coder/code-server.git	coder/code-server		
+sources-layered-ocp4.21	rhoai	odh-pipeline-runtime-pytorch-cuda-py312-2fa49680ab49	prefetch-input/mongocli	https://github.com/mongodb/mongodb-cli	mongodb/mongodb-cli		
+sources-layered-ocp4.21	rhoai	odh-workload-variant-autoscaler-controller-c7017cede46c	sample-data	https://github.com/llm-inferno/sample-data	llm-inferno/sample-data		
+sources-layered-ocp4.21	rhoai	perses-f56f679e2a5f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.21:by-repo/client
+sources-layered-ocp4.21	rhoai	perses-f56f679e2a5f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.21:by-repo/operator
+sources-layered-ocp4.21	skupper-netobs-operator	skupper-network-observer-rhel9-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.21	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-aztp-df99f012af66	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.21	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-precache-df99f012af66	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-layered-ocp4.22	acm	multicluster-operators-subscription-25eff3f7e2e1	external/helm	https://github.com/helm/helm	helm/helm	v3.21.0	
+sources-layered-ocp4.22	ansible-cloud-addons-operator	aap-cloud-billing-rhel8-operator-cd72f06507c3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.22	ansible-cloud-addons-operator	aap-cloud-ui-rhel8-operator-4ea578227267	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.22	cluster-observability-operator	alertmanager-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.22:by-repo/client
+sources-layered-ocp4.22	cluster-observability-operator	alertmanager-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.22:by-repo/operator
+sources-layered-ocp4.22	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.22:by-repo/client
+sources-layered-ocp4.22	cluster-observability-operator	cluster-observability-rhel9-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.22:by-repo/operator
+sources-layered-ocp4.22	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.22:by-repo/client
+sources-layered-ocp4.22	cluster-observability-operator	obo-prometheus-operator-prometheus-config-reloader-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.22:by-repo/operator
+sources-layered-ocp4.22	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.22:by-repo/client
+sources-layered-ocp4.22	cluster-observability-operator	thanos-0dc9ab7b559f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.22:by-repo/operator
+sources-layered-ocp4.22	dpu-operator	ose-dpu-daemon-955d8d1a0652	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-daemon-955d8d1a0652	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-intel-ipu-p4sdk-ce5bde5ba58e	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-intel-ipu-p4sdk-ce5bde5ba58e	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-intel-ipu-vsp-181df82ad1d2	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-intel-ipu-vsp-181df82ad1d2	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-intel-netsec-vsp-91734f469c70	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-intel-netsec-vsp-91734f469c70	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-marvell-cp-agent-1b33dddbacf0	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-marvell-cp-agent-1b33dddbacf0	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-marvell-vsp-176f131d1246	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-marvell-vsp-176f131d1246	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-network-resources-injector-26a54d68278f	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-network-resources-injector-26a54d68278f	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-rhel9-operator-dfc3f422ffe6	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-layered-ocp4.22	dpu-operator	ose-dpu-rhel9-operator-dfc3f422ffe6	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-layered-ocp4.22	loki-operator	logging-loki-458d057795da	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.22	loki-operator	loki-rhel9-operator-fdb9915c4304	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.22	netobserv-operator	logging-loki-4ef03f55999a	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-layered-ocp4.22	openshift-cert-manager-operator	cert-manager-operator-fbb480da9759	trust-manager	https://github.com/openshift/cert-manager-trust-manager.git	openshift/cert-manager-trust-manager		
+sources-layered-ocp4.22	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	custom-metrics-autoscaler-operator	https://github.com/openshift/custom-metrics-autoscaler-operator	openshift/custom-metrics-autoscaler-operator		sources-ocp4.22-operators:by-repo/custom-metrics-autoscaler-operator
+sources-layered-ocp4.22	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-http-add-on	https://github.com/openshift/kedacore-http-add-on	openshift/kedacore-http-add-on		
+sources-layered-ocp4.22	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	kedacore-keda	https://github.com/openshift/kedacore-keda	openshift/kedacore-keda		
+sources-layered-ocp4.22	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/controller-tools	https://github.com/kubernetes-sigs/controller-tools.git	kubernetes-sigs/controller-tools		
+sources-layered-ocp4.22	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/mock	https://github.com/uber-go/mock	uber-go/mock		
+sources-layered-ocp4.22	openshift-custom-metrics-autoscaler-operator	custom-metrics-autoscaler-http-add-on-operator-2cfe7769c737	tools/protobuf	https://github.com/protocolbuffers/protobuf.git	protocolbuffers/protobuf		
+sources-layered-ocp4.22	openshift-pipelines-operator-rh	pipelines-controller-b7c05dd57af2	dependencies/tini	https://github.com/krallin/tini.git	krallin/tini		
+sources-layered-ocp4.22	policy-controller-operator	policy-controller-rhel9-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.22	quay	quay-v3.18.0	web/build-tools	https://github.com/RedHatInsights/insights-frontend-builder-common.git	RedHatInsights/insights-frontend-builder-common		
+sources-layered-ocp4.22	rhoai	odh-dashboard-ae06f04f41a2	packages/lm-eval/upstream	https://github.com/trustyai-explainability/trustyai-dashboard.git	trustyai-explainability/trustyai-dashboard		
+sources-layered-ocp4.22	rhoai	odh-mod-arch-gen-ai-2bc2f89b522e	packages/lm-eval/upstream	https://github.com/trustyai-explainability/trustyai-dashboard.git	trustyai-explainability/trustyai-dashboard		
+sources-layered-ocp4.22	rhoai	odh-pipeline-runtime-pytorch-cuda-py312-2fa49680ab49	codeserver/ubi9-python-3.12/prefetch-input/code-server	https://github.com/coder/code-server.git	coder/code-server		
+sources-layered-ocp4.22	rhoai	odh-pipeline-runtime-pytorch-cuda-py312-2fa49680ab49	prefetch-input/mongocli	https://github.com/mongodb/mongodb-cli	mongodb/mongodb-cli		
+sources-layered-ocp4.22	rhoai	odh-workload-variant-autoscaler-controller-c7017cede46c	sample-data	https://github.com/llm-inferno/sample-data	llm-inferno/sample-data		
+sources-layered-ocp4.22	rhoai	perses-f56f679e2a5f/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.22:by-repo/client
+sources-layered-ocp4.22	rhoai	perses-f56f679e2a5f/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.22:by-repo/operator
+sources-layered-ocp4.22	skupper-netobs-operator	skupper-network-observer-rhel9-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-layered-ocp4.22	topology-aware-lifecycle-manager	topology-aware-lifecycle-manager-aztp-edc66c0eddda	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-ocp4.14-certified-operators		cloudcasa-operator-aa2793868ce2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.14-certified-operators		f5-ipam-controller-operator-2d4fe925c8aa	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.14-certified-operators		gaudi-ai-sw-tools-operator-002be9c1f1b2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.14-certified-operators		gpu-operator-certified-head	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.14-certified-operators		hpe-filex-csi-operator-254982e8fecc	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.14-certified-operators		kong-gateway-operator-head	kubernetes-ingress-controller	https://github.com/Kong/kubernetes-ingress-controller.git	Kong/kubernetes-ingress-controller		
+sources-ocp4.14-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.14-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.14-community-operators:by-repo/helm-charts
+sources-ocp4.14-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.14-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.14-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.14-certified-operators		stackable-listener-operator-1	rust/csi-grpc/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.14-certified-operators		stackable-secret-operator-1	rust/operator-binary/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.14-certified-operators		sumologic-kubernetes-collection-helm-operator-dd01dd0e3656	helm-charts/sumologic-kubernetes-collection	https://github.com/SumoLogic/sumologic-kubernetes-collection	SumoLogic/sumologic-kubernetes-collection		
+sources-ocp4.14-certified-operators		timemachine-operator-b9353871ac96	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.14-community-operators		aerospike-kubernetes-operator-head	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.14-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.14-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.14	sources-ocp4.14.58:by-repo/cloud-provider-aws
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.14	sources-ocp4.14.58:by-repo/cloud-provider-azure
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.14	
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.14	sources-ocp4.14.58:by-repo/containernetworking-plugins
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.14	
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.14	
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	kube-proxy	https://github.com/openshift/kubernetes	openshift/kubernetes	sdn-4.14-kubernetes-1.27.1	sources-ocp4.14.58:by-repo/kubernetes
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.14	sources-ocp4.14.58:by-repo/kubernetes
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.14	sources-ocp4.14.58:by-repo/ovn-kubernetes
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.14-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter	release-4.14	
+sources-ocp4.14-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.14-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.14-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.14:by-repo/client
+sources-ocp4.14-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.14:by-repo/operator
+sources-ocp4.14-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.14-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.14-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.14:by-repo/client
+sources-ocp4.14-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.14:by-repo/operator
+sources-ocp4.14-operators		loki-operator-228c0378b7cb	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.14-operators		red-hat-camel-k-a6255a756462	.github/actions/backport	https://github.com/tibdex/backport	tibdex/backport		
+sources-ocp4.14-operators		red-hat-camel-k-a6255a756462	.github/actions/changelog	https://github.com/CharMixer/auto-changelog-action	CharMixer/auto-changelog-action		
+sources-ocp4.14-operators		service-telemetry-operator-a5e1a783794b	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.14-operators		smart-gateway-operator-8f588d5f3ea6	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.14-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.14.58		driver-toolkit-cafed17b0c2b	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.15-certified-operators		cloudcasa-operator-aa2793868ce2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.15-certified-operators		f5-ipam-controller-operator-2d4fe925c8aa	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.15-certified-operators		gaudi-ai-sw-tools-operator-002be9c1f1b2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.15-certified-operators		gpu-operator-certified-d5891068bf92	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.15-certified-operators		hpe-filex-csi-operator-254982e8fecc	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.15-certified-operators		kong-gateway-operator-head	kubernetes-ingress-controller	https://github.com/Kong/kubernetes-ingress-controller.git	Kong/kubernetes-ingress-controller		
+sources-ocp4.15-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.15-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.15-community-operators:by-repo/helm-charts
+sources-ocp4.15-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.15-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.15-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.15-certified-operators		stackable-listener-operator-1	rust/csi-grpc/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.15-certified-operators		stackable-secret-operator-1	rust/operator-binary/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.15-certified-operators		sumologic-kubernetes-collection-helm-operator-dd01dd0e3656	helm-charts/sumologic-kubernetes-collection	https://github.com/SumoLogic/sumologic-kubernetes-collection	SumoLogic/sumologic-kubernetes-collection		
+sources-ocp4.15-certified-operators		timemachine-operator-b9353871ac96	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.15-community-operators		aerospike-kubernetes-operator-44f0ddba4a09	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.15-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.15-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.15	sources-ocp4.15.59:by-repo/cloud-provider-aws
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.15	sources-ocp4.15.59:by-repo/cloud-provider-azure
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.15	
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.15	sources-ocp4.15.59:by-repo/containernetworking-plugins
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.15	
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.15	
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	kube-proxy	https://github.com/openshift/kubernetes	openshift/kubernetes	sdn-4.15-kubernetes-1.28.3	sources-ocp4.15.59:by-repo/kubernetes
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.15	sources-ocp4.15.59:by-repo/kubernetes
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.15	sources-ocp4.15.59:by-repo/ovn-kubernetes
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.15-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter	release-4.15	
+sources-ocp4.15-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.15-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.15-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.15:by-repo/client
+sources-ocp4.15-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.15:by-repo/operator
+sources-ocp4.15-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.15-community-operators		multicluster-global-hub-operator-9eb88509b46f	librdkafka	https://github.com/confluentinc/librdkafka	confluentinc/librdkafka	master	
+sources-ocp4.15-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.15-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.15:by-repo/client
+sources-ocp4.15-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.15:by-repo/operator
+sources-ocp4.15-operators		lifecycle-agent-28d412ad5354	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux.git	openshift-kni/telco5g-konflux		
+sources-ocp4.15-operators		loki-operator-47b68ee3de04	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.15-operators		red-hat-camel-k-a6255a756462	.github/actions/backport	https://github.com/tibdex/backport	tibdex/backport		
+sources-ocp4.15-operators		red-hat-camel-k-a6255a756462	.github/actions/changelog	https://github.com/CharMixer/auto-changelog-action	CharMixer/auto-changelog-action		
+sources-ocp4.15-operators		service-telemetry-operator-a5e1a783794b	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.15-operators		smart-gateway-operator-8f588d5f3ea6	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.15-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.15.59		driver-toolkit-7a448c2ee026	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.16-certified-operators		cloudcasa-operator-aa2793868ce2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.16-certified-operators		f5-ipam-controller-operator-2d4fe925c8aa	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.16-certified-operators		gaudi-ai-sw-tools-operator-002be9c1f1b2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.16-certified-operators		gpu-operator-certified-d5891068bf92	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.16-certified-operators		hpe-filex-csi-operator-254982e8fecc	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.16-certified-operators		kong-gateway-operator-head	kubernetes-ingress-controller	https://github.com/Kong/kubernetes-ingress-controller.git	Kong/kubernetes-ingress-controller		
+sources-ocp4.16-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.16-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.16-community-operators:by-repo/helm-charts
+sources-ocp4.16-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.16-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.16-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.16-certified-operators		stackable-listener-operator-1	rust/csi-grpc/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.16-certified-operators		stackable-secret-operator-head	rust/operator-binary/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.16-certified-operators		sumologic-kubernetes-collection-helm-operator-dd01dd0e3656	helm-charts/sumologic-kubernetes-collection	https://github.com/SumoLogic/sumologic-kubernetes-collection	SumoLogic/sumologic-kubernetes-collection		
+sources-ocp4.16-certified-operators		timemachine-operator-b9353871ac96	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.16-community-operators		aerospike-kubernetes-operator-head	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.16-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.16-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.16	sources-ocp4.16.55:by-repo/cloud-provider-aws
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.16	sources-ocp4.16.55:by-repo/cloud-provider-azure
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.16	
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.16	sources-ocp4.16.55:by-repo/containernetworking-plugins
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.16	
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.16	
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	kube-proxy	https://github.com/openshift/kubernetes	openshift/kubernetes	sdn-4.16-kubernetes-1.29.0	sources-ocp4.16.55:by-repo/kubernetes
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.16	sources-ocp4.16.55:by-repo/kubernetes
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.16	sources-ocp4.16.55:by-repo/ovn-kubernetes
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.16-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter	release-4.16	
+sources-ocp4.16-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.16-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.16-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.16:by-repo/client
+sources-ocp4.16-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.16:by-repo/operator
+sources-ocp4.16-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.16-community-operators		multicluster-global-hub-operator-e18d0320155d	librdkafka	https://github.com/confluentinc/librdkafka	confluentinc/librdkafka	master	
+sources-ocp4.16-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.16-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.16:by-repo/client
+sources-ocp4.16-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.16:by-repo/operator
+sources-ocp4.16-operators		loki-operator-053ce6704994	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.16-operators		numaresources-operator-head	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux	openshift-kni/telco5g-konflux		
+sources-ocp4.16-operators		policy-controller-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.16-operators		red-hat-camel-k-a6255a756462	.github/actions/backport	https://github.com/tibdex/backport	tibdex/backport		
+sources-ocp4.16-operators		red-hat-camel-k-a6255a756462	.github/actions/changelog	https://github.com/CharMixer/auto-changelog-action	CharMixer/auto-changelog-action		
+sources-ocp4.16-operators		skupper-netobs-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.16-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.16.55		cluster-node-tuning-operator-eacd6ee98ab2	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.16.55		driver-toolkit-1d5732f0209b	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.16.55		ibm-cloud-controller-manager-f961f16d17dc	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.17-certified-operators		cloudcasa-operator-aa2793868ce2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.17-certified-operators		f5-ipam-controller-operator-2d4fe925c8aa	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.17-certified-operators		gpu-operator-certified-head	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.17-certified-operators		hpe-filex-csi-operator-254982e8fecc	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.17-certified-operators		kong-gateway-operator-head	kubernetes-ingress-controller	https://github.com/Kong/kubernetes-ingress-controller.git	Kong/kubernetes-ingress-controller		
+sources-ocp4.17-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.17-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.17-community-operators:by-repo/helm-charts
+sources-ocp4.17-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.17-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.17-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.17-certified-operators		stackable-listener-operator-head	rust/csi-grpc/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.17-certified-operators		stackable-secret-operator-head	rust/operator-binary/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.17-certified-operators		sumologic-kubernetes-collection-helm-operator-dd01dd0e3656	helm-charts/sumologic-kubernetes-collection	https://github.com/SumoLogic/sumologic-kubernetes-collection	SumoLogic/sumologic-kubernetes-collection		
+sources-ocp4.17-certified-operators		timemachine-operator-b9353871ac96	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.17-community-operators		aerospike-kubernetes-operator-44f0ddba4a09	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.17-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.17-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.17	sources-ocp4.17.54:by-repo/cloud-provider-aws
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.17	sources-ocp4.17.54:by-repo/cloud-provider-azure
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.17	
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.17	sources-ocp4.17.54:by-repo/containernetworking-plugins
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.17	
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.17	
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	kube-proxy	https://github.com/openshift/kubernetes	openshift/kubernetes	master	sources-ocp4.17.54:by-repo/kubernetes
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.17	sources-ocp4.17.54:by-repo/kubernetes
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.17	sources-ocp4.17.54:by-repo/ovn-kubernetes
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.17-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter	release-4.17	
+sources-ocp4.17-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.17-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.17-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.17:by-repo/client
+sources-ocp4.17-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.17:by-repo/operator
+sources-ocp4.17-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.17-community-operators		multicluster-global-hub-operator-e18d0320155d	librdkafka	https://github.com/confluentinc/librdkafka	confluentinc/librdkafka	master	
+sources-ocp4.17-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.17-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.17:by-repo/client
+sources-ocp4.17-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.17:by-repo/operator
+sources-ocp4.17-operators		loki-operator-34450bf62128	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.17-operators		numaresources-operator-head	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux	openshift-kni/telco5g-konflux		
+sources-ocp4.17-operators		policy-controller-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.17-operators		red-hat-camel-k-a6255a756462	.github/actions/backport	https://github.com/tibdex/backport	tibdex/backport		
+sources-ocp4.17-operators		red-hat-camel-k-a6255a756462	.github/actions/changelog	https://github.com/CharMixer/auto-changelog-action	CharMixer/auto-changelog-action		
+sources-ocp4.17-operators		skupper-netobs-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.17-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.17-operators		windows-machine-config-operator-head	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter		
+sources-ocp4.17.54		cluster-node-tuning-operator-ea6abc302b56	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.17.54		driver-toolkit-859518f69524	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.17.54		ibm-cloud-controller-manager-ad8f7eb0ffba	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.17.55		cluster-node-tuning-operator-fe37d7cf96ef	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.17.55		driver-toolkit-859518f69524	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.17.55		ibm-cloud-controller-manager-ad8f7eb0ffba	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.17.56		cluster-node-tuning-operator-fe37d7cf96ef	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.17.56		driver-toolkit-859518f69524	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.17.56		ibm-cloud-controller-manager-ad8f7eb0ffba	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.18-certified-operators		cloudcasa-operator-aa2793868ce2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.18-certified-operators		f5-ipam-controller-operator-2d4fe925c8aa	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.18-certified-operators		gpu-operator-certified-d5891068bf92	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.18-certified-operators		hpe-filex-csi-operator-ecaccadaa864	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.18-certified-operators		kong-gateway-operator-head	kubernetes-ingress-controller	https://github.com/Kong/kubernetes-ingress-controller.git	Kong/kubernetes-ingress-controller		
+sources-ocp4.18-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.18-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.18-community-operators:by-repo/helm-charts
+sources-ocp4.18-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.18-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.18-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.18-certified-operators		stackable-listener-operator-head	rust/csi-grpc/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.18-certified-operators		stackable-secret-operator-head	rust/operator-binary/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.18-certified-operators		sumologic-kubernetes-collection-helm-operator-dd01dd0e3656	helm-charts/sumologic-kubernetes-collection	https://github.com/SumoLogic/sumologic-kubernetes-collection	SumoLogic/sumologic-kubernetes-collection		
+sources-ocp4.18-certified-operators		timemachine-operator-b9353871ac96	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.18-community-operators		aerospike-kubernetes-operator-head	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.18-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.18-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.18	sources-ocp4.18.46:by-repo/cloud-provider-aws
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.18	sources-ocp4.18.46:by-repo/cloud-provider-azure
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.18	
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.18	sources-ocp4.18.46:by-repo/containernetworking-plugins
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.18	
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.18	
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.18	sources-ocp4.18.46:by-repo/kubernetes
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.18	sources-ocp4.18.46:by-repo/ovn-kubernetes
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.18-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter	release-4.18	
+sources-ocp4.18-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.18-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.18-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.18:by-repo/client
+sources-ocp4.18-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.18:by-repo/operator
+sources-ocp4.18-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.18-community-operators		multicluster-global-hub-operator-e18d0320155d	librdkafka	https://github.com/confluentinc/librdkafka	confluentinc/librdkafka	master	
+sources-ocp4.18-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.18-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.18:by-repo/client
+sources-ocp4.18-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.18:by-repo/operator
+sources-ocp4.18-operators		dpu-operator-head	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-ocp4.18-operators		dpu-operator-head	ocp-traffic-flow-tests	https://github.com/wizhaoredhat/ocp-traffic-flow-tests.git	wizhaoredhat/ocp-traffic-flow-tests		
+sources-ocp4.18-operators		loki-operator-bc29e774cd3d	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.18-operators		numaresources-operator-head	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux	openshift-kni/telco5g-konflux		
+sources-ocp4.18-operators		policy-controller-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.18-operators		red-hat-camel-k-a5a790d41845	.github/actions/backport	https://github.com/tibdex/backport	tibdex/backport		
+sources-ocp4.18-operators		red-hat-camel-k-a5a790d41845	.github/actions/changelog	https://github.com/CharMixer/auto-changelog-action	CharMixer/auto-changelog-action		
+sources-ocp4.18-operators		skupper-netobs-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.18-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.18.46		cluster-node-tuning-operator-06b60fc3356f	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.18.46		driver-toolkit-2e139edc4aee	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.18.46		ibm-cloud-controller-manager-a33026b12f20	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.18.47		cluster-node-tuning-operator-06b60fc3356f	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.18.47		driver-toolkit-2e139edc4aee	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.18.47		ibm-cloud-controller-manager-a33026b12f20	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.18.48		cluster-node-tuning-operator-06b60fc3356f	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.18.48		driver-toolkit-2e139edc4aee	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.18.48		ibm-cloud-controller-manager-a33026b12f20	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.18.49		cluster-node-tuning-operator-cb375d177811	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.18.49		driver-toolkit-2e139edc4aee	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.18.49		ibm-cloud-controller-manager-a33026b12f20	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.18.50		cluster-node-tuning-operator-cb375d177811	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.18.50		driver-toolkit-2e139edc4aee	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.18.50		ibm-cloud-controller-manager-a33026b12f20	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.18.51		cluster-node-tuning-operator-cb375d177811	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.18.51		driver-toolkit-2e139edc4aee	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.18.51		ibm-cloud-controller-manager-a33026b12f20	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.18.52		driver-toolkit-2e139edc4aee	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.18.53		driver-toolkit-2e139edc4aee	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19-certified-operators		cloudcasa-operator-aa2793868ce2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.19-certified-operators		gpu-operator-certified-head	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.19-certified-operators		hpe-filex-csi-operator-ecaccadaa864	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.19-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.19-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.19-community-operators:by-repo/helm-charts
+sources-ocp4.19-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.19-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.19-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.19-certified-operators		scylladb-operator-head	submodules/github.com/scylladb/scylla-monitoring	https://github.com/scylladb/scylla-monitoring.git	scylladb/scylla-monitoring		
+sources-ocp4.19-certified-operators		stackable-listener-operator-head	rust/csi-grpc/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.19-certified-operators		stackable-secret-operator-head	rust/operator-binary/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.19-certified-operators		sumologic-kubernetes-collection-helm-operator-dd01dd0e3656	helm-charts/sumologic-kubernetes-collection	https://github.com/SumoLogic/sumologic-kubernetes-collection	SumoLogic/sumologic-kubernetes-collection		
+sources-ocp4.19-community-operators		aerospike-kubernetes-operator-44f0ddba4a09	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.19-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.19-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.19	sources-ocp4.19.36:by-repo/cloud-provider-aws
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.19	sources-ocp4.19.36:by-repo/cloud-provider-azure
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.19	
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.19	sources-ocp4.19.36:by-repo/containernetworking-plugins
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.19	
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.19	
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.19	sources-ocp4.19.36:by-repo/kubernetes
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.19	sources-ocp4.19.36:by-repo/ovn-kubernetes
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.19-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter	release-4.19	
+sources-ocp4.19-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.19-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.19-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.19:by-repo/client
+sources-ocp4.19-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.19:by-repo/operator
+sources-ocp4.19-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.19-community-operators		multicluster-global-hub-operator-e18d0320155d	librdkafka	https://github.com/confluentinc/librdkafka	confluentinc/librdkafka	master	
+sources-ocp4.19-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.19-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.19:by-repo/client
+sources-ocp4.19-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.19:by-repo/operator
+sources-ocp4.19-operators		dpu-operator-head	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-ocp4.19-operators		dpu-operator-head	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-ocp4.19-operators		loki-operator-0a7d34b97970	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.19-operators		numaresources-operator-head	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux	openshift-kni/telco5g-konflux		
+sources-ocp4.19-operators		policy-controller-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.19-operators		red-hat-camel-k-a5a790d41845	.github/actions/backport	https://github.com/tibdex/backport	tibdex/backport		
+sources-ocp4.19-operators		red-hat-camel-k-a5a790d41845	.github/actions/changelog	https://github.com/CharMixer/auto-changelog-action	CharMixer/auto-changelog-action		
+sources-ocp4.19-operators		skupper-netobs-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.19-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.19.36		azure-service-operator-3bb352c18a94	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.19.36		cluster-node-tuning-operator-f7ed3c80209e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.19.36		driver-toolkit-686fdac59588	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19.36		ibm-cloud-controller-manager-7422aab27110	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.19.36		rhel-coreos-48a00b3b0213	fedora-coreos-config	https://github.com/coreos/fedora-coreos-config	coreos/fedora-coreos-config	testing-devel	
+sources-ocp4.19.37		azure-service-operator-3bb352c18a94	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.19.37		cluster-node-tuning-operator-f7ed3c80209e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.19.37		driver-toolkit-686fdac59588	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19.37		ibm-cloud-controller-manager-7422aab27110	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.19.37		rhel-coreos-48a00b3b0213	fedora-coreos-config	https://github.com/coreos/fedora-coreos-config	coreos/fedora-coreos-config	testing-devel	
+sources-ocp4.19.38		azure-service-operator-3bb352c18a94	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.19.38		cluster-node-tuning-operator-f7ed3c80209e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.19.38		driver-toolkit-686fdac59588	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19.38		ibm-cloud-controller-manager-7422aab27110	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.19.38		rhel-coreos-48a00b3b0213	fedora-coreos-config	https://github.com/coreos/fedora-coreos-config	coreos/fedora-coreos-config	testing-devel	
+sources-ocp4.19.39		azure-service-operator-3bb352c18a94	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.19.39		cluster-node-tuning-operator-f7ed3c80209e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.19.39		driver-toolkit-686fdac59588	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19.39		ibm-cloud-controller-manager-7422aab27110	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.19.39		rhel-coreos-48a00b3b0213	fedora-coreos-config	https://github.com/coreos/fedora-coreos-config	coreos/fedora-coreos-config	testing-devel	
+sources-ocp4.19.40		azure-service-operator-3bb352c18a94	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.19.40		cluster-node-tuning-operator-f7ed3c80209e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.19.40		driver-toolkit-686fdac59588	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19.40		ibm-cloud-controller-manager-7422aab27110	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.19.40		rhel-coreos-48a00b3b0213	fedora-coreos-config	https://github.com/coreos/fedora-coreos-config	coreos/fedora-coreos-config	testing-devel	
+sources-ocp4.19.41		azure-service-operator-3bb352c18a94	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.19.41		cluster-node-tuning-operator-f7ed3c80209e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.19.41		driver-toolkit-686fdac59588	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19.41		ibm-cloud-controller-manager-7422aab27110	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.19.41		rhel-coreos-48a00b3b0213	fedora-coreos-config	https://github.com/coreos/fedora-coreos-config	coreos/fedora-coreos-config	testing-devel	
+sources-ocp4.19.42		driver-toolkit-686fdac59588	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19.42		rhel-coreos-48a00b3b0213/fedora-coreos-config	fedora-bootc	https://gitlab.com/fedora/bootc/base-images.git			
+sources-ocp4.19.43		driver-toolkit-686fdac59588	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.19.43		rhel-coreos-48a00b3b0213/fedora-coreos-config	fedora-bootc	https://gitlab.com/fedora/bootc/base-images.git			
+sources-ocp4.20-certified-operators		cloudcasa-operator-aa2793868ce2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.20-certified-operators		gpu-operator-certified-d5891068bf92	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.20-certified-operators		hpe-filex-csi-operator-ecaccadaa864	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.20-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.20-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.20-community-operators:by-repo/helm-charts
+sources-ocp4.20-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.20-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.20-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.20-certified-operators		scylladb-operator-de1eaab18fd6	submodules/github.com/scylladb/scylla-monitoring	https://github.com/scylladb/scylla-monitoring.git	scylladb/scylla-monitoring	4.14.3	
+sources-ocp4.20-certified-operators		stackable-listener-operator-head	rust/csi-grpc/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.20-certified-operators		stackable-secret-operator-head	rust/operator-binary/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.20-certified-operators		sumologic-kubernetes-collection-helm-operator-dd01dd0e3656	helm-charts/sumologic-kubernetes-collection	https://github.com/SumoLogic/sumologic-kubernetes-collection	SumoLogic/sumologic-kubernetes-collection		
+sources-ocp4.20-community-operators		aerospike-kubernetes-operator-44f0ddba4a09	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.20-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.20-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.20	sources-ocp4.20.27:by-repo/cloud-provider-aws
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.20	sources-ocp4.20.27:by-repo/cloud-provider-azure
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.20	
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.20	sources-ocp4.20.27:by-repo/containernetworking-plugins
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.20	
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.20	
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.20	sources-ocp4.20.27:by-repo/kubernetes
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.20	sources-ocp4.20.27:by-repo/ovn-kubernetes
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.20-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter	release-4.20	
+sources-ocp4.20-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.20-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.20-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.20:by-repo/client
+sources-ocp4.20-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.20:by-repo/operator
+sources-ocp4.20-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.20-community-operators		multicluster-global-hub-operator-e18d0320155d	librdkafka	https://github.com/confluentinc/librdkafka	confluentinc/librdkafka	master	
+sources-ocp4.20-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.20-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.20:by-repo/client
+sources-ocp4.20-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.20:by-repo/operator
+sources-ocp4.20-operators		dpu-operator-head	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-ocp4.20-operators		dpu-operator-head	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-ocp4.20-operators		loki-operator-fdb9915c4304	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.20-operators		numaresources-operator-head	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux	openshift-kni/telco5g-konflux		
+sources-ocp4.20-operators		policy-controller-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.20-operators		red-hat-camel-k-a5a790d41845	.github/actions/backport	https://github.com/tibdex/backport	tibdex/backport		
+sources-ocp4.20-operators		red-hat-camel-k-a5a790d41845	.github/actions/changelog	https://github.com/CharMixer/auto-changelog-action	CharMixer/auto-changelog-action		
+sources-ocp4.20-operators		skupper-netobs-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.20-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.20.27		azure-service-operator-d957de42c2e6	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.20.27		cluster-node-tuning-operator-94d9ffd3ec8d	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.20.27		driver-toolkit-62e1f6040cd2	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.20.27		ibm-cloud-controller-manager-36ab30f90e87	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.20.28		azure-service-operator-d957de42c2e6	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.20.28		cluster-node-tuning-operator-6401d7f3b34e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.20.28		driver-toolkit-62e1f6040cd2	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.20.28		ibm-cloud-controller-manager-36ab30f90e87	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.20.29		azure-service-operator-d957de42c2e6	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.20.29		cluster-node-tuning-operator-6401d7f3b34e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.20.29		driver-toolkit-62e1f6040cd2	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.20.29		ibm-cloud-controller-manager-36ab30f90e87	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.20.30		azure-service-operator-d957de42c2e6	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.20.30		cluster-node-tuning-operator-6401d7f3b34e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.20.30		driver-toolkit-62e1f6040cd2	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.20.30		ibm-cloud-controller-manager-36ab30f90e87	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.20.32		azure-service-operator-d957de42c2e6	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.20.32		cluster-node-tuning-operator-6401d7f3b34e	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.20.32		driver-toolkit-62e1f6040cd2	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.20.32		ibm-cloud-controller-manager-36ab30f90e87	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.20.33		driver-toolkit-62e1f6040cd2	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.20.34		driver-toolkit-62e1f6040cd2	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.21-certified-operators		cloudcasa-operator-aa2793868ce2	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.21-certified-operators		gpu-operator-certified-head	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.21-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.21-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.21-community-operators:by-repo/helm-charts
+sources-ocp4.21-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.21-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.21-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.21-certified-operators		stackable-listener-operator-head	rust/csi-grpc/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.21-certified-operators		stackable-secret-operator-head	rust/operator-binary/vendor/csi	https://github.com/container-storage-interface/spec	container-storage-interface/spec		
+sources-ocp4.21-certified-operators		sumologic-kubernetes-collection-helm-operator-dd01dd0e3656	helm-charts/sumologic-kubernetes-collection	https://github.com/SumoLogic/sumologic-kubernetes-collection	SumoLogic/sumologic-kubernetes-collection		
+sources-ocp4.21-community-operators		aerospike-kubernetes-operator-head	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.21-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.21-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.21	sources-ocp4.21.22:by-repo/cloud-provider-aws
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.21	sources-ocp4.21.22:by-repo/cloud-provider-azure
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.21	
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.21	sources-ocp4.21.22:by-repo/containernetworking-plugins
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.21	
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.21	
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.21	sources-ocp4.21.22:by-repo/kubernetes
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.21	sources-ocp4.21.22:by-repo/ovn-kubernetes
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.21-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter		
+sources-ocp4.21-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.21-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.21-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.21:by-repo/client
+sources-ocp4.21-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.21:by-repo/operator
+sources-ocp4.21-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.21-community-operators		multicluster-global-hub-operator-e18d0320155d	librdkafka	https://github.com/confluentinc/librdkafka	confluentinc/librdkafka	master	
+sources-ocp4.21-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.21-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.21:by-repo/client
+sources-ocp4.21-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.21:by-repo/operator
+sources-ocp4.21-operators		loki-operator-fdb9915c4304	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.21-operators		numaresources-operator-head	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux	openshift-kni/telco5g-konflux		
+sources-ocp4.21-operators		openperouter-operator-head	website/themes/hugo-book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.21-operators		openperouter-operator-head	website/themes/hugo-theme-learn	https://github.com/matcornic/hugo-theme-learn.git	matcornic/hugo-theme-learn		
+sources-ocp4.21-operators		policy-controller-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.21-operators		red-hat-camel-k-a5a790d41845	.github/actions/backport	https://github.com/tibdex/backport	tibdex/backport		
+sources-ocp4.21-operators		red-hat-camel-k-a5a790d41845	.github/actions/changelog	https://github.com/CharMixer/auto-changelog-action	CharMixer/auto-changelog-action		
+sources-ocp4.21-operators		skupper-netobs-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.21-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.21-operators		windows-machine-config-operator-head	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter		
+sources-ocp4.21.22		azure-service-operator-5e84c83176d7	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.21.22		cluster-node-tuning-operator-91c812dcaf93	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.21.22		driver-toolkit-f0ae9d12ca7e	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.21.22		ibm-cloud-controller-manager-c566572b2cf0	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.21.23		azure-service-operator-5e84c83176d7	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.21.23		cluster-node-tuning-operator-91c812dcaf93	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.21.23		driver-toolkit-f0ae9d12ca7e	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.21.23		ibm-cloud-controller-manager-c566572b2cf0	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.21.24		azure-service-operator-5e84c83176d7	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.21.24		cluster-node-tuning-operator-91c812dcaf93	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.21.24		driver-toolkit-f0ae9d12ca7e	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.21.24		ibm-cloud-controller-manager-c566572b2cf0	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.21.25		azure-service-operator-5e84c83176d7	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.21.25		cluster-node-tuning-operator-91c812dcaf93	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.21.25		driver-toolkit-f0ae9d12ca7e	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.21.25		ibm-cloud-controller-manager-c566572b2cf0	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.21.27		azure-service-operator-5e84c83176d7	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.21.27		cluster-node-tuning-operator-91c812dcaf93	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.21.27		driver-toolkit-f0ae9d12ca7e	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.21.27		ibm-cloud-controller-manager-c566572b2cf0	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.21.28		driver-toolkit-f0ae9d12ca7e	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.21.29		driver-toolkit-f0ae9d12ca7e	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.22-certified-operators		gpu-operator-certified-head	aws-kube-ci	https://gitlab.com/nvidia/container-infrastructure/aws-kube-ci.git		main	
+sources-ocp4.22-certified-operators		kubearmor-operator-certified-3aa29655e860	KubeArmor/BPF/libbpf	https://github.com/libbpf/libbpf/	libbpf/libbpf		
+sources-ocp4.22-certified-operators		linstor-operator-8f47921a5e18	piraeus-charts	https://github.com/piraeusdatastore/helm-charts.git	piraeusdatastore/helm-charts		sources-ocp4.22-community-operators:by-repo/helm-charts
+sources-ocp4.22-certified-operators		linstor-operator-8f47921a5e18	piraeus-operator	https://github.com/piraeusdatastore/piraeus-operator.git	piraeusdatastore/piraeus-operator		
+sources-ocp4.22-certified-operators		netscaler-adm-agent-operator-dd01dd0e3656	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.22-certified-operators		netscaler-operator-61d351156f3e	devdocs-theme	https://github.com/citrix/devdocs-theme.git	citrix/devdocs-theme		
+sources-ocp4.22-community-operators		aerospike-kubernetes-operator-head	pkg/configschema/schemas	https://github.com/aerospike/schemas	aerospike/schemas		
+sources-ocp4.22-community-operators		azure-service-operator-head	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.22-community-operators		camel-k-head	.github/actions/gh-go-mod-generate-sbom	https://github.com/CycloneDX/gh-gomod-generate-sbom/	CycloneDX/gh-gomod-generate-sbom		
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-aws	https://github.com/openshift/cloud-provider-aws	openshift/cloud-provider-aws	release-4.22	sources-ocp4.22.10:by-repo/cloud-provider-aws
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	cloud-provider-azure	https://github.com/openshift/cloud-provider-azure	openshift/cloud-provider-azure	release-4.22	sources-ocp4.22.10:by-repo/cloud-provider-azure
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	containerd	https://github.com/openshift/containerd	openshift/containerd	release-4.22	
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	containernetworking-plugins	https://github.com/openshift/containernetworking-plugins	openshift/containernetworking-plugins	release-4.22	sources-ocp4.22.10:by-repo/containernetworking-plugins
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	csi-proxy	https://github.com/openshift/csi-proxy	openshift/csi-proxy	release-4.22	
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	hcsshim	https://github.com/openshift/hcsshim	openshift/hcsshim	release-4.22	
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	kubelet	https://github.com/openshift/kubernetes	openshift/kubernetes	release-4.22	sources-ocp4.22.10:by-repo/kubernetes
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	ovn-kubernetes	https://github.com/openshift/ovn-kubernetes	openshift/ovn-kubernetes	release-4.22	sources-ocp4.22.10:by-repo/ovn-kubernetes
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.22-community-operators		community-windows-machine-config-operator-50293e4ba66c	windows_exporter	https://github.com/openshift/prometheus-community-windows_exporter	openshift/prometheus-community-windows_exporter	release-4.22	
+sources-ocp4.22-community-operators		flink-kubernetes-operator-f50413820c3f	docs/themes/book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.22-community-operators		fossul-operator-dce3c680b071	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.22-community-operators		korrel8r-head	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.22:by-repo/client
+sources-ocp4.22-community-operators		korrel8r-head	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.22:by-repo/operator
+sources-ocp4.22-community-operators		loki-operator-head	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.22-community-operators		universal-crossplane-head	build	git@github.com:upbound/build.git	upbound/build		
+sources-ocp4.22-operators		cluster-observability-operator-179b87de3d04/korrel8r	client	git@github.com:korrel8r/client.git	korrel8r/client		sources-layered-ocp4.22:by-repo/client
+sources-ocp4.22-operators		cluster-observability-operator-179b87de3d04/korrel8r	operator	git@github.com:alanconway/operator.git	alanconway/operator		sources-layered-ocp4.22:by-repo/operator
+sources-ocp4.22-operators		dpu-operator-head	cluster-deployment-automation	https://github.com/bn222/cluster-deployment-automation	bn222/cluster-deployment-automation		
+sources-ocp4.22-operators		dpu-operator-head	kubernetes-traffic-flow-tests	https://github.com/ovn-kubernetes/kubernetes-traffic-flow-tests	ovn-kubernetes/kubernetes-traffic-flow-tests		
+sources-ocp4.22-operators		loki-operator-fdb9915c4304	operator/website/themes/doks	https://github.com/h-enk/doks.git	h-enk/doks		
+sources-ocp4.22-operators		numaresources-operator-head	telco5g-konflux	https://github.com/openshift-kni/telco5g-konflux	openshift-kni/telco5g-konflux		
+sources-ocp4.22-operators		openperouter-operator-head	website/themes/hugo-book	https://github.com/alex-shpak/hugo-book	alex-shpak/hugo-book		
+sources-ocp4.22-operators		openperouter-operator-head	website/themes/hugo-theme-learn	https://github.com/matcornic/hugo-theme-learn.git	matcornic/hugo-theme-learn		
+sources-ocp4.22-operators		policy-controller-operator-f60ef2ad6dd3	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.22-operators		skupper-netobs-operator-ebd9b5ae4dd0	website/themes/docsy	https://github.com/asmacdo/docsy.git	asmacdo/docsy		
+sources-ocp4.22-operators		windows-machine-config-operator-head	promu	https://github.com/openshift/prometheus-promu	openshift/prometheus-promu		
+sources-ocp4.22.10		driver-toolkit-7aa4007a8601	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.22.3		agent-installer-ui-67a8dc3ce466	build-tools	https://github.com/jgyselov/insights-frontend-builder-common.git	jgyselov/insights-frontend-builder-common	monorepo_adaptations	
+sources-ocp4.22.3		azure-service-operator-b44d444422f5	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.22.3		cluster-node-tuning-operator-9553086d2f3b	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.22.3		driver-toolkit-7aa4007a8601	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.22.3		ibm-cloud-controller-manager-24cff9a691e1	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.22.4		agent-installer-ui-67a8dc3ce466	build-tools	https://github.com/jgyselov/insights-frontend-builder-common.git	jgyselov/insights-frontend-builder-common	monorepo_adaptations	
+sources-ocp4.22.4		azure-service-operator-b44d444422f5	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.22.4		cluster-node-tuning-operator-9553086d2f3b	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.22.4		driver-toolkit-7aa4007a8601	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.22.4		ibm-cloud-controller-manager-24cff9a691e1	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.22.5		agent-installer-ui-1aa8b72164c5	build-tools	https://github.com/jgyselov/insights-frontend-builder-common.git	jgyselov/insights-frontend-builder-common	monorepo_adaptations	
+sources-ocp4.22.5		azure-service-operator-b44d444422f5	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.22.5		cluster-node-tuning-operator-1b0cc30b10e1	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.22.5		driver-toolkit-7aa4007a8601	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.22.5		ibm-cloud-controller-manager-24cff9a691e1	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.22.6		agent-installer-ui-97b56b89eb1a	build-tools	https://github.com/jgyselov/insights-frontend-builder-common.git	jgyselov/insights-frontend-builder-common	monorepo_adaptations	
+sources-ocp4.22.6		azure-service-operator-b44d444422f5	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.22.6		cluster-node-tuning-operator-7ee68aef3216	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.22.6		driver-toolkit-7aa4007a8601	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.22.6		ibm-cloud-controller-manager-24cff9a691e1	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.22.8		agent-installer-ui-b248dc6cf9bb	build-tools	https://github.com/jgyselov/insights-frontend-builder-common.git	jgyselov/insights-frontend-builder-common	monorepo_adaptations	
+sources-ocp4.22.8		azure-service-operator-b44d444422f5	v2/specs/azure-rest-api-specs	https://github.com/Azure/azure-rest-api-specs	Azure/azure-rest-api-specs		
+sources-ocp4.22.8		cluster-node-tuning-operator-169b483912b6	assets/tuned/tuned	https://github.com/redhat-performance/tuned.git	redhat-performance/tuned		
+sources-ocp4.22.8		driver-toolkit-7aa4007a8601	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		
+sources-ocp4.22.8		ibm-cloud-controller-manager-24cff9a691e1	cloud-provider-vpc-controller	https://github.com/openshift/cloud-provider-vpc-controller	openshift/cloud-provider-vpc-controller		
+sources-ocp4.22.9		driver-toolkit-7aa4007a8601	kmods-via-containers	https://github.com/openshift-psap/kmods-via-containers	openshift-psap/kmods-via-containers		

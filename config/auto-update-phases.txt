@@ -1,0 +1,17 @@
+# Phases casket-auto-update.sh is allowed to auto-build (one per line).
+# The swap to production always stays manual (docs/operations.md 自動化の境界).
+#
+#   a          fast (~5 min/minor), github archive fetch only
+#   b          heavy (5-20 min/minor), pulls redhat-operator-index + bundles
+#   b-operand  heavy, same catalog one hop deeper
+#   a-rpm      listed = check-only reminder; never auto-built (needs the
+#              subscribed RHEL 9 VM, see docs/pipeline.md)
+#
+# b/b-operand were held back until their registry entries existed, because
+# with an unpopulated registry every minor looks stale and a first unattended
+# run would kick off hours of catalog pulls. That happened at the 2026-07-11
+# fresh rebuild, and both have been enabled since.
+a
+b
+b-operand
+a-rpm

@@ -1,0 +1,125 @@
+---
+# Reverses casket-host.yml: stops/disables/removes the units, SELinux
+# label, firewall ports and lingering it installed.
+#
+# Deliberately does NOT unmount /srv/sources-* or touch the OpenGrok podman
+# container/index. casket-mounts.sh itself refuses to reconcile toward an
+# empty desired state ("refusing to unmount everything") -- this is
+# production infra serving live LAN users, and there is no supported
+# "unmount everything" mode. If you really need that, do it by hand.
+#
+# Run:
+#   cd ansible && ansible-playbook -i inventory.ini casket-host-teardown.yml
+#
+# Optional: also delete mcp/.venv (it self-heals via ensure-venv.sh /
+# ExecStartPre, so this is safe but means the next start rebuilds it):
+#   ansible-playbook -i inventory.ini casket-host-teardown.yml -e purge_venv=true
+
+- name: Tear down casket-host search infrastructure automation
+  hosts: localhost
+  gather_facts: true
+  vars:
+    casket_repo: "{{ lookup('env', 'CASKET_WORK') | default(ansible_env.HOME + '/casket-work', true) }}"
+    casket_user: "{{ ansible_user_id }}"
+    user_systemd_dir: "{{ ansible_env.HOME }}/.config/systemd/user"
+    purge_venv: false
+
+  tasks:
+    # --- user units: opengrok, casket-mcp -------------------------------
+    - name: Stop + disable opengrok.service (user)
+      ansible.builtin.systemd:
+        scope: user
+        name: opengrok.service
+        state: stopped
+        enabled: false
+      ignore_errors: true  # unit may not exist on a host that never ran casket-host.yml
+
+    - name: Stop + disable casket-mcp.service (user)
+      ansible.builtin.systemd:
+        scope: user
+        name: casket-mcp.service
+        state: stopped
+        enabled: false
+      ignore_errors: true
+
+    - name: Remove user unit files
+      ansible.builtin.file:
+        path: "{{ user_systemd_dir }}/{{ item }}"
+        state: absent
+      loop:
+        - opengrok.service
+        - casket-mcp.service
+      register: user_units_removed
+
+    - name: Reload systemd (user) after removing units
+      ansible.builtin.systemd:
+        scope: user
+        daemon_reload: true
+      when: user_units_removed.changed
+
+    # --- system unit: casket-mounts -------------------------------------
+    # Stopping a Type=oneshot/RemainAfterExit unit only clears its "active"
+    # bookkeeping in systemd -- it has no ExecStop, so this does NOT
+    # unmount anything already mounted under /srv. That's intentional.
+    - name: Stop + disable casket-mounts.service (system)
+      become: true
+      ansible.builtin.systemd:
+        name: casket-mounts.service
+        state: stopped
+        enabled: false
+      ignore_errors: true
+
+    - name: Remove casket-mounts.service (system)
+      become: true
+      ansible.builtin.file:
+        path: /etc/systemd/system/casket-mounts.service
+        state: absent
+      register: mounts_unit_removed
+
+    - name: Reload systemd (system) after removing the unit
+      become: true
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: mounts_unit_removed.changed
+
+    # --- SELinux: restore casket-mounts.sh to the default label ---------
+    - name: Remove the bin_t fcontext mapping for casket-mounts.sh
+      become: true
+      community.general.sefcontext:
+        target: "{{ casket_repo }}/scripts/casket-mounts.sh"
+        setype: bin_t
+        state: absent
+      register: sefcontext_removed
+
+    - name: Restore the file's label to whatever policy now says (user_home_t)
+      become: true
+      ansible.builtin.command: "restorecon -v {{ casket_repo }}/scripts/casket-mounts.sh"
+      register: restorecon_result
+      changed_when: "'Relabeled' in restorecon_result.stdout"
+      when: sefcontext_removed.changed
+
+    # --- lingering --------------------------------------------------------
+    - name: Disable lingering for {{ casket_user }}
+      become: true
+      ansible.builtin.command: "loginctl disable-linger {{ casket_user }}"
+      args:
+        removes: "/var/lib/systemd/linger/{{ casket_user }}"
+
+    # --- firewall ---------------------------------------------------------
+    - name: Close casket-mcp / OpenGrok ports in firewalld
+      become: true
+      ansible.posix.firewalld:
+        port: "{{ item }}"
+        permanent: true
+        immediate: true
+        state: disabled
+      loop:
+        - 8765/tcp
+        - 8080/tcp
+
+    # --- optional: purge mcp/.venv ----------------------------------------
+    - name: Remove mcp/.venv
+      ansible.builtin.file:
+        path: "{{ casket_repo }}/mcp/.venv"
+        state: absent
+      when: purge_venv | bool

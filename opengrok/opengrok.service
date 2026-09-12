@@ -1,0 +1,50 @@
+[Unit]
+# OpenGrok source-browser container — start/stop wrapper around the
+# long-lived podman container created by scripts/run-opengrok.sh.
+# This unit does NOT create the container (run-opengrok.sh does, since that
+# also stages sources and needs the full `podman run ... --entrypoint` args);
+# it only starts/stops the existing one, so a host reboot brings the web UI
+# and REST API (used by casket-mcp) back without re-running the full staging
+# + container-recreate flow.
+# Install as a systemd USER service (no root needed once the container exists):
+#   cp opengrok.service ~/.config/systemd/user/
+#   loginctl enable-linger "$USER"          # run without an active login
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now opengrok
+#   systemctl --user status opengrok        # journalctl --user -u opengrok -f
+Description=OpenGrok Container Service
+# NOTE: network-online.target is a SYSTEM target; in a user unit this orders
+# against the (nonexistent) user-manager target of that name and is a no-op.
+# The real wait is the default-route poll in ExecStartPre below.
+After=network-online.target
+
+[Service]
+Type=simple
+TimeoutStartSec=5m
+# Wait for the casket squashfs sources to be mounted before starting the
+# container. `podman start` re-establishes the container's /srv/sources-*
+# bind mounts at start time as a point-in-time snapshot of the host mount
+# namespace — if casket-mounts.service (system oneshot) hasn't finished yet,
+# the container binds the empty underlying dirs and xref browsing stays broken
+# until the next restart. This is a user unit and casket-mounts is a system
+# unit, so we can't order with After=; poll its state instead (any user may
+# read it). The index itself lives on the root fs (/srv/opengrok-data), so
+# search works regardless; this guard only protects source browsing.
+ExecStartPre=/usr/bin/bash -c 'for i in $(seq 1 60); do systemctl is-active --quiet casket-mounts.service && exit 0; sleep 2; done; echo "casket-mounts.service not active after 120s" >&2; exit 1'
+# Wait for a default route before `podman start`. Rootless podman uses pasta,
+# which copies ONE host interface's address into the container netns and picks
+# it by following the default route. br0 is DHCP, so on a cold boot the
+# container can start before the lease lands (observed 2026-07-20: container up
+# 23s after boot) — pasta then falls back to a statically-configured libvirt
+# bridge (virbr1/192.168.10.1). The result is subtle: loopback still works
+# (loopback->loopback), but every LAN connection to http://<host>:8080/ gets a
+# TCP RST, because pasta forwards to that address inside the netns and no such
+# address exists there. Poll for the route instead.
+ExecStartPre=/usr/bin/bash -c 'for i in $(seq 1 60); do ip -4 route show default | grep -q . && exit 0; sleep 2; done; echo "no IPv4 default route after 120s" >&2; exit 1'
+ExecStart=/usr/bin/podman start -a casket-ocp-grok
+ExecStop=/usr/bin/podman stop -t 10 casket-ocp-grok
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
