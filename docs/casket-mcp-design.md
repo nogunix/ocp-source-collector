@@ -1,76 +1,69 @@
-# casket-mcp 設計メモ（ocp-source-collector MCP サーバ）
+# casket-mcp design notes (ocp-source-collector MCP server)
 
-casket マウント (`/srv/sources-*`) を MCP ツールとして公開し、Claude 等から
-OpenShift/CNV/RHEL のソースを検索・参照できるようにする。起点: 2026-06-08。
+Exposes casket mounts (`/srv/sources-*`) as MCP tools, enabling Claude and other clients to search and read OpenShift/CNV/RHEL sources. Started: 2026-06-08.
 
-## 方針（確定）
+## Design decisions
 
-- **backend = ハイブリッド**: 検索の「シンボル定義/参照/全文」は OpenGrok REST、
-  「ナビゲーション・repo解決・ファイル読取・Phase D の全文」は FS + ripgrep + 新索引層。
-- **transport = 両対応**: 同一実装で stdio（ローカル）と HTTP（LAN共有）を切替。
-- **read-only**: 全ツール読み取りのみ。パスは `/srv/sources-*` 配下に限定（traversal 防止）。
-- 実装: Python + 公式 `mcp` SDK の **FastMCP**（デコレータでツール定義）。
+- **Backend = hybrid**: Search for symbol definitions/references/full text uses OpenGrok REST; navigation, repo resolution, file reads, and uncovered phases use FS + ripgrep + index layer.
+- **Transport = dual-mode**: Same implementation switches between stdio (local) and HTTP (LAN sharing).
+- **Read-only**: All tools are read-only. Paths restricted to `/srv/sources-*` (traversal prevention).
+- Implementation: Python + official `mcp` SDK's **FastMCP** (decorator-based tool definitions).
 
-## アーキテクチャ
+## Architecture
 
 ```
 Claude Code / Desktop ──(MCP: stdio or HTTP)──▶ casket-mcp (FastMCP)
                                                   ├─ OpenGrok REST  http://localhost:8080/api/v1
-                                                  │     def / symbol / full / path  (Phase A/B/C 索引)
+                                                  │     def / symbol / full / path  (indexed phases)
                                                   └─ FS + ripgrep   /srv/sources-*
-                                                        by-repo / by-component / INDEX.tsv（新索引層）
-                                                        read_file / grep（Phase D 含む全マウント）
+                                                        by-repo / by-component / INDEX.tsv (index layer)
+                                                        read_file / grep (all mounts)
 ```
 
-### バックエンド振り分け（ルーティング）
+### Backend routing
 
-| 操作 | 第一候補 | フォールバック / 補完 |
+| Operation | Primary | Fallback / supplement |
 |---|---|---|
-| シンボル定義 (`def`) | OpenGrok REST | 無ければ ripgrep で `type X struct`/`func X` 近似 |
-| 参照検索 (xref/symbol) | OpenGrok REST | （rgでは近似不可 → "OpenGrok停止中"と返す） |
-| 全文検索 | OpenGrok REST（索引済みマイナー） | 未索引マイナーは ripgrep |
-| repo/コンポーネント解決 | FS: `by-repo/`,`by-component/`,`INDEX.tsv` | — |
-| ファイル読取・dir一覧 | FS 直 | — |
-| パターン grep（範囲指定） | ripgrep | — |
+| Symbol definition (`def`) | OpenGrok REST | If unavailable, ripgrep approximation with `type X struct`/`func X` |
+| Reference search (xref/symbol) | OpenGrok REST | (rg cannot approximate → returns "OpenGrok is down") |
+| Full text search | OpenGrok REST (indexed minors) | Non-indexed minors use ripgrep |
+| Repo/component resolution | FS: `by-repo/`, `by-component/`, `INDEX.tsv` | — |
+| File read / dir listing | FS direct | — |
+| Pattern grep (scoped) | ripgrep | — |
 
-> **重要な前提**: 索引の切れ目は**フェーズではなくマイナー**。b-operand も
-> `layered-<minor>` として索引済みで、上の「Phase D は ripgrep」は解消済み。
-> 代わりに `config/opengrok-minors.txt` が索引対象マイナーを絞り（全量だと ~900G）、
-> さらに `keep-patches: N` が Phase A / a-rpm のパッチを最新 N 本に制限する。
-> **索引対象外のマイナー・パッチは ripgrep 経路**で、これは容量判断による恒久的な設計。
-> また OpenGrok コンテナは常駐が前提（停止中は検索系が degrade）。
+> **Key assumption**: The indexing boundary is **per minor, not per phase**. b-operand is also indexed as `layered-<minor>`, so the earlier "Phase D uses ripgrep" note is resolved. Instead, `config/opengrok-minors.txt` limits which minors are indexed (full indexing would cost ~900G), and `keep-patches: N` limits Phase A / a-rpm patches to the newest N. **Non-indexed minors and patches use the ripgrep path** — this is a permanent design decision based on capacity constraints. The OpenGrok container is assumed to be always running (search degrades when it's down).
 
-## ツール表面（tool surface）
+## Tool surface
 
 ```
-# ナビゲーション / 解決（FS・常に可用）
-list_versions()                         -> 利用可能な OCP minor/patch と Phase 一覧（マウント名から）
-list_components(version, phase?)        -> INDEX.tsv/images.tsv からコンポーネント一覧
-resolve_repo(repo, version)             -> by-repo/ 経由で実パス（dedup命名の隠れを解決）
-resolve_component(name, version)        -> by-component/ 経由で実パス
+# Navigation / resolution (FS, always available)
+list_versions()                         -> available OCP minor/patch and phase list (from mount names)
+list_components(version, phase?)        -> component list from INDEX.tsv/images.tsv
+resolve_repo(repo, version)             -> real path via by-repo/ (resolves dedup naming)
+resolve_component(name, version)        -> real path via by-component/
 
-# 検索（ハイブリッド）
-search_symbol(name, project?)           -> 定義位置 [{path,line,snippet}]（OpenGrok def）
-search_refs(name, project?)             -> 参照元（OpenGrok symbol/xref）
-search_text(query, project?|path?, max) -> 全文（OpenGrok優先 / Phase D は rg）
-grep(pattern, path, glob?, max)         -> ripgrep（範囲指定・Phase D 含む）
+# Search (hybrid)
+search_symbol(name, project?)           -> definition locations [{path,line,snippet}] (OpenGrok def)
+search_refs(name, project?)             -> references (OpenGrok symbol/xref)
+search_text(query, project?|path?, max) -> full text (OpenGrok preferred / rg for uncovered phases)
+grep(pattern, path, glob?, max)         -> ripgrep (scoped, all phases)
 
-# 参照（FS）
-read_file(path, start?, end?)           -> ファイル/範囲読取
-list_dir(path)                          -> ディレクトリ一覧
+# Read (FS)
+read_file(path, start?, end?)           -> file/range read
+list_dir(path)                          -> directory listing
 
-# 今回の調査で有用だったもの（任意・第2段）
-diff_file(path_a, path_b)               -> 2版間 unified diff（API差分等）
+# Useful for investigations (optional, phase 2)
+diff_file(path_a, path_b)               -> unified diff between two versions (API diffing etc.)
 ```
 
-戻り値は LLM が扱いやすい構造化 JSON（`path:line` を含め、Claude Code でクリック可能に）。
+Return values are structured JSON optimized for LLM consumption (includes `path:line` for Claude Code click-through).
 
-## transport 切替
+## Transport switching
 
-FastMCP の `mcp.run(transport=...)` で同一コードから両対応:
+FastMCP's `mcp.run(transport=...)` provides dual-mode from the same codebase:
 
 ```python
-# casket_mcp.py 末尾
+# end of casket_mcp.py
 import sys
 mode = sys.argv[1] if len(sys.argv) > 1 else "stdio"
 if mode == "http":
@@ -79,52 +72,50 @@ else:
     mcp.run(transport="stdio")
 ```
 
-### Claude Code への登録
+### Registering with Claude Code
 
 ```bash
-# ローカル(stdio)。$CASKET_WORK はこのリポジトリのチェックアウト先（既定 ~/casket-work）
+# Local (stdio). $CASKET_WORK is this repo's checkout (default ~/casket-work)
 claude mcp add casket -- python "$CASKET_WORK"/mcp/casket_mcp.py
 
-# あるいは .mcp.json（リポジトリ同梱・チーム共有、絶対パスで記載）
+# Or via .mcp.json (checked into repo for team sharing, use absolute paths)
 { "mcpServers": {
     "casket": { "command": "python",
                 "args": ["/path/to/casket-work/mcp/casket_mcp.py"] } } }
 
-# LAN共有(HTTP)。server: python casket_mcp.py http
+# LAN sharing (HTTP). Server: python casket_mcp.py http
 { "mcpServers": {
     "casket": { "type": "http", "url": "http://casket-host:8765/mcp" } } }
 ```
 
-HTTP公開時は OpenGrok 同様 firewall を開ける（`firewall-cmd --add-port=8765/tcp`）。
+For HTTP mode, open the firewall as with OpenGrok (`firewall-cmd --add-port=8765/tcp`).
 
-## OpenGrok REST 参照（v1）
+## OpenGrok REST reference (v1)
 
-- `GET /api/v1/projects` → プロジェクト名一覧（`ocp-4.18` 等）
-- `GET /api/v1/search?def=<sym>&projects=<p>&maxresults=N` → 定義
-- 同 `?symbol=` 参照 / `?full=` 全文 / `?path=` パス
-- レスポンス: `{ "resultCount":N, "results": { "<file>": [ {"lineNumber","line","tag"} ] } }`
-  （フィールド名は稼働インスタンスで要確認 — バージョン差あり）
+- `GET /api/v1/projects` → project name list (`ocp-4.18` etc.)
+- `GET /api/v1/search?def=<sym>&projects=<p>&maxresults=N` → definitions
+- Same with `?symbol=` for references / `?full=` for full text / `?path=` for paths
+- Response: `{ "resultCount":N, "results": { "<file>": [ {"lineNumber","line","tag"} ] } }`
+  (field names may vary by version — verify against the running instance)
 
-## 実装計画
+## Implementation layout
 
 ```
 mcp/
-├── casket_mcp.py        FastMCP 本体（ツール定義＋ルーティング）
+├── casket_mcp.py        FastMCP core (tool definitions + routing)
 ├── backends.py          opengrok_search() / rg_search() / fs_resolve()
-├── requirements.txt     mcp[cli]  （ripgrep/curl は OS 側）
-└── README.md            登録手順・運用（OpenGrok起動依存・firewall）
+├── requirements.txt     mcp[cli]  (ripgrep/curl are OS-level)
+└── README.md            Registration instructions, operations (OpenGrok dependency, firewall)
 ```
 
-段階:
-1. **第1段（FS+rg 中核）**: list/resolve/read/grep/search_text(rg) — OpenGrok 無しでも全 Phase 動く。
-2. **第2段（OpenGrok 連携）**: search_symbol/refs/text を REST 優先に。停止検知でrg degrade。
-3. **第3段（任意）**: diff_file、Phase D の OpenGrok 索引追加でフォールバック降格。
+Phases:
+1. **Phase 1 (FS+rg core)**: list/resolve/read/grep/search_text(rg) — works without OpenGrok for all phases.
+2. **Phase 2 (OpenGrok integration)**: search_symbol/refs/text prefer REST. Down-detection degrades to rg.
+3. **Phase 3 (optional)**: diff_file, additional OpenGrok indexing to reduce fallback scope.
 
-## 設計上の注意
+## Design notes
 
-- パス検証: 受け取った `path` は `realpath` して `/srv/sources-*` 配下のみ許可（外部読取防止）。
-- 大きすぎる結果の抑制: `maxresults`/`read_file` の range 必須化で context 溢れ防止。
-- by-repo/by-component は **2026-06-08 の索引層**前提（[[casket-production-layout]]）。未再ビルドの
-  casket には無いが、全24本は反映済みなので可。
-- OpenGrok 未起動時に検索系を黙って劣化させず、レスポンスに `"backend":"ripgrep(opengrok down)"` を明示。
-```
+- Path validation: received `path` is `realpath`'d and must be under `/srv/sources-*` (prevents external reads).
+- Result size control: `maxresults` / `read_file` range requirement prevents context overflow.
+- by-repo/by-component assumes the **2026-06-08 index layer** — absent on un-rebuilt caskets, but all 24 are now updated.
+- When OpenGrok is not running, search responses don't silently degrade — they include `"backend":"ripgrep(opengrok down)"` explicitly.

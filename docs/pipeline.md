@@ -1,53 +1,53 @@
-# パイプライン手順
+# Pipeline reference
 
-各フェーズのスクリプト構成と実行手順。成果物の中身は [artifacts.md](artifacts.md)、リリース追随の運用は [operations.md](operations.md) を参照。
+Script structure and execution steps for each phase. For artifact contents see [artifacts.md](artifacts.md), for release maintenance operations see [operations.md](operations.md).
 
-## スクリプト構成
+## Script structure
 
 `$CASKET_WORK/scripts/`
 
-| ファイル | 役割 |
-|---------|------|
-| `lib.sh`                  | 共通ヘルパー（引数パース、ロガー、パス解決） |
-| `discover.sh`             | Phase A: `oc adm release info` から images.tsv / commits.tsv 生成 |
-| `fetch-git.sh`            | Phase A: GitHub archive API から tarball を並列 DL、(repo, commit) で dedupe |
-| `manifest.sh`             | Phase A: MANIFEST.json 生成（SHA256, サイズ含む） |
-| `package.sh`              | Phase A: mksquashfs で `.sqfs.xz` 出力 |
-| `phase-a-rpm-package.sh`  | A-rpm: `phase-a-rpm/srpms/` + `phase-a-rpm/rpmdb/` を 1 本の `.sqfs.xz` に集約 |
-| `phase-b-discover.sh`     | Phase B: redhat-operator-index から FBC `/configs` 展開 + operators.tsv/bundles.tsv 生成 |
-| `phase-b-fetch-bundles.sh`| Phase B: 各 operator の default-channel head bundle を pull、manifests/metadata 抽出、containers.tsv 生成（`containerImage` 注釈が無くても行を残す＝csv_repo 救済の前提） |
-| `phase-b-fetch-source.sh` | Phase B: 各 containerImage の `vcs-ref` + `io.openshift.build.source-location` を読み、github tarball 取得 (v1) |
-| `phase-b-resolve-v2.sh`   | Phase B v2: CSV `annotations.repository` / `spec.links[]` + repository 別 ref 戦略 / tag/branch fallback で v1 取りこぼしを救済し `20-git/` へ追記 |
-| `lib-resolve.sh`          | Phase B: source 解決の純粋関数 (`normalize_github` / `candidate_source_urls`)。副作用なし・sourceable で `tests/` が回帰テスト |
-| `phase-b-package.sh`      | Phase B: catalog + bundles + git + meta を 1 本の `.sqfs.xz` に（meta/MANIFEST/INDEX は `git-v2.tsv` を優先） |
-| `phase-b-operand-discover.sh`     | B-operand: レイヤード製品の head bundle を pull、CSV `spec.relatedImages` を `images.tsv` に列挙 |
-| `phase-b-operand-resolve-labels.py`| B-operand: operand image を上流 github source へ解決 (`upstream-vcs-url`/`component-map`/`oci-source`/`source-location`/`url`) |
-| `phase-b-operand-fetch-source.sh` | B-operand: operand の github archive を取得、(repo, ref|tag) で dedupe |
-| `phase-b-operand-cargo-vendor.sh` | B-operand: Rust 製品の `Cargo.lock` を `cargo vendor` 相当で解決し `30-vendor/<comp>/<crate>-<ver>/` へ展開（crates.io の `.crate` + git dep は github archive）。対象は `config/cargo-vendor.txt`（現在 trustee-operator のみ）。DL は `$CASKET_WORK/cargo-cache/` にキャッシュしマイナー間で共有 |
-| `phase-b-operand-package.sh`      | B-operand: 1 製品の operand ソースを stage / `.sqfs.xz` 化 (`--stage-only` で統合待ち)。`30-vendor/` があれば `vendor/` として同梱 |
-| `phase-b-operand-combine.sh`      | B-operand: 1 マイナーの 7 製品 stage を `cp -al` で集約し統合 casket を mksquashfs (製品ごとに subdir) |
-| `build-source-index.py`   | 全 Phase: staged `meta/MANIFEST.json` から `git/INDEX.tsv` + `by-component/` + `by-repo/` 逆引き索引を生成（package スクリプトが staging 直後に自動実行）。dedup ディレクトリ名で実体 repo が隠れる問題への対策 |
-| `swap-operators-v2.sh`             | (運用) 新 operator casket への fstab 書換 + .mount restart (sudo, 一度きり) |
-| `swap-operators-v2-remount-only.sh`| (運用) fstab 既に更新済時の remount のみ実行 |
-| `fix-perms-rebuild.sh`             | (運用) 古い operator casket の perms 修正用 unpacker (chmod a+rX して再 pack) |
-| `repackage-add-index.sh`          | (運用) 既存 casket に索引層を後付け: overlayfs で `INDEX.tsv`/`by-component/`/`by-repo/` を読取専用マウントに重ねて再 mksquashfs（単一 A/B・製品別 layered B-operand 両対応） |
-| `swap-source-index.sh`            | (運用) 索引付き新 casket への fstab 差し替え + mount 再起動（既定 dry-run、`--apply` で実行）。全 24 casket を 2026-06-08 に `casket-20260608-*` として本番反映済 |
+| File | Role |
+|------|------|
+| `lib.sh`                  | Common helpers (argument parsing, logger, path resolution) |
+| `discover.sh`             | Phase A: Generate images.tsv / commits.tsv from `oc adm release info` |
+| `fetch-git.sh`            | Phase A: Parallel download of tarballs from the GitHub archive API, deduped by (repo, commit) |
+| `manifest.sh`             | Phase A: Generate MANIFEST.json (with SHA256, sizes) |
+| `package.sh`              | Phase A: Output `.sqfs.xz` via mksquashfs |
+| `phase-a-rpm-package.sh`  | A-rpm: Consolidate `phase-a-rpm/srpms/` + `phase-a-rpm/rpmdb/` into a single `.sqfs.xz` |
+| `phase-b-discover.sh`     | Phase B: Extract FBC `/configs` from redhat-operator-index + generate operators.tsv/bundles.tsv |
+| `phase-b-fetch-bundles.sh`| Phase B: Pull each operator's default-channel head bundle, extract manifests/metadata, generate containers.tsv (retains rows even without `containerImage` annotation — prerequisite for csv_repo rescue) |
+| `phase-b-fetch-source.sh` | Phase B: Read `vcs-ref` + `io.openshift.build.source-location` from each containerImage, fetch github tarball (v1) |
+| `phase-b-resolve-v2.sh`   | Phase B v2: Rescue v1 misses using CSV `annotations.repository` / `spec.links[]` + per-repo ref strategies / tag/branch fallback, appending to `20-git/` |
+| `lib-resolve.sh`          | Phase B: Pure functions for source resolution (`normalize_github` / `candidate_source_urls`). Side-effect-free, sourceable, regression-tested in `tests/` |
+| `phase-b-package.sh`      | Phase B: Package catalog + bundles + git + meta into a single `.sqfs.xz` (meta/MANIFEST/INDEX prefer `git-v2.tsv`) |
+| `phase-b-operand-discover.sh`     | B-operand: Pull layered product head bundles, enumerate CSV `spec.relatedImages` into `images.tsv` |
+| `phase-b-operand-resolve-labels.py`| B-operand: Resolve operand images to upstream github source (`upstream-vcs-url`/`component-map`/`oci-source`/`source-location`/`url`) |
+| `phase-b-operand-fetch-source.sh` | B-operand: Fetch operand github archives, deduped by (repo, ref\|tag) |
+| `phase-b-operand-cargo-vendor.sh` | B-operand: Resolve `Cargo.lock` for Rust products (crates.io `.crate` + github archive for git deps) into `30-vendor/<comp>/<crate>-<ver>/`. Targets listed in `config/cargo-vendor.txt` (currently trustee-operator only). Downloads cached in `$CASKET_WORK/cargo-cache/`, shared across minors |
+| `phase-b-operand-package.sh`      | B-operand: Stage and package a single product's operand source into `.sqfs.xz` (`--stage-only` for integration). Includes `30-vendor/` as `vendor/` if present |
+| `phase-b-operand-combine.sh`      | B-operand: Consolidate 7 product stages for one minor via `cp -al`, then mksquashfs into an integrated casket (one subdir per product) |
+| `build-source-index.py`   | All phases: Generate `git/INDEX.tsv` + `by-component/` + `by-repo/` reverse-lookup index from staged `meta/MANIFEST.json` (auto-run by package scripts after staging). Addresses the problem of deduped directory names hiding the actual repos |
+| `swap-operators-v2.sh`             | (ops) Rewrite fstab + restart .mount for new operator caskets (sudo, one-time) |
+| `swap-operators-v2-remount-only.sh`| (ops) Remount only, when fstab is already updated |
+| `fix-perms-rebuild.sh`             | (ops) Fix permissions on old operator caskets (chmod a+rX then repack) |
+| `repackage-add-index.sh`          | (ops) Retrofit index layer onto existing caskets: overlay `INDEX.tsv`/`by-component/`/`by-repo/` onto read-only mount via overlayfs, then re-mksquashfs (handles both single A/B and per-product layered B-operand layouts) |
+| `swap-source-index.sh`            | (ops) Swap fstab to indexed caskets + restart mounts (dry-run by default, `--apply` to execute). All 24 caskets deployed as `casket-20260608-*` on 2026-06-08 |
 
-A-rpm 関連の補助物は `$CASKET_WORK/phase-a-rpm/vm/` 配下:
+A-rpm auxiliary files under `$CASKET_WORK/phase-a-rpm/vm/`:
 
-| ファイル | 役割 |
-|---------|------|
-| `bootstrap.sh`                    | Fedora ホスト側で RHEL 9 cloud VM を起動 (cloud-init seed + virt-install) |
-| `user-data` / `meta-data`         | cloud-init seed (cloud-user 作成、SSH 鍵注入) |
-| `scripts/01-extract-rpmdb.sh`     | VM 内: 7 版分 `oc adm release info --rpmdb --rpmdb-image=rhel-coreos` |
-| `scripts/02-fetch-srpms.sh`       | VM 内: 全版を union → `dnf download --source` で SRPM 一括取得 |
-| `scripts/machineos-pullspecs.tsv` | 7 OCP 版 → rhel-coreos image pullspec マップ (参考用) |
+| File | Role |
+|------|------|
+| `bootstrap.sh`                    | Host side (Fedora): Start RHEL 9 cloud VM (cloud-init seed + virt-install) |
+| `user-data` / `meta-data`         | cloud-init seed (create cloud-user, inject SSH key) |
+| `scripts/01-extract-rpmdb.sh`     | In VM: `oc adm release info --rpmdb --rpmdb-image=rhel-coreos` for 7 versions |
+| `scripts/02-fetch-srpms.sh`       | In VM: Union all versions → batch `dnf download --source` |
+| `scripts/machineos-pullspecs.tsv` | 7 OCP versions → rhel-coreos image pullspec map (reference) |
 
-### パイプライン（任意の OCP バージョンで再現）
+### Pipeline (reproducible for any OCP version)
 
 ```bash
 cd "$CASKET_WORK"
-V=4.20.22       # 任意
+V=4.20.22       # any version
 
 ./scripts/discover.sh   -v "$V" -a x86_64
 ./scripts/fetch-git.sh  -v "$V" --jobs 6
@@ -55,26 +55,26 @@ V=4.20.22       # 任意
 ./scripts/package.sh    -v "$V" -o /mnt/hdd/casket-ocp
 ```
 
-オプション:
-- `discover.sh -a {x86_64|aarch64|ppc64le|s390x|multi}` — アーキ指定
-- `fetch-git.sh --limit N` — スモークテスト用に N 件だけ取得
-- `fetch-git.sh --jobs N` — 並列度（既定 6）
-- `package.sh -o <dir>` — 出力先（既定 `/mnt/hdd/casket-ocp`）
+Options:
+- `discover.sh -a {x86_64|aarch64|ppc64le|s390x|multi}` — architecture selection
+- `fetch-git.sh --limit N` — fetch only N items for smoke testing
+- `fetch-git.sh --jobs N` — parallelism (default 6)
+- `package.sh -o <dir>` — output directory (default `/mnt/hdd/casket-ocp`)
 
-### 複数バージョンを一括取得
+### Batch multiple versions
 
-stable-N チャネルから各最新パッチ版を順次処理する例:
+Example: process the latest patch version from each stable-N channel sequentially:
 
 ```bash
 cd "$CASKET_WORK"
 
-# 各 stable-N の最新パッチ版を取得
+# Get the latest patch version for each stable-N
 for v in 4.20 4.19 4.18 4.17 4.16 4.15 4.14; do
   curl -sSL "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${v}/release.txt" \
     | awk '/^ *Version:/ {print $2; exit}'
 done
 
-# 上記で得たバージョンを逐次パイプライン実行
+# Run the pipeline sequentially for the versions obtained above
 for V in 4.19.31 4.18.41 4.17.53 4.16.55 4.15.59 4.14.58; do
   ./scripts/discover.sh   -v "$V" -a x86_64 \
   && ./scripts/fetch-git.sh  -v "$V" --jobs 6 \
@@ -84,34 +84,31 @@ for V in 4.19.31 4.18.41 4.17.53 4.16.55 4.15.59 4.14.58; do
 done
 ```
 
-実測: 7 版で約 12 分（1 版あたり ~2 分、2026-05-27 時点）。展開レイアウトにしたことで tarball 同梱版の ~18.7 GB から大きく縮んだ。
+Measured: ~12 minutes for 7 versions (~2 min per version, as of 2026-05-27). The extracted layout significantly reduced size compared to the tarball-bundled version at ~18.7 GB.
 
-### A-rpm パイプライン (rhel-coreos SRPM 収集)
+### A-rpm pipeline (rhel-coreos SRPM collection)
 
-Phase A と同じリリースペイロードの `rhel-coreos` イメージだけを RPM 単位で
-深掘りするサブフェーズ。Red Hat サブスクリプションを持つ RHEL 9 マシン
-(本プロジェクトでは libvirt VM `rhel9-srpm` を使用) 上で `dnf download
---source` を回す方式。Fedora ホストからは bootstrap だけ実行する。
+A sub-phase that drills into the `rhel-coreos` image from the same release payload as Phase A, at the RPM level. Runs `dnf download --source` on a RHEL 9 machine with a Red Hat subscription (this project uses the libvirt VM `rhel9-srpm`). Only the bootstrap is executed from the Fedora host.
 
 ```bash
-# 1. RHEL 9 VM を起動 (Fedora ホスト側、要 sudo)
+# 1. Start the RHEL 9 VM (Fedora host side, requires sudo)
 cd "$CASKET_WORK"/phase-a-rpm/vm
 ./bootstrap.sh                           # → ssh cloud-user@<IP>
 
-# 2. VM に必要物を転送 (Fedora ホスト)
-VMIP=192.168.122.xxx                     # bootstrap.sh の最終行に出る
+# 2. Transfer required files to the VM (from Fedora host)
+VMIP=192.168.122.xxx                     # shown in bootstrap.sh's final output
 scp ~/.docker/config.json cloud-user@$VMIP:~/pull-secret.json
 scp -r scripts cloud-user@$VMIP:~/
 
-# 3. VM 内でサブスク登録 → 抽出 → fetch (cloud-user)
+# 3. In the VM: register subscription → extract → fetch (as cloud-user)
 ssh cloud-user@$VMIP
 sudo rhc connect --activation-key <KEY> --organization <ORG>   # or subscription-manager register
 cd ~/scripts
-./01-extract-rpmdb.sh                    # 7 版分 rpmdb (~3 分、quay からの pull 含む)
-./02-fetch-srpms.sh                      # SRPM 一括 DL (~15-30 分)
+./01-extract-rpmdb.sh                    # rpmdb for 7 versions (~3 min, including quay pulls)
+./02-fetch-srpms.sh                      # batch SRPM download (~15-30 min)
 exit
 
-# 4. Fedora ホストに回収 + pack
+# 4. Collect results to Fedora host + package
 rsync -a cloud-user@$VMIP:~/scripts/srpms/    $CASKET_WORK/phase-a-rpm/srpms/
 rsync -a cloud-user@$VMIP:~/scripts/rpmdb-tsv/ $CASKET_WORK/phase-a-rpm/rpmdb/
 rsync -a cloud-user@$VMIP:~/scripts/{wishlist.txt,missing*.txt,fetch*.log} \
@@ -119,14 +116,14 @@ rsync -a cloud-user@$VMIP:~/scripts/{wishlist.txt,missing*.txt,fetch*.log} \
 ./scripts/phase-a-rpm-package.sh -o /mnt/hdd/casket-ocp
 ```
 
-実測 (7 版、初回):
-- VM bootstrap: 5 分 (qcow2 clone + cloud-init)
-- 01-extract-rpmdb.sh: 約 3 分 (oc が rhel-coreos を pull + rpmdb 抽出)
-- 02-fetch-srpms.sh: 約 15 分 (初回 dnf cache 含む) — ヒット率 7-8 割
-- EUS / E4S / fast-datapath 追加リトライ: 約 5 分 (`--releasever=9.X` 指定でほぼ全て解決)
-- rsync + pack: 約 3 分
+Measured (7 versions, initial run):
+- VM bootstrap: 5 min (qcow2 clone + cloud-init)
+- 01-extract-rpmdb.sh: ~3 min (oc pulls rhel-coreos + rpmdb extraction)
+- 02-fetch-srpms.sh: ~15 min (including initial dnf cache) — 70-80% hit rate
+- EUS / E4S / fast-datapath retry: ~5 min (mostly resolved with `--releasever=9.X`)
+- rsync + package: ~3 min
 
-### Phase B パイプライン (redhat-operators 収集)
+### Phase B pipeline (redhat-operators collection)
 
 ```bash
 cd "$CASKET_WORK"
@@ -140,69 +137,61 @@ for V in 4.20 4.19 4.18 4.17 4.16 4.15 4.14; do
 done
 ```
 
-Phase B は OCP **minor** で動く (Phase A の patch 単位とは異なる; カタログタグが `v<minor>` のため)。実測: 7 版で約 90 分 (v1 部分; 1 版あたり 5〜20 分、label lookup と FBC 展開がボトルネック)。`phase-b-resolve-v2.sh` は 1 版あたり 20〜30 秒、`phase-b-package.sh` は 1 版あたり 30 秒〜1 分。
+Phase B operates per OCP **minor** (unlike Phase A's per-patch granularity; the catalog tag is `v<minor>`). Measured: ~90 minutes for 7 versions (v1 portion; 5-20 min per version, label lookup and FBC extraction are the bottleneck). `phase-b-resolve-v2.sh` takes 20-30 seconds per version, `phase-b-package.sh` takes 30 seconds to 1 minute per version.
 
-#### certified / community カタログ (2026-07-11 追加)
+#### certified / community catalogs (added 2026-07-11)
 
-`CATALOG` 環境変数で同じ 5 スクリプトがそのまま
-`certified-operator-index` / `community-operator-index` に切り替わる（既定 `redhat`）:
-
-```bash
-CATALOG=certified ./scripts/phase-b-discover.sh -v 4.20   # 以降のスクリプトも同様に CATALOG を付けて実行
-```
-
-- work dir は `phase-b-certified/<minor>/`・`phase-b-community/<minor>/`、成果物は
-  `casket-<date>-ocp<minor>-{certified,community}-operators.sqfs.xz`（redhat は従来どおり無印）。
-- 実測 (4.20): certified 185 operators → **800 MB** / community 300 operators
-  (github source 217 dirs — OSS 由来で解決率が redhat より高い) → **1.4 GB**。
-- **auto-update の対象にはしない**（運用判断 2026-07-11）: community はカタログの
-  digest が頻繁に動くためリビルド多発になる。必要な時に手動でビルドする。
-- community のコンテナはサードパーティレジストリ (ghcr.io、個人 quay リポジトリ等)
-  に散っており、死んだエンドポイントで `oc image info` が数分ハングし得るため
-  `phase-b-fetch-source.sh` のラベル照会には `timeout 60` を入れてある。
-
-#### 本番マウントへの差し替え (新しい operator casket を作り直した場合)
+The `CATALOG` environment variable switches the same 5 scripts to `certified-operator-index` / `community-operator-index` (default `redhat`):
 
 ```bash
-sudo "$CASKET_WORK"/scripts/swap-operators-v2.sh   # fstab 書換 + daemon-reload + restart
+CATALOG=certified ./scripts/phase-b-discover.sh -v 4.20   # pass CATALOG to subsequent scripts as well
 ```
 
-`systemctl restart` が busy で失敗するマウントがあれば、そのマウントだけ `umount -l` してから `systemctl start` でフォロー (実例: 4.20 で発生)。差し替え対象のファイル名は同 script の `VERS=` と日付グロブを編集して合わせる。
+- Work dirs are `phase-b-certified/<minor>/` / `phase-b-community/<minor>/`, artifacts are `casket-<date>-ocp<minor>-{certified,community}-operators.sqfs.xz` (redhat remains unlabeled as before).
+- Measured (4.20): certified 185 operators → **800 MB** / community 300 operators (github source 217 dirs — higher resolution rate than redhat due to OSS origins) → **1.4 GB**.
+- **Not included in auto-update** (operational decision 2026-07-11): community catalog digests change frequently, which would trigger excessive rebuilds. Build manually as needed.
+- Community containers are spread across third-party registries (ghcr.io, personal quay repos, etc.), and dead endpoints can cause `oc image info` to hang for minutes, so `phase-b-fetch-source.sh` label queries use `timeout 60`.
 
-### 作業ディレクトリ
+#### Swapping to production mounts (when new operator caskets are rebuilt)
+
+```bash
+sudo "$CASKET_WORK"/scripts/swap-operators-v2.sh   # fstab rewrite + daemon-reload + restart
+```
+
+If `systemctl restart` fails due to a busy mount, follow up with `umount -l` on that mount followed by `systemctl start` (occurred with 4.20 in practice). Edit the `VERS=` and date glob in the script to match the target filenames.
+
+### Work directory layout
 
 ```
 $CASKET_WORK/
-├── README.md                      ← 概要とドキュメント索引
-├── CLAUDE.md  USAGE.md            ← 開発ガイド / 利用手順
-├── scripts/                       ← パイプライン本体 (Phase A / A-rpm / B / B-operand) + lib-resolve.sh
-├── tests/                         ← ネットワーク不要の回帰テスト (CI で実行)
-├── .github/workflows/ci.yml       ← lint + テスト (本体パイプラインは CI 対象外)
-├── docs/                          ← 設計・計画ドキュメント
-├── decks/                         ← 資料: build_*_deck.py + pptx/pdf + 図 (.gitignore — 社内限定テンプレート依存のため非公開)
-├── analysis/                      ← 移行・検証の分析メモ (.gitignore — ホスト固有の調査記録のため非公開)
-├── mcp/  opengrok/                ← MCP サーバー / OpenGrok ソースブラウザ
-├── ocp<VERSION>/                  ← Phase A バージョン別中間生成物 (.gitignore)
+├── README.md                      ← Overview and documentation index
+├── CLAUDE.md  USAGE.md            ← Developer guide / user guide
+├── scripts/                       ← Pipeline core (Phase A / A-rpm / B / B-operand) + lib-resolve.sh
+├── tests/                         ← Network-free regression tests (run in CI)
+├── .github/workflows/ci.yml       ← Lint + tests (the pipeline itself is not CI-tested)
+├── docs/                          ← Design & planning documents
+├── mcp/  opengrok/                ← MCP server / OpenGrok source browser
+├── ocp<VERSION>/                  ← Phase A per-version intermediates (.gitignore)
 │   ├── 00-discover/               release.json, release-commits.txt, images.tsv, commits.tsv
-│   ├── 10-git/                    tarball + fetch.log
+│   ├── 10-git/                    tarballs + fetch.log
 │   ├── 40-manifest/               MANIFEST.json
-│   └── 50-out/stage/              mksquashfs 入力ツリー
-├── phase-a-rpm/                   ← A-rpm 中間生成物
-│   ├── vm/                        cloud-init + virt-install bootstrap, VM 内スクリプト
-│   ├── srpms/                     843 *.src.rpm (VM から rsync)
-│   ├── rpmdb/                     7 版分の rpmdb tsv
-│   ├── logs/                      wishlist / missing / fetch ログ
-│   └── 50-out/stage/              mksquashfs 入力ツリー
-├── phase-b/<minor>/               ← Phase B 中間生成物 (minor 単位)
+│   └── 50-out/stage/              mksquashfs input tree
+├── phase-a-rpm/                   ← A-rpm intermediates
+│   ├── vm/                        cloud-init + virt-install bootstrap, in-VM scripts
+│   ├── srpms/                     843 *.src.rpm (rsynced from VM)
+│   ├── rpmdb/                     rpmdb tsv for 7 versions
+│   ├── logs/                      wishlist / missing / fetch logs
+│   └── 50-out/stage/              mksquashfs input tree
+├── phase-b/<minor>/               ← Phase B intermediates (per minor)
 │   ├── 00-discover/               configs/ (FBC), operators.tsv, bundles.tsv, containers.tsv, labels.tsv, git.tsv, containers-v2.tsv, git-v2.tsv
-│   ├── 10-bundles/<op>/<head>/    bundle 展開: manifests/, metadata/
-│   ├── 20-git/                    github tarball (v1 + v2 追記、fetch.log + fetch-v2.log)
-│   └── 50-out/stage/              mksquashfs 入力ツリー
-└── phase-b-operand/<pkg>/<minor>/ ← B-operand 中間生成物 (製品×minor 単位)
-    ├── 00-discover/               head bundle, images.tsv (operand 一覧)
-    ├── 20-git/                    operand github tarball + fetch ログ
-    ├── 30-vendor/<comp>/          Rust 依存の展開済ソース (Cargo.lock 解決, 対象製品のみ)
-    └── 50-out/stage/              統合前 stage (phase-b-operand-combine.sh が集約)
+│   ├── 10-bundles/<op>/<head>/    extracted bundle: manifests/, metadata/
+│   ├── 20-git/                    github tarballs (v1 + v2 appended, fetch.log + fetch-v2.log)
+│   └── 50-out/stage/              mksquashfs input tree
+└── phase-b-operand/<pkg>/<minor>/ ← B-operand intermediates (per product × minor)
+    ├── 00-discover/               head bundle, images.tsv (operand list)
+    ├── 20-git/                    operand github tarballs + fetch logs
+    ├── 30-vendor/<comp>/          extracted Rust dependency sources (Cargo.lock resolved, target products only)
+    └── 50-out/stage/              pre-integration stage (phase-b-operand-combine.sh consolidates)
 ```
 
-中間生成物 (`ocp<VERSION>/`, `phase-a-rpm/srpms`, `phase-a-rpm/50-out`) は最終 `.sqfs.xz` 生成後は削除して OK。`phase-a-rpm/rpmdb/` と `phase-a-rpm/logs/` は次回更新時の差分把握に役立つので残すと良い。
+Intermediates (`ocp<VERSION>/`, `phase-a-rpm/srpms`, `phase-a-rpm/50-out`) can be deleted after the final `.sqfs.xz` is generated. `phase-a-rpm/rpmdb/` and `phase-a-rpm/logs/` are worth keeping for diffing on the next update.

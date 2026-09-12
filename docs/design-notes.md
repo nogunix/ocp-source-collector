@@ -1,30 +1,30 @@
-# 設計判断・既知の注意点
+# Design decisions and known caveats
 
-各フェーズの設計で選んだ方式と、その理由。
+The approach chosen for each phase and the reasoning behind it.
 
 ## Phase A
 
-- **`*-source` コンテナを追いかける案を不採用にした理由**: OCP の release payload にひもづくソースコンテナは命名規則が安定せず、`quay.io/openshift-release-dev/ocp-v4.0-art-dev:<...>-source` 等を実機で probe したがすべて 404。代わりに `oc adm release info --commits` が各コンポーネントの GitHub repo URL + 正確な commit SHA を綺麗に返すため、これを source of truth とした。
-- **GitHub archive を直接取得**: tarball は `https://github.com/<owner>/<repo>/archive/<sha>.tar.gz` で認証不要・1 リクエストで完結。164 件で約 95 秒。
-- **(repo, commit) で dedupe**: 191 イメージのうち約 27 件は同じ repo+commit を共有する（例: `csi-operator` を使う複数の CSI ドライバ operator）。tarball は dedupe して保存し、MANIFEST.json でイメージ→tarball の many-to-one を維持。
-- **`.sqfs.xz` の正体**: 既存 casket (`casket-20251118-rhel10.sqfs.xz` 等) を `file` / `xz -t` で確認した結果、**外側 xz ラップ無し**の「内部 xz 圧縮 squashfs」だった。本プロトタイプも同じ形式に揃えた。
+- **Why `*-source` containers were rejected**: The source containers tied to the OCP release payload have unstable naming conventions. Probing pullspecs like `quay.io/openshift-release-dev/ocp-v4.0-art-dev:<...>-source` on real clusters returned 404 in all cases. Instead, `oc adm release info --commits` cleanly returns the GitHub repo URL + exact commit SHA for each component, so this was adopted as the source of truth.
+- **Direct GitHub archive download**: Tarballs are fetched from `https://github.com/<owner>/<repo>/archive/<sha>.tar.gz` — no authentication required, one request per component. ~95 seconds for 164 items.
+- **Dedup by (repo, commit)**: Of 191 images, ~27 share the same repo+commit (e.g. multiple CSI driver operators using `csi-operator`). Tarballs are deduped for storage, with MANIFEST.json maintaining the many-to-one image→tarball mapping.
+- **What `.sqfs.xz` actually is**: Examining existing caskets (`casket-20251118-rhel10.sqfs.xz` etc.) with `file` / `xz -t` confirmed they are **internally xz-compressed squashfs with no outer xz wrap**. This project uses the same format.
 
 ## A-rpm
 
-- **`--rpmdb-image=rhel-coreos` が必須**: 4.14 / 4.15 には `machine-os-content` (旧 el8 ベース ostree) と `rhel-coreos` (新 el9 ベース OCI) が共存。`oc adm release info --rpmdb` の既定動作だと前者を引き、本プロジェクトのサブスク (RHEL 9 のみ) では SRPM が取れない。明示で `rhel-coreos` を指定して全 7 版を **el9 統一**にして処理する。
-- **rpmdb 抽出は RHEL 9 VM 内で実施**: Fedora ホストの新しい rpm では 4.14-4.18 の rpmdb 変換が `rpm -qa` 段階で失敗 (host rpm との format mismatch)。RHEL 9 ネイティブの rpm を持つ VM 内なら全版通る。
-- **`dnf download --source` で SRPM を引く**: binary RPM の NEVR を渡せば dnf が repodata で sourcerpm を解決して `.src.rpm` を保存。出力 dir 内で同名 SRPM は自然に dedup される。
-- **EUS / E4S は `--releasever=<minor>` 指定が必要**: el9_2 / el9_4 / el9_6 errata の SRPM は EUS 専用チャネル経由でしか入手できず、VM 自身が 9.8 だと `eus/rhel9/9.8/...` を引いて 404。dist tag のマイナーごとに `--releasever=9.2` 等で再 fetch することで初回 32% → 最終 99.86% カバレッジに到達。
+- **`--rpmdb-image=rhel-coreos` is required**: 4.14/4.15 have both `machine-os-content` (old el8-based ostree) and `rhel-coreos` (new el9-based OCI) coexisting. The default behavior of `oc adm release info --rpmdb` picks the former, and this project's subscription (RHEL 9 only) cannot fetch SRPMs for it. Explicitly specifying `rhel-coreos` processes all 7 versions as **el9-unified**.
+- **rpmdb extraction runs inside a RHEL 9 VM**: The Fedora host's newer rpm fails at the `rpm -qa` stage for 4.14-4.18 rpmdb conversion (format mismatch with host rpm). A VM with RHEL 9 native rpm handles all versions.
+- **SRPMs fetched via `dnf download --source`**: Given binary RPM NEVRs, dnf resolves the sourcerpm through repodata and saves the `.src.rpm`. Same-name SRPMs in the output directory are naturally deduped.
+- **EUS / E4S requires explicit `--releasever=<minor>`**: SRPMs for el9_2 / el9_4 / el9_6 errata are only available through EUS-specific channels, and a VM running 9.8 fetches `eus/rhel9/9.8/...` which 404s. Re-fetching with `--releasever=9.2` etc. per dist-tag minor improved coverage from the initial 32% to a final 99.86%.
 
 ## Phase B
 
-- **対象は redhat-operator-index の `vN.M` タグ**。Phase A が patch 単位なのに対し Phase B は **minor 単位**で動く (カタログがそうなっているため)。
-- **File-Based Catalog (FBC) は `/configs` ディレクトリ**: opm サーバーを立てる必要は無く、`oc image extract --path /configs/:dest/` で NDJSON を取り出せる。
-- **head bundle 算出は `replaces` + `skips` を考慮**: **他 entry の `replaces` / `skips` に含まれない entry** を集合演算で求め、複数残る場合は配列末尾を採用する。
-- **container image labels は不揃い**: `io.openshift.build.source-location` + `vcs-ref` が揃うはずだが実際は不揃い。Phase B v2 (CSV 起点 + branch fallback) で 6→34 件 (4.20 は 86 件) まで増加。残る取りこぼしは CSV の `repository` 自体が github を指していない operator で、brew/cachito ビルド由来のため公開 tarball として再現不可。
+- **Target is the `vN.M` tag of redhat-operator-index**. Phase B operates per **minor** (unlike Phase A's per-patch granularity), because the catalog is tagged that way.
+- **File-Based Catalog (FBC) lives in `/configs`**: No need to run an opm server — `oc image extract --path /configs/:dest/` retrieves the NDJSON directly.
+- **Head bundle computation considers `replaces` + `skips`**: Finds entries not referenced by any other entry's `replaces` / `skips` via set operations. When multiple remain, takes the last in the array.
+- **Container image labels are inconsistent**: `io.openshift.build.source-location` + `vcs-ref` should be present but often aren't. Phase B v2 (CSV-based + branch fallback) improved resolution from 6 to 34 (86 for 4.20). Remaining misses are operators whose CSV `repository` doesn't point to github — built via brew/cachito, making them unreproducible as public tarballs.
 
-## トラブルシューティング
+## Troubleshooting
 
-- **GitHub レート制限**: 認証なしで 164 並列 6 を実測した範囲では問題なし（アーカイブ DL は API レート制限とは別枠）。429 が出たら `--jobs` を下げるか `GITHUB_TOKEN` を設定。
-- **Phase A/RPM VM**: `rhel9-srpm` (libvirt) は登録 + 設定済み状態で永続化。`sudo virsh start rhel9-srpm` → `sudo virsh net-dhcp-leases default` で IP 確認。
-- **SRPM 取り残し 2 件**: `redhat-release-9.2-0.15.el9` / `redhat-release-eula-9.2-0.15.el9` は EUS チャネルからも消失 (9.2 EUS 終了直前の中間バージョン)。実害なし。
+- **GitHub rate limits**: No issues observed when running 164 targets at parallelism 6 without authentication (archive downloads are under a separate rate limit from the API). If 429 errors occur, reduce `--jobs` or set `GITHUB_TOKEN`.
+- **Phase A/RPM VM**: `rhel9-srpm` (libvirt) is persisted in a registered and configured state. `sudo virsh start rhel9-srpm` → `sudo virsh net-dhcp-leases default` to get the IP.
+- **2 uncollected SRPMs**: `redhat-release-9.2-0.15.el9` / `redhat-release-eula-9.2-0.15.el9` have disappeared even from EUS channels (intermediate versions just before 9.2 EUS EOL). No practical impact.

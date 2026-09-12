@@ -8,7 +8,7 @@ see `../scripts/lib.sh`).
 
 **Stage 1 + 2 (current).** Stage 1 = filesystem navigation + ripgrep. Stage 2 =
 OpenGrok REST for symbol-definition / cross-reference / fast broad full-text
-(全フェーズ: a / a-rpm / b / b-certified / b-community / b-operand), with graceful degradation when the OpenGrok container is down.
+(all phases: a / a-rpm / b / b-certified / b-community / b-operand), with graceful degradation when the OpenGrok container is down.
 Navigation uses the `by-repo`/`by-component`/`INDEX.tsv` index layer (live since
 2026-06-08).
 

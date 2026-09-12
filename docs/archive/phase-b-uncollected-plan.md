@@ -1,154 +1,165 @@
-# Phase B（旧称 Phase C）未収録オペレーター収録計画
+# Phase B (formerly Phase C) — Uncollected operator recovery plan
 
-> 文中の「Phase C」は 2026-07-11 のリネームで現「Phase B」。記録保全のため本文は当時の呼称のまま。
+> "Phase C" in this document refers to what was renamed to "Phase B" on 2026-07-11. Original names are preserved for historical accuracy.
 
-> 作成: 2026-06-09 / 更新: 2026-06-09（4.18 実パイプライン調査・修正反映）
-> 対象: OCP `redhat-operator-index` のうち casket 未収録の OLM オペレーター
-> 調査ベース: OCP 4.18 インデックス（discover→fetch-bundles 実行済み、キャッシュ参照）
+> Created: 2026-06-09 / Updated: 2026-06-09 (reflects 4.18 actual pipeline investigation and fixes)
+> Target: OLM operators in OCP `redhat-operator-index` not yet collected by casket
+> Investigation base: OCP 4.18 index (discover→fetch-bundles already executed, cache available)
 
-## 背景 — Phase C は全インデックスを処理済み
+## Background — Phase C processes the entire index
 
-`phase-c-discover.sh` はインデックス全体を処理する。4.18 実測: カタログ 153 オペレーター、
-default-channel head を持つ 122。収録されるのは「ソースが公開 GitHub の取得可能な
-commit/tag に解決できたもの」だけ（本番 4.18 カセット ~34 ディレクトリ）。
+`phase-c-discover.sh` processes the entire index. 4.18 actual measurements: catalog has
+153 operators, 122 with default-channel heads. Only those whose source resolves to a
+fetchable commit/tag on public GitHub are collected (production 4.18 casket: ~34
+directories).
 
-## 2つの根本原因（いずれも修正済み）
+## Two root causes (both fixed)
 
-### 原因1 — ref が解決できない（resolve-v2.sh）
+### Cause 1 — ref cannot be resolved (resolve-v2.sh)
 
-リポジトリ URL は CSV から取れるが、社内ビルドの `revision` sha は公開ミラーに無く、
-v2 の既存フォールバック（`v<version>` / `release-<ocp-minor>` / main / master）が
-**製品版と公開リポのタグ命名の不一致**で 404 する。
+Repository URL is obtainable from CSV, but internal build `revision` SHAs don't exist
+on public mirrors, and v2's existing fallback (`v<version>` / `release-<ocp-minor>` /
+main / master) returns 404 due to **product version vs public repo tag naming
+mismatches**.
 
-**修正**: `phase-c-resolve-v2.sh` の `dl_one` にリポジトリ別 ref 戦略（case テーブル、Phase D
-COMPONENT_MAP と同型）を追加。`ver_minor`（製品版の MAJOR.MINOR）を導出して使用。
+**Fix**: Added per-family ref strategies (case table, same pattern as Phase D
+COMPONENT_MAP) to `phase-c-resolve-v2.sh`'s `dl_one`. Derives `ver_minor` (product
+version MAJOR.MINOR) for use.
 
-| リポジトリ | 変換 | 実測(4.18) |
+| Repository | Transform | Actual (4.18) |
 |---|---|---|
-| redhat-developer/gitops-operator | `tags/v<MAJOR.MINOR>.0`（patch切捨て） | v1.20.0 → 200 |
+| redhat-developer/gitops-operator | `tags/v<MAJOR.MINOR>.0` (patch truncated) | v1.20.0 → 200 |
 | maistra/istio-operator | `tags/maistra-<ver>-dev`, `tags/maistra-<ver>` | maistra-2.6.16-dev → 200 |
-| openshift-knative/serverless-operator | `heads/release-<MAJOR.MINOR>`（製品版から） | release-1.37 → 200 |
-| ComplianceAsCode/compliance-operator | `tags/v<ver>`, `heads/<MAJOR.MINOR>` | （RH先行のため近似） |
+| openshift-knative/serverless-operator | `heads/release-<MAJOR.MINOR>` (from product version) | release-1.37 → 200 |
+| ComplianceAsCode/compliance-operator | `tags/v<ver>`, `heads/<MAJOR.MINOR>` | (approximate, RH is ahead of public tags) |
 
-### 原因2 — containerImage 注釈なしで行ごと脱落（fetch-bundles.sh）★今回発見
+### Cause 2 — rows dropped when containerImage annotation is missing (fetch-bundles.sh) ★ discovered in this investigation
 
-`phase-c-fetch-bundles.sh:149` の `[[ -z "$container" ]] && continue` が、CSV に
-`containerImage` 注釈を持たないオペレーターを `containers.tsv` から除外していた。
-4.18 実測: 122 中 **92 行のみ**、**30 オペレーターが脱落**。脱落分は resolve-v2 に
-到達しないため、ref 戦略以前に救済不能だった。脱落30の中に serverless / pipelines /
-compliance / file-integrity / sandboxed-containers / windows-machine-config 等が含まれる。
+`phase-c-fetch-bundles.sh:149`'s `[[ -z "$container" ]] && continue` was excluding
+operators without a `containerImage` annotation from `containers.tsv`. 4.18 actual:
+only **92 of 122 rows**, **30 operators dropped**. Dropped operators never reach
+resolve-v2, making them unrecoverable regardless of ref strategy. The 30 dropped
+include serverless / pipelines / compliance / file-integrity / sandboxed-containers /
+windows-machine-config, etc.
 
-**修正**: `continue` を撤去し、containerImage が空でも行を残す。resolve-v2 は CSV の
-`metadata.annotations.repository`（または `spec.links[].url`）から csv_repo を再取得して解決する。
+**Fix**: Removed the `continue`. Rows with empty containerImage are kept. resolve-v2
+re-extracts csv_repo from `metadata.annotations.repository` (or `spec.links[].url`)
+to resolve.
 
-### 原因3 — 空ref で read が列ズレ（resolve-v2.sh download部）★今回発見
+### Cause 3 — read column shift on empty ref (resolve-v2.sh download section) ★ discovered in this investigation
 
-csv_repo のみで commit ラベルが無いオペレーターは ref 空。DL_TSV の行が
-`src<TAB><TAB>ver<TAB>fname` となり、`IFS=$'\t' read -r src ref ver fname` が
-**連続タブを1つに圧縮**（tab は空白文字）して列がズレ、`fname` が空に → 該当29製品の
-ダウンロードが全て無効化されていた。
+Operators with only csv_repo and no commit label have an empty ref. The DL_TSV row
+becomes `src<TAB><TAB>ver<TAB>fname`, and `IFS=$'\t' read -r src ref ver fname`
+**collapses consecutive tabs into one** (tab is whitespace), causing column shift so
+`fname` becomes empty → downloads for all 29 affected products were silently
+invalidated.
 
-**修正**: DL_TSV 生成時に空 ref を `_NONE_` sentinel に置換、`dl_one` 冒頭で空へ戻す。
-これで serverless/pipelines/compliance 等の ref 空ケースが正しく fetch される。
+**Fix**: Replace empty ref with `_NONE_` sentinel during DL_TSV generation; restore to
+empty at the start of `dl_one`. This correctly handles the empty-ref case for
+serverless/pipelines/compliance, etc.
 
-## 4.18 実測サマリ（修正後・全3原因解消）
+## 4.18 measured summary (post-fix, all 3 causes resolved)
 
-| 指標 | 値 |
+| Metric | Value |
 |---|---|
-| 本番 4.18（修正前） | 34 source dir |
-| **修正後 ユニーク source dir** | **110** |
-| 収録 operator（dedup前） | 114 |
-| head operator | 122 |
+| Production 4.18 (pre-fix) | 34 source dirs |
+| **Post-fix unique source dirs** | **110** |
+| Collected operators (before dedup) | 114 |
+| Head operators | 122 |
 | NO_SOURCE | 6 |
-| DL失敗 | 2（openstack=org-root, openshift-builds=www.redhat.com） |
+| DL failure | 2 (openstack=org-root, openshift-builds=www.redhat.com) |
 
-**約 3.2倍（34→110）。** 優先3製品は狙い通り解決:
-serverless→release-1.37, gitops→v1.20.0, servicemesh→maistra-2.6.16-dev。
-ソース実体も検証済み（tektoncd operator-main, serverless release-1.37 等は本物の source tree）。
+**~3.2x improvement (34→110).** Priority 3 products resolved as intended:
+serverless→release-1.37, gitops→v1.20.0, servicemesh→maistra-2.6.16-dev.
+Source contents verified (tektoncd operator-main, serverless release-1.37, etc. are
+real source trees).
 
-品質: 大半は sha/tag/release-branch で版正確。一部（~12–14, compliance/pipelines/kueue/
-lws/jobset/node-maintenance/security-profiles/watcher/logic/orchestrator/exploit-iq/
-amq-broker 等）は main/master 近似（最新ソース、出荷版と厳密一致せず）。これは既存 v2 と
-同じ方針上のトレードオフ。
+Quality: Most use sha/tag/release-branch for exact version match. Some (~12–14:
+compliance/pipelines/kueue/lws/jobset/node-maintenance/security-profiles/watcher/logic/
+orchestrator/exploit-iq/amq-broker) are main/master approximations (latest source, not
+exact match to shipped version). This is the same policy tradeoff as existing v2.
 
-## 4.18 旧実測（原因調査時）
+## 4.18 earlier measurements (during cause investigation)
 
-- カタログ 153 / head 122 / 旧 containers.tsv 92（→修正後 122 へ）
-- 脱落30のうち **GitHub csv_repo を持つ = 18**（救済候補）、非GitHub 0、repository注釈なし 12
-- repository 注釈なし12 も大半は `spec.links` に GitHub あり（下表）
+- Catalog 153 / head 122 / old containers.tsv 92 (→ post-fix 122)
+- Of the 30 dropped: **18 have GitHub csv_repo** (rescue candidates), 0 non-GitHub,
+  12 have no repository annotation
+- Of the 12 without repository annotation, most have GitHub in `spec.links` (see table
+  below)
 
-## 救済対象の全体像（4.18）
+## Full rescue picture (4.18)
 
-### A. csv_repo が GitHub（18製品）— fix#2 で resolve-v2 に到達
+### A. GitHub csv_repo (18 products) — fix#2 makes them reach resolve-v2
 
 serverless, openshift-pipelines, compliance, file-integrity, sandboxed-containers,
 windows-machine-config, jobset, lws, node-maintenance, fence-agents-remediation,
-machine-deletion-remediation, logic-operator(×2), orchestrator, rhtpa, exploit-iq,
-amq-broker(rhel8/rhel9)。
-openshift/* ・ medik8s/* は release ブランチ/タグ/sha が揃い解決容易。
+machine-deletion-remediation, logic-operator (×2), orchestrator, rhtpa, exploit-iq,
+amq-broker (rhel8/rhel9).
+openshift/* and medik8s/* have release branches/tags/sha available for easy resolution.
 
-### B. repository 注釈なし12製品 — spec.links 経由の内訳（実測）
+### B. No repository annotation — 12 products via spec.links (actual measurements)
 
-| グループ | 数 | 製品 | 対処 |
+| Group | Count | Products | Resolution |
 |---|---|---|---|
-| B1 追加実装ゼロ・版正確 | 3 | dpu, nbde-tang-server, numaresources | `release-4.18` ブランチ存在（200） |
-| B2 追加実装ゼロ・最新近似 | 5 | cincinnati, devworkspace, kueue, security-profiles, watcher | main/master のみ200（版は最新近似） |
-| B3 org-root リンクのみ | 1 | openstack | `openstack-k8s-operators/` 止まり。Phase D 方式の手動リポマッピング要 |
-| B4 github リンク無し | 3 | ansible-automation-platform, ansible-cloud-addons, pf-status-relay | 制御イメージの `io.openshift.build.source-location` ラベル抽出が要。ansible は公開ソース無しの公算大 |
+| B1: No additional code needed, version-exact | 3 | dpu, nbde-tang-server, numaresources | `release-4.18` branch exists (200) |
+| B2: No additional code needed, latest approximation | 5 | cincinnati, devworkspace, kueue, security-profiles, watcher | Only main/master returns 200 (latest approximation) |
+| B3: Org-root link only | 1 | openstack | Stops at `openstack-k8s-operators/`. Needs Phase D-style manual repo mapping |
+| B4: No github link | 3 | ansible-automation-platform, ansible-cloud-addons, pf-status-relay | Requires extracting `io.openshift.build.source-location` label from control image. ansible likely has no public source |
 
-B1+B2 の8製品は**追加コード不要**（fix#2＋既存 spec.links フォールバックで自動収集）。
+B1+B2 (8 products) require **no additional code** (fix#2 + existing spec.links
+fallback handles automatic collection).
 
-## 困難な2製品（厳密一致不可、近似のみ）
+## Difficult 2 products (exact match impossible, approximation only)
 
-| 製品 | 理由 |
+| Product | Reason |
 |---|---|
-| openshift-pipelines (tektoncd/operator) | 製品版 v1.22 ↔ upstream v0.79 が完全非対応。版逆引き写像なし。要 midstream リポ調査 |
-| compliance (ComplianceAsCode) | RH 出荷 v1.9.0 が公開リポに未 tag/branch化（公開最新 v1.8.2）。master 近似のみ |
+| openshift-pipelines (tektoncd/operator) | Product version v1.22 ↔ upstream v0.79 are completely incompatible. No version reverse-mapping exists. Needs midstream repo investigation |
+| compliance (ComplianceAsCode) | RH shipped v1.9.0 has no public tag/branch (public latest is v1.8.2). Master approximation only |
 
-## 解決見込み（4.18）
+## Resolution outlook (4.18)
 
-| 区分 | 数 | 備考 |
+| Category | Count | Notes |
 |---|---|---|
-| 既存収録 | ~34 | 維持 |
-| A群（GitHub csv_repo） | ~16/18 | 困難2を除き大半解決 |
-| B1+B2群 | 8 | 自動収集（3つ版正確/5つ近似） |
-| **合計見込み** | **~46–50** | 現状比 +35〜45% |
-| 残課題 | 4 | openstack(B3) + ansible×2/pf-status-relay(B4) |
+| Existing collected | ~34 | Maintained |
+| Group A (GitHub csv_repo) | ~16/18 | Most resolved except 2 difficult cases |
+| Group B1+B2 | 8 | Automatic collection (3 version-exact / 5 approximation) |
+| **Estimated total** | **~46–50** | +35–45% over current |
+| Remaining issues | 4 | openstack (B3) + ansible×2/pf-status-relay (B4) |
 
-## 実装ステップ
+## Implementation steps
 
-1. **済** `phase-c-resolve-v2.sh` に per-family ref 戦略（原因1）
-2. **済** `phase-c-fetch-bundles.sh` の空containerImage行ドロップ撤去（原因2）
-3. **済** `phase-c-resolve-v2.sh` の空ref sentinel 修正（原因3）
-4. **済** 4.18 full 再実行 → 110 ユニークdir（34→110）確定
-5. 4.18 を package → 検証マウント（`phase-c-package.sh -v 4.18`）
-6. 全8マイナー（4.14–4.21）再実行＋再パッケージ: 各 minor で discover→fetch-bundles→fetch-source→resolve-v2→package、`swap-operators-extracted.sh`（同名スワップ・fstab不変）
+1. **Done** — Per-family ref strategies in `phase-c-resolve-v2.sh` (cause 1)
+2. **Done** — Removed empty containerImage row drop in `phase-c-fetch-bundles.sh` (cause 2)
+3. **Done** — Empty ref sentinel fix in `phase-c-resolve-v2.sh` (cause 3)
+4. **Done** — 4.18 full re-run → 110 unique dirs (34→110) confirmed
+5. Package 4.18 → verification mount (`phase-c-package.sh -v 4.18`)
+6. Re-run + repackage all 8 minors (4.14–4.21): discover→fetch-bundles→fetch-source→resolve-v2→package per minor, `swap-operators-extracted.sh` (same-name swap, fstab unchanged)
 
-### 後回し（次の課題）
+### Deferred (next issues)
 
-- openstack: 構成リポ群の手動マッピング（Phase D 寄り）
-- ansible×2 / pf-status-relay: relatedImages の制御イメージ build ラベル抽出ロジック（費用対効果低）
-- pipelines: 製品版↔upstream版 対応表 or RH midstream リポ調査
-- compliance: 公開タグ化を待つ or master 近似で妥協
+- openstack: Manual mapping of constituent repos (Phase D approach)
+- ansible×2 / pf-status-relay: Control image build label extraction logic (low cost-effectiveness)
+- pipelines: Product version↔upstream version mapping table or RH midstream repo investigation
+- compliance: Wait for public tag or accept master approximation
 
-## 検証コマンド（再現用）
+## Verification commands (for reproduction)
 
 ```bash
-# 特定オペレーターの config だけ抽出（全インデックス不要）
+# Extract a single operator's config (no need for full index)
 mkdir -p /tmp/cfg/<op>
 oc image extract --registry-config=~/.docker/config.json --filter-by-os=linux/amd64 \
   --path "/configs/<op>/:/tmp/cfg/<op>/" registry.redhat.io/redhat/redhat-operator-index:v4.18
 
-# head bundle CSV の repository / spec.links / containerImage
+# Check head bundle CSV's repository / spec.links / containerImage
 oc image extract ... --path "/manifests/:/tmp/b/<op>/" <bundle-image>
 python3 -c "import yaml; d=yaml.safe_load(open('<csv>'));
 ann=d['metadata']['annotations']; print('repo=',ann.get('repository'));
 print('links=',[l['url'] for l in d.get('spec',{}).get('links',[])])"
 
-# ref 候補の存在確認
+# Verify ref candidate existence
 curl -sIL -o /dev/null -w '%{http_code}\n' \
   https://github.com/<owner>/<repo>/archive/refs/heads/release-4.18.tar.gz
 ```
 ```bash
-# zsh 注意: 未クォート変数は単語分割されない。ループは printf '%s\n' ... | while read で。
+# zsh note: unquoted variables don't undergo word splitting. Use printf '%s\n' ... | while read for loops.
 ```

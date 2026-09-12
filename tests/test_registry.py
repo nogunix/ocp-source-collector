@@ -108,7 +108,7 @@ def test_get_returns_latest_matching_entry(tmp_path):
 
 
 def test_accepts_a_rpm_and_b_operand_phase_values(tmp_path):
-    # a-rpm and b-operand are sub-resolutions of a/b (see README.md "運用"
+    # a-rpm and b-operand are sub-resolutions of a/b (see README.md "Operations"
     # section), not independent phases -- cover the CLI choice change.
     reg = tmp_path / "registry.json"
     run("add", "--phase", "a-rpm", "--unit", "all", "--fingerprint", "f1",

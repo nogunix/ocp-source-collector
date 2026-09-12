@@ -1,5 +1,5 @@
 # Phases casket-auto-update.sh is allowed to auto-build (one per line).
-# The swap to production always stays manual (docs/operations.md 自動化の境界).
+# The swap to production always stays manual (docs/operations.md "automation boundary").
 #
 #   a          fast (~5 min/minor), github archive fetch only
 #   b          heavy (5-20 min/minor), pulls redhat-operator-index + bundles

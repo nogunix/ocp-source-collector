@@ -7,7 +7,7 @@
 #
 # Fingerprints per phase (see scripts/lib-fingerprint.sh for the fetchers).
 # "a-rpm" and "b-operand" are sub-resolutions of a/b (same upstream artifact,
-# one level deeper), not independent phases -- see README.md "運用" section:
+# one level deeper), not independent phases -- see README.md "Operations" section:
 #   a:         the current patch string for the minor (from the stable-<minor> channel)
 #   b:         manifest digest of registry.redhat.io/redhat/redhat-operator-index:v<minor>
 #   b-operand: same catalog digest as b -- phase-b-operand-discover.sh pulls the

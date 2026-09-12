@@ -11,7 +11,7 @@ catalog), each with a direct mode and a "go one level deeper" sub-mode. `a-rpm`
 and `b-operand` are that deeper mode for `a`/`b` respectively. Both were renamed
 on 2026-07-11: first Phase B/D → `a-rpm`/`c-operand` (they're sub-resolutions,
 not independent phases), then old Phase C → `b`/`b-operand` (so the two origins
-read as sequential A/B instead of A/C) — see README.md's "現状" section for the reasoning.
+read as sequential A/B instead of A/C) — see README.md's "What gets collected" section for the reasoning.
 
 - **A**: OCP component git tarballs. **9 minors live** (4.14-4.22).
 - **A-rpm**: SRPMs from redhat-coreos rpmdb (99.86% coverage).
@@ -44,7 +44,7 @@ See [docs/pipeline.md](docs/pipeline.md) for full script tables, execution examp
 ```bash
 ./scripts/phase-a-rpm-package.sh
 ```
-Requires RHEL 9 VM (`rhel9-srpm` libvirt guest) with `dnf download --source` capability. See [docs/pipeline.md](docs/pipeline.md#a-rpm-パイプライン-rhel-coreos-srpm-収集) for the full VM workflow.
+Requires RHEL 9 VM (`rhel9-srpm` libvirt guest) with `dnf download --source` capability. See [docs/pipeline.md](docs/pipeline.md#a-rpm-pipeline-rhel-coreos-srpm-collection) for the full VM workflow.
 
 ### Phase B: Operator sources
 ```bash

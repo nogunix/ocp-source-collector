@@ -43,7 +43,7 @@ _LAYERED_RE = re.compile(r"^layered-ocp(\d+\.\d+)$")
 
 
 def _classify(suffix: str) -> tuple[str, str]:
-    # Phase ids follow the repo's 2026-07-11 naming (README「現状」):
+    # Phase ids follow the repo's 2026-07-11 naming (README "What gets collected"):
     #   a = payload component sources, a-rpm = rhel-coreos SRPMs,
     #   b = redhat-operators, b-operand = layered products,
     #   b-certified / b-community = the extra catalog caskets (2026-07-11).

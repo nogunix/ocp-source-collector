@@ -14,7 +14,7 @@
 # 2026-08-09 (see lib-reclaim.sh). Fetched tarballs are always kept, so a
 # rebuild re-downloads nothing. --keep-stage opts out.
 #
-# a-rpm (Phase A's RPM/SRPM sibling -- see README.md "運用" section) still
+# a-rpm (Phase A's RPM/SRPM sibling -- see README.md "Operations" section) still
 # needs its manual subscribed-VM collection step first -- this only drives
 # phase-a-rpm-package.sh over whatever phase-a-rpm/srpms/ already holds. That
 # manual step is out of scope for automation on purpose (needs a login +

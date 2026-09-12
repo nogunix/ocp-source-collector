@@ -78,7 +78,7 @@ version_dir() {
 # mount_path_for <phase> <unit> [<fingerprint>]
 # Production mount naming per phase, as used by the existing swap-*.sh scripts.
 # Phase identifiers reflect what each phase actually is (see README.md
-# "運用" section): "a-rpm" and "b-operand" are sub-resolutions of A and B
+# "Operations" section): "a-rpm" and "b-operand" are sub-resolutions of A and B
 # (same source artifact, one level deeper), not independent siblings.
 # NB: these are just the case-label names -- the mount *paths* below are
 # unchanged production paths, not renamed in this pass.

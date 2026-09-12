@@ -1,133 +1,140 @@
 # Changelog
 
-このプロジェクトはバージョンタグを切っていないため、日付単位でまとめています。新しい順。
+This project does not use version tags, so entries are grouped by date (newest first).
 
 ## 2026-07-12
 
-- **A-rpm fresh 完了 = 全フェーズ fresh 達成**: rhel9-srpm VM で 9 パッチ分の rpmdb を再抽出し
-  SRPM を再収集（EUS/E4S は dist tag 別 `--releasever` + enablerepo リトライ）。
-  `casket-20260712-ocp-srpms` を live 化（by-ocp に 4.21.22 / 4.22.3 を初収録、
-  bin→src 解決 4983 中 unresolved 28 = 99.44%。残りは EUS 終了後の
-  grub2/openssh/python3 z-stream 再ビルド）。
-- `phase-a-rpm-extract-one.sh`: rpm2cpio の決定的 SIGPIPE (rc 141) を許容
-  （抽出完了後の trailing padding 書き込み失敗を pipefail が失敗扱いにしていた）。
-- **OpenGrok を索引対象マイナー whitelist 制に変更 → 索引を SSD へ戻した**:
-  全マイナー索引（named volume ~905G）をやめ、`config/opengrok-minors.txt`
-  （既定 4.20/4.21/4.22 の 3 マイナー）に載ったものだけを stage・索引する方式に。
-  未収録マイナーも casket-mcp の ripgrep で検索可能。footprint が ~150-250G に
-  縮み SSD に十分収まるため `DATA_VOLUME` を `/srv/opengrok-data`（SSD）へ戻した
-  （同日午前に一旦 `/mnt/hdd/opengrok-data` へ退避したが whitelist 化で不要に）。
-  `run-opengrok.sh` は staging tree が実際に参照する `/srv/sources-*` マウントだけを
-  bind する（48 casket 全 bind をやめた）。退役済み旧パッチ 5 project の索引遺骸も削除。
-- **OpenGrok 起動レースの 0 件検索バグ対策を configuration.xml 永続化に一本化**
-  (root-cause 2026-07-12): コンテナ内起動 sync が Tomcat の REST デプロイにレースで
-  負けると全 project が `indexed=false` のままになり、xref は正常なのに全文/シンボル
-  検索だけが**何を検索しても 0 件**を返す沈黙バグ（ログに
-  `IndexNotFoundException: no segments*`）。`run-opengrok.sh` が `/opengrok/etc`
-  （configuration.xml）を `ETC_VOLUME`（既定 `/srv/opengrok-etc`）に永続化することで、
-  初回 sync 完走後は indexed 済み config が作り直し・再起動をまたいで残り、レースが
-  再顕在化しない。0 件バグに陥ったら `run-opengrok.sh` を叩き直す（作り直し + sync
-  再実行）のが正しい復旧経路。`PUT .../indexed` での手動復旧は suggester 全再構築を
-  誘発し OOM を招くため厳禁（README に明記）。
-  ※ 一旦 sync を毎起動再トリガーする `wait-for-ready.sh`（+ `opengrok.service` の
-  `ExecStartPost`）を入れたが、config 永続化で不要になったため削除。suggester 夜間
-  再構築の無効化は `run-opengrok.sh` 内に戻した。
-- **ansible**: unit ファイルが変わったときだけ `casket-mcp` / `opengrok` を
-  `restarted`（従来は `started` のみ）にし、更新後の `ExecStart` が同一 playbook
-  実行内で効くように。
-- **ドキュメント前提の明確化**: casket はファイル配布しない（利用は稼働ホストの
-  サービス経由 or 自ホスト構築の2択、docs/setup.md 全面改稿）。
-  Red Hat サブスクリプション必須を README / setup.md に明記。
-- CHANGELOG 追記、scratch/ の使い捨てスクリプト掃除。
+- **A-rpm fresh complete = all phases now fresh**: Re-extracted rpmdb for 9 patches in
+  the rhel9-srpm VM and re-collected SRPMs (EUS/E4S with per-dist-tag `--releasever` +
+  enablerepo retry). Made `casket-20260712-ocp-srpms` live (by-ocp now includes 4.21.22
+  / 4.22.3 for the first time; bin→src resolution 4983 with 28 unresolved = 99.44%.
+  Remaining are grub2/openssh/python3 z-stream rebuilds after EUS EOL).
+- `phase-a-rpm-extract-one.sh`: Tolerate deterministic SIGPIPE (rc 141) from rpm2cpio
+  (trailing padding write failure after extraction completes was treated as failure by
+  pipefail).
+- **Switched OpenGrok to minor whitelist mode → moved index back to SSD**: Stopped
+  indexing all minors (named volume ~905G) and switched to indexing only those listed
+  in `config/opengrok-minors.txt` (default: 4.20/4.21/4.22, 3 minors). Non-indexed
+  minors remain searchable via casket-mcp's ripgrep path. Footprint shrank to ~150-250G,
+  fitting on SSD, so `DATA_VOLUME` was moved back to `/srv/opengrok-data` (SSD)
+  (earlier that day it was temporarily evacuated to `/mnt/hdd/opengrok-data`, but the
+  whitelist change made that unnecessary). `run-opengrok.sh` now binds only the
+  `/srv/sources-*` mounts actually referenced by the staging tree (stopped binding all
+  48 caskets). Removed stale index remnants from 5 retired old-patch projects.
+- **Unified OpenGrok startup race / 0-result search bug fix to configuration.xml
+  persistence** (root-cause 2026-07-12): When the in-container startup sync lost the
+  race against Tomcat's REST deployment, all projects remained `indexed=false`, causing
+  xref to work normally but full-text/symbol search to **silently return 0 results for
+  any query** (log: `IndexNotFoundException: no segments*`). `run-opengrok.sh` now
+  persists `/opengrok/etc` (configuration.xml) to `ETC_VOLUME` (default
+  `/srv/opengrok-etc`), so after the first sync completes, the indexed config survives
+  container recreation and restarts, preventing the race from resurfacing. If the
+  0-result bug occurs, the correct recovery is to re-run `run-opengrok.sh` (recreate +
+  re-run sync). Manual recovery via `PUT .../indexed` is prohibited as it triggers full
+  suggester rebuild causing OOM (documented in README).
+  Note: A `wait-for-ready.sh` (+ `opengrok.service` `ExecStartPost`) that re-triggered
+  sync on every startup was added temporarily but removed once config persistence made
+  it unnecessary. Nightly suggester rebuild disabling was moved back into
+  `run-opengrok.sh`.
+- **ansible**: Changed `casket-mcp` / `opengrok` to `restarted` (was `started` only)
+  when unit files change, so updated `ExecStart` takes effect within the same playbook
+  run.
+- **Documentation premise clarification**: Caskets are not distributed as files (usage
+  is either via services on the running host or self-hosted build; docs/setup.md fully
+  rewritten). Red Hat subscription requirement explicitly stated in README / setup.md.
+- CHANGELOG additions, scratch/ throwaway script cleanup.
 
-## 2026-07-11 (続き)
+## 2026-07-11 (continued)
 
-- **フェーズ全量 fresh リビルド計画を完遂**（方針: 既存 casket は registry に
-  バックフィルせず新規ビルドで置換）:
-  - Phase A ×9（4.14.58〜4.22.3、**4.22 新規追跡**）→ live
-  - B ×9 / B-operand ×9（解決オーバーホール + 当日の resolver 改善反映）→ live
-  - certified / community カタログ ×18 を新規展開（`CATALOG` 環境変数で
-    phase-b 5 スクリプトを共用、auto-update 対象外の手動リビルド運用）
-  - 旧世代 casket（20260523〜0608）を削除、~57G+ 解放
-- **fstab レス化**: casket 行 50 超を全廃し、`state/registry.json` +
-  `config/static-mounts.tsv` を単一の真実源とする `casket-mounts.sh`
-  リコンサイラ + boot 時 `casket-mounts.service` に移行。
-  `casket-swap.sh` は「その場 remount + registry 遷移」に単純化。
-- **auto-update 機構**: systemd user timer（毎日 06:00）が
-  check→build(staged) を無人実行。swap は手動ゲート維持。
-  b/b-operand も registry 整備後に解禁。
-- **CNV downstream ギャップ調査**（JANUS case）:
-  未解決 5 コンポーネント中 4 つを公開経路で救済（ipam-extensions の
-  commit 一致、virt-artifacts-server の kubevirt monorepo 判定、
-  hostpath の sibling-version fixup）。virt-core の downstream 差分は
-  ftp.redhat.com の kubevirt SRPM が唯一の公開経路だが GA 追随止まりのため
-  取り込みは見送り（design-notes に記録）。
-- **汎用化**: `CASKET_OUT` 環境変数、mount サービスのインストーラ、
-  新規ホスト診断 `casket-doctor.sh`、docs/setup.md 新設。
-- casket-mcp の phase 識別子を新体系 (a/a-rpm/b/b-operand/b-certified/
-  b-community) に更新、カタログマウントの分類漏れ修正。
-- バグ修正: `lib-fingerprint.sh` の arch filter (`linux/x86_64`→`linux/amd64`、
-  b/b-operand ビルドが全滅する潜在バグ)、sudo 実行時の `CASKET_WORK` 解決
-  （$HOME 由来→checkout 由来 + export）、registry.json の root 所有化防止、
-  community カタログの `oc image info` ハング（timeout 60s）、
-  `casket-*.sh` の実行ビット欠落。
-- OpenGrok: certified/community を専用 project 名で staging、README を
-  ~54 project 構成に更新、rootless 必須（sudo 起動で Docker Hub レート制限）
-  を明記。
+- **Completed full fresh rebuild plan for all phases** (approach: replace with new
+  builds rather than backfilling existing caskets into registry):
+  - Phase A ×9 (4.14.58–4.22.3, **4.22 newly tracked**) → live
+  - B ×9 / B-operand ×9 (resolution overhaul + same-day resolver improvements) → live
+  - Deployed certified / community catalogs ×18 (reusing phase-b's 5 scripts via
+    `CATALOG` env var; manual rebuild workflow, not included in auto-update)
+  - Deleted old-generation caskets (20260523–0608), freed ~57G+
+- **Eliminated fstab**: Removed 50+ casket fstab entries, migrated to
+  `casket-mounts.sh` reconciler + boot-time `casket-mounts.service` using
+  `state/registry.json` + `config/static-mounts.tsv` as single source of truth.
+  `casket-swap.sh` simplified to "in-place remount + registry transition".
+- **Auto-update mechanism**: systemd user timer (daily 06:00) runs check→build(staged)
+  unattended. Swap remains manually gated. b/b-operand enabled after registry setup.
+- **CNV downstream gap investigation** (JANUS case): Rescued 4 of 5 unresolved
+  components via public paths (ipam-extensions commit match, virt-artifacts-server
+  kubevirt monorepo determination, hostpath sibling-version fixup). virt-core's
+  downstream diff has ftp.redhat.com kubevirt SRPM as the only public path, but it
+  only tracks GA releases, so incorporation was deferred (recorded in design-notes).
+- **Generalization**: `CASKET_OUT` env var, mount service installer, new-host
+  diagnostic `casket-doctor.sh`, docs/setup.md created.
+- Updated casket-mcp phase identifiers to new scheme (a/a-rpm/b/b-operand/b-certified/
+  b-community), fixed catalog mount classification gap.
+- Bug fixes: `lib-fingerprint.sh` arch filter (`linux/x86_64`→`linux/amd64`, a latent
+  bug that would break all b/b-operand builds), `CASKET_WORK` resolution under sudo
+  ($HOME-derived→checkout-derived + export), preventing root ownership of registry.json,
+  community catalog `oc image info` hang (timeout 60s), missing execute bit on
+  `casket-*.sh`.
+- OpenGrok: staging certified/community under dedicated project names, README updated
+  for ~54 project configuration, documented rootless requirement (sudo startup hits
+  Docker Hub rate limits).
 
 ## 2026-07-11
 
-- **ブランチ統合**: `casket-source-index` を `main` にマージ (PR #5, #6, #7)。
-- **フェーズ名称の変更**（2段階）: 旧 Phase B/D → `a-rpm`/`c-operand` → 最終的に `b`/`b-operand`。
-  2つの起点（リリースペイロード／operatorカタログ）× 2段階の深さという構造を、
-  `A`/`A-rpm`・`B`/`B-operand` の名前で連番として読めるように整理。
-  `phase-b/` 作業ディレクトリも `phase-a-rpm/` へ移動。
-- README / CLAUDE.md / USAGE.md をリネームに合わせて全面改訂、ホスト固有パスを一般化。
-- **公開準備**: MIT LICENSE 追加、casket-host の IP/ホスト名を一般化、
-  顧客ケース識別子を除去、`decks/`（ライセンス制約のある社内テンプレート成果物）を追跡除外、
-  `.mcp.json` のマシン固有サーバ設定をクリア。
-- **リリース運用の自動化**: `casket-check/build/swap/cleanup.sh` を追加し、
-  `config/minors.txt` / `config/phase-a-rpm-minors.txt` / `config/phase-b-operand-products.tsv`
-  を対象minor/製品の単一情報源に統合。`scripts/registry.py` でcasketアーティファクトの
-  ライフサイクルを追跡。
-- `lib-fingerprint.sh`: `mount_path_for` と鮮度フィンガープリント取得を共通化。
-- opengrok: `WORKERS` で reindex 時の並列 JVM 数を上限制御できるように。
-- `swap-source-index.sh` の fstab 書き換え no-op バグ（`#` エスケープ漏れ）を修正。
+- **Branch integration**: Merged `casket-source-index` into `main` (PR #5, #6, #7).
+- **Phase renaming** (2 stages): Old Phase B/D → `a-rpm`/`c-operand` → final
+  `b`/`b-operand`. Organized the 2 origins (release payload / operator catalog) × 2
+  depth levels so that `A`/`A-rpm` and `B`/`B-operand` read as sequential numbering.
+  `phase-b/` work directory moved to `phase-a-rpm/`.
+- README / CLAUDE.md / USAGE.md fully revised for renaming, host-specific paths
+  generalized.
+- **Public release preparation**: Added MIT LICENSE, generalized casket-host IP/hostname,
+  removed customer case identifiers, excluded `decks/` (internal template artifacts with
+  license restrictions) from tracking, cleared machine-specific server config from
+  `.mcp.json`.
+- **Release operations automation**: Added `casket-check/build/swap/cleanup.sh`,
+  consolidated `config/minors.txt` / `config/phase-a-rpm-minors.txt` /
+  `config/phase-b-operand-products.tsv` as single source of truth for target
+  minors/products. `scripts/registry.py` for casket artifact lifecycle tracking.
+- `lib-fingerprint.sh`: Shared `mount_path_for` and freshness fingerprint retrieval.
+- opengrok: `WORKERS` to cap parallel JVM count during reindex.
+- Fixed `swap-source-index.sh` fstab rewrite no-op bug (`#` escaping issue).
 
 ## 2026-06-10
 
-- opengrok: webapp のヒープ (`CATALINA_OPTS`) を設定可能化。ヒープ設定・reindexハング
-  のトラブルシュートをドキュメント化。
+- opengrok: Made webapp heap (`CATALINA_OPTS`) configurable. Documented heap settings
+  and reindex hang troubleshooting.
 
 ## 2026-06-09
 
-- **Phase C（現 B）解決オーバーホール**: 未収集operatorを救済する3つの解決バグを修正、
-  bundle取得の堅牢化、解決ロジックを `lib-resolve.sh` に切り出して `resolve-v2.sh` から利用。
-- **Phase D（現 B-operand）**: レイヤード製品 (CNV/ACS/MCE/ACM/RHOAI/ODF/Quay) の
-  operand ソース取得スクリプトを追加。
-- opengrok airgap: インデックスを zstd 圧縮し、スパースゼロによる肥大化を解消。
-- CI: lint とネットワーク不要の回帰テストを追加。
-- リポジトリ整理: `decks/` と `analysis/` をルートから分離、作業用ディレクトリを gitignore。
-- `swap-operators-remount.sh`: 4.21 対応、busy-loop フォールバック追加。
-- README/CLAUDE.md: Phase C 解決オーバーホールの記録、Phase D の追記、
-  source-index (`INDEX.tsv` + `by-component`/`by-repo`) のドキュメント化。
+- **Phase C (now B) resolution overhaul**: Fixed 3 resolution bugs suppressing
+  uncollected operators, hardened bundle fetching, extracted resolution logic to
+  `lib-resolve.sh` for use by `resolve-v2.sh`.
+- **Phase D (now B-operand)**: Added operand source fetching scripts for layered
+  products (CNV/ACS/MCE/ACM/RHOAI/ODF/Quay).
+- opengrok airgap: Compressed index with zstd, eliminating bloat from sparse zeros.
+- CI: Added lint and network-free regression tests.
+- Repository cleanup: Separated `decks/` and `analysis/` from root, gitignored work
+  directories.
+- `swap-operators-remount.sh`: 4.21 support, busy-loop fallback added.
+- README/CLAUDE.md: Recorded Phase C resolution overhaul, added Phase D documentation,
+  documented source-index (`INDEX.tsv` + `by-component`/`by-repo`).
 
 ## 2026-06-08
 
-- **casket-mcp** 実装: stage 1（FSナビゲーション + ripgrep MCPサーバ）、
-  stage 2（OpenGrok REST バックエンド：symbol/xref/全文検索）、
-  stage 3（`diff_file` + Phase D の OpenGrok インデックス化）。
-  LAN/リモートからの HTTP アクセスを許可しドキュメント化。
-- casket: package時に source-index (`by-component`/`by-repo`/`INDEX.tsv`) を生成する処理を追加、
-  overlay backfill + swap ツール、24 casket 全てを本番反映。
-- phase-b（現 B）: applied-tree mode 追加 (`PHASE_B_APPLY=1`, `rpmbuild -bp`)、`.git` 除去、
-  `KEEP_STAGE` での再利用に対応した casket を出荷。
-- opengrok: 既に appuser 所有の場合、215G データボリュームへの不要な `chown -R` をスキップ。
+- **casket-mcp** implementation: stage 1 (FS navigation + ripgrep MCP server),
+  stage 2 (OpenGrok REST backend: symbol/xref/full-text search),
+  stage 3 (`diff_file` + Phase D OpenGrok indexing).
+  Documented HTTP access for LAN/remote.
+- casket: Added source-index generation (`by-component`/`by-repo`/`INDEX.tsv`) at
+  package time, overlay backfill + swap tools, applied to all 24 caskets in production.
+- phase-b (now B): Added applied-tree mode (`PHASE_B_APPLY=1`, `rpmbuild -bp`),
+  `.git` removal, shipped caskets with `KEEP_STAGE` reuse support.
+- opengrok: Skip unnecessary `chown -R` on 215G data volume when already owned by
+  appuser.
 
 ## 2026-06-02
 
-- opengrok: airgap デプロイスクリプトとドキュメントを最終化。
+- opengrok: Finalized airgap deploy scripts and documentation.
 
 ## 2026-06-01
 
-- Initial commit。
+- Initial commit.
