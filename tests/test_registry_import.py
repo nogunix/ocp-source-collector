@@ -443,3 +443,18 @@ def test_cmd_transition_to_staged_sets_no_timestamp(tmp_path):
     assert entry["status"] == "staged"
     assert "live_since" not in entry
     assert "retired_at" not in entry
+
+
+def test_save_skips_chown_when_not_root(tmp_path, monkeypatch):
+    """The mirror of test_save_chowns_when_running_as_root: pinned either way,
+    so the pair holds whether the suite runs as root (CI) or not (laptop)."""
+    path = tmp_path / "registry.json"
+    path.write_text("{}")
+    monkeypatch.setattr(reg.os, "geteuid", lambda: 1000)
+
+    def refuse(*a, **kw):
+        raise AssertionError("chown must not be attempted as a normal user")
+
+    monkeypatch.setattr(reg.os, "chown", refuse)
+    reg.save(str(path), {"artifacts": []})
+    assert json.loads(path.read_text()) == {"artifacts": []}

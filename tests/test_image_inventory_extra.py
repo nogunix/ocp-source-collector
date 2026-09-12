@@ -342,10 +342,7 @@ class TestMain:
 
     def test_unknown_argv_flag_ignored(self, tmp_path, monkeypatch, capsys):
         """The hand-rolled arg loop drops anything it does not recognise."""
-        import sys
-        monkeypatch.setattr(_mod, "CACHE", str(tmp_path / "cache"))
-        monkeypatch.setattr(_mod, "POOL", str(tmp_path / "pool"))
-        monkeypatch.setattr(_mod, "gather_images", dict)
-        monkeypatch.setattr(sys, "argv", ["inv.py", "--frobnicate", "extra"])
+        self._setup_main(tmp_path, monkeypatch,
+                         argv_extra=["--frobnicate", "extra"])
         assert _mod.main() == 0
         assert "unique image digests: 0" in capsys.readouterr().out

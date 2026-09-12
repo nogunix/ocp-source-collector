@@ -314,12 +314,13 @@ class TestIndexUnitsOSError:
         mount = be.Mount(
             path=str(mount_path), name="sources-ocp4.20.22",
             suffix="ocp4.20.22", phase="a", version="4.20.22")
-        os.chmod(str(mount_path), 0o000)
-        try:
-            result = list(be._index_units(mount))
-            assert result == []
-        finally:
-            os.chmod(str(mount_path), 0o755)
+        # chmod 0o000 would not deny root, and CI runs as root -- raise from
+        # the call itself so the guard is exercised for any user.
+        def deny(p):
+            raise PermissionError("EACCES")
+
+        monkeypatch.setattr(be.os, "listdir", deny)
+        assert list(be._index_units(mount)) == []
 
 
 # ============================================== submodule-aware resolve/list
@@ -507,10 +508,14 @@ class TestListComponentsOSError:
         git.mkdir(parents=True)
         idx = git / "INDEX.tsv"
         idx.write_text("dir\trepo\tref\tversion\tcomponents\n")
-        os.chmod(str(idx), 0o000)
-        try:
-            result = be.list_components("4.20")
-            idx_rows = [r for r in result if not r.get("submodule_of")]
-            assert idx_rows == []
-        finally:
-            os.chmod(str(idx), 0o755)
+
+        real_open = open
+
+        def deny(path, *a, **kw):
+            if str(path).endswith("INDEX.tsv"):
+                raise PermissionError("EACCES")
+            return real_open(path, *a, **kw)
+
+        monkeypatch.setattr("builtins.open", deny)
+        result = be.list_components("4.20")
+        assert [r for r in result if not r.get("submodule_of")] == []
