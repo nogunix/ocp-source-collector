@@ -22,6 +22,7 @@ RUN dnf install -y --setopt=install_weak_deps=False \
         rpm-build git patch tar gzip xz bzip2 zstd \
         findutils diffutils sed gawk grep \
         make perl-interpreter python3 which file unzip cpio \
+        zsh \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 

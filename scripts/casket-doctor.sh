@@ -75,6 +75,14 @@ if [[ "$MODE" == "build" ]]; then
     else
         warn "srpmix7 not found at $SRPMIX7 (a-rpm uses built-in fallback; run: git submodule update --init)"
     fi
+    for dist in el8 el9 el10; do
+        local img="casket-srpm-expand:${dist}"
+        if command -v podman >/dev/null 2>&1 && podman image exists "$img" 2>/dev/null; then
+            ok "container: $img"
+        else
+            warn "container image $img not found (a-rpm uses host fallback for .${dist} SRPMs)"
+        fi
+    done
     if [[ -r "$AUTHFILE" ]]; then
         ok "authfile: $AUTHFILE"
         for reg in quay.io registry.redhat.io; do

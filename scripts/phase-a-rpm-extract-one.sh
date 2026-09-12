@@ -12,10 +12,12 @@
 #   <NEVR>/_incomplete         marker: expansion failed (partial output kept)
 #
 # Dispatch order:
-#   1. Container (casket-srpm-expand:elN) — rpmbuild -bp runs under the
+#   1. srpmix7 in container (casket-srpm-expand:elN + srpmix7 submodule) —
+#      distro-native rpm + full srpmix7 metadata (srpm_query_*, logs).
+#   2. Container (casket-srpm-expand:elN) — rpmbuild -bp runs under the
 #      distro's own rpm, so %patchN and other version-specific macros work.
-#   2. srpmix7 expand on the host (if SRPMIX7= set and zsh available).
-#   3. Built-in fallback on the host — same layout, but rpmbuild -bp will
+#   3. srpmix7 expand on the host (if SRPMIX7= set and zsh available).
+#   4. Built-in fallback on the host — same layout, but rpmbuild -bp will
 #      fail on el8/el9 specs under Fedora rpm 6.x (%patchN obsolete).
 #
 # Idempotent: if <stage_root>/<NEVR>/ already exists, exits 0 without re-extracting.
@@ -44,6 +46,37 @@ detect_dist() {
     rel=$(rpm -qp --qf '%{RELEASE}' "$1" 2>/dev/null)
     if [[ "$rel" =~ \.el([0-9]+) ]]; then
         echo "el${BASH_REMATCH[1]}"
+    fi
+}
+
+# --- srpmix7-in-container path: best of both worlds ---
+srpmix7_container_extract() {
+    local dist="$1"
+    local image="${CONTAINER_IMAGE_PREFIX}:${dist}"
+
+    podman image exists "$image" 2>/dev/null || return 1
+    [[ -x "$SRPMIX7" ]] || return 1
+
+    local src_abs srpmix7_dir srpmix7_bin
+    src_abs=$(cd "$(dirname "$src")" && pwd)/$(basename "$src")
+    srpmix7_dir=$(cd "$(dirname "$SRPMIX7")" && pwd)
+    srpmix7_bin=$(basename "$SRPMIX7")
+
+    mkdir -p "$dest"
+
+    if podman run --rm \
+        --volume "$src_abs:/work/src.rpm:ro,z" \
+        --volume "$srpmix7_dir:/srpmix7:ro,z" \
+        --volume "$dest:/work/out:z" \
+        "$image" \
+        zsh "/srpmix7/$srpmix7_bin" expand \
+            --stype=file --sloc=/work/src.rpm \
+            --dtype=dir  --dloc=/work/out \
+            srpm --nodeps \
+        >"$tmp/srpmix7-container.log" 2>&1; then
+        return 0
+    else
+        return 1
     fi
 }
 
@@ -163,13 +196,19 @@ builtin_extract() {
 # --- dispatch ---
 dist=$(detect_dist "$src")
 
-# 1. Container: best path — distro-native rpm handles %patchN etc.
+# 1. srpmix7 in container: distro-native rpm + srpmix7 metadata
+if [[ -n "$dist" ]] && srpmix7_container_extract "$dist"; then
+    exit 0
+fi
+[[ -n "$dist" ]] && rm -rf "$dest"
+
+# 2. Container: rpmbuild -bp under the distro's rpm (no srpmix7 metadata)
 if [[ -n "$dist" ]] && container_extract "$dist"; then
     exit 0
 fi
 [[ -n "$dist" ]] && rm -rf "$dest"
 
-# 2. srpmix7 on host
+# 3. srpmix7 on host
 if [[ -x "$SRPMIX7" ]] && command -v zsh >/dev/null 2>&1; then
     if srpmix7_extract; then
         exit 0
@@ -178,5 +217,5 @@ if [[ -x "$SRPMIX7" ]] && command -v zsh >/dev/null 2>&1; then
     rm -rf "$dest"
 fi
 
-# 3. Built-in fallback (rpmbuild -bp likely fails on el8/el9 under Fedora rpm 6.x)
+# 4. Built-in fallback (rpmbuild -bp likely fails on el8/el9 under Fedora rpm 6.x)
 builtin_extract || exit 1
