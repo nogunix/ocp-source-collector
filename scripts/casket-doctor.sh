@@ -76,7 +76,7 @@ if [[ "$MODE" == "build" ]]; then
         warn "srpmix7 not found at $SRPMIX7 (a-rpm uses built-in fallback; run: git submodule update --init)"
     fi
     for dist in el8 el9 el10; do
-        local img="casket-srpm-expand:${dist}"
+        img="casket-srpm-expand:${dist}"
         if command -v podman >/dev/null 2>&1 && podman image exists "$img" 2>/dev/null; then
             ok "container: $img"
         else
