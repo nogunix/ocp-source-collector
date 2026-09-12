@@ -6,7 +6,6 @@ Network-free: uses monkeypatched paths and tmp_path fixtures.
 Run: pytest tests/test_backends_fs.py
 """
 import os
-import shutil
 import sys
 
 import pytest
@@ -420,6 +419,8 @@ def test_search_refs_no_opengrok(monkeypatch):
     assert "error" in result
     assert result["count"] == 0
 
+
+import shutil
 
 @pytest.mark.skipif(shutil.which("rg") is None, reason="ripgrep not installed")
 def test_search_text_with_path_uses_ripgrep(tmp_path, monkeypatch):
