@@ -44,6 +44,34 @@ OpenGrok 索引は全マイナーを索引すると ~900G になるため、既�
 `DATA_VOLUME` を HDD 側に向ける。
 サイズ感: A ×9 ~6.4G / A-rpm 4.1G / B ×9 ~5.6G / B-operand ×9 ~9.5G / certified+community ×18 ~19G。
 
+## リポジトリ構成
+
+```
+ocp-source-collector/
+├── scripts/                 収集・ビルド・運用スクリプト (本体)
+│   ├── discover.sh / fetch-git.sh / manifest.sh / package.sh   Phase A パイプライン
+│   ├── phase-a-rpm-*.sh                                        A-rpm パイプライン
+│   ├── phase-b-*.sh                                            Phase B / B-operand パイプライン
+│   ├── casket-build.sh / casket-swap.sh / casket-check.sh ...  リリース運用ドライバ
+│   ├── collect-deps.py / collect-submodules.py                 依存・submodule 収集
+│   ├── build-source-index.py                                   ソース索引生成
+│   ├── lib.sh / lib-*.sh                                       共通ライブラリ
+│   └── registry.py / deplib.py / submodulelib.py               Python ライブラリ
+├── config/                  対象バージョン・製品定義
+│   ├── minors.txt                     収集対象マイナー (A/B/B-operand 共通)
+│   ├── phase-a-rpm-minors.txt         A-rpm 対象マイナー
+│   ├── phase-b-operand-products.tsv   B-operand 対象製品
+│   └── opengrok-minors.txt            OpenGrok 索引対象マイナー
+├── docs/                    設計・運用ドキュメント
+├── mcp/                     casket-mcp サーバー (MCP 経由でソース検索)
+├── opengrok/                OpenGrok ソースブラウザ (Web UI)
+├── tests/                   テストスイート (CI で実行)
+├── systemd/                 自動更新用 systemd unit
+├── containers/              SRPM 収集用コンテナ定義
+├── ansible/                 ホストセットアップ playbook
+└── .github/workflows/       CI 定義
+```
+
 ## クイックスタート
 
 ```bash

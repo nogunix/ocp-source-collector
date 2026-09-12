@@ -83,6 +83,34 @@ through casket-mcp's ripgrep backend.
 Rough sizes: A ×9 ~6.4G, A-rpm 4.1G, B ×9 ~5.6G, B-operand ×9 ~9.5G,
 certified + community ×18 ~19G.
 
+## Repository layout
+
+```
+ocp-source-collector/
+├── scripts/                 Collection, build and operations scripts (the core)
+│   ├── discover.sh / fetch-git.sh / manifest.sh / package.sh   Phase A pipeline
+│   ├── phase-a-rpm-*.sh                                        A-rpm pipeline
+│   ├── phase-b-*.sh                                            Phase B / B-operand pipeline
+│   ├── casket-build.sh / casket-swap.sh / casket-check.sh ...  Release lifecycle drivers
+│   ├── collect-deps.py / collect-submodules.py                 Dependency & submodule collection
+│   ├── build-source-index.py                                   Source index generation
+│   ├── lib.sh / lib-*.sh                                       Shared shell libraries
+│   └── registry.py / deplib.py / submodulelib.py               Python libraries
+├── config/                  Target version & product definitions
+│   ├── minors.txt                     Target minors (A/B/B-operand)
+│   ├── phase-a-rpm-minors.txt         A-rpm target minors
+│   ├── phase-b-operand-products.tsv   B-operand target products
+│   └── opengrok-minors.txt            OpenGrok indexed minors
+├── docs/                    Design & operations documentation
+├── mcp/                     casket-mcp server (search sources via MCP)
+├── opengrok/                OpenGrok source browser (Web UI)
+├── tests/                   Test suite (runs in CI)
+├── systemd/                 Auto-update systemd units
+├── containers/              SRPM collection container definitions
+├── ansible/                 Host setup playbooks
+└── .github/workflows/       CI definitions
+```
+
 ## Quick start
 
 ```bash
