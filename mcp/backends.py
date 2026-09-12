@@ -847,7 +847,7 @@ def coverage_report(version: str) -> dict:
             if units:
                 phases[m.phase] = {"mount": m.name, **(_index_stats(units[0][1]) or {})}
     # a-rpm: by-ocp/<patch>/ carries the per-release SRPM view
-    srpms_root = "/srv/sources-ocp-srpms/by-ocp"
+    srpms_root = os.path.join(SRV, "sources-ocp-srpms", "by-ocp")
     if os.path.isdir(srpms_root):
         for pv in sorted(os.listdir(srpms_root)):
             if pv == version or pv.startswith(version.rstrip(".") + "."):
