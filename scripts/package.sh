@@ -33,7 +33,6 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 [[ -n "$VERSION" ]] || die "version required (-v X.Y.Z)"
-require_cmd mksquashfs
 
 VDIR="$(version_dir "$VERSION")"
 STAGE="$VDIR/50-out/stage"
@@ -137,23 +136,18 @@ fi
 python3 "$SCRIPT_DIR/build-source-index.py" "$STAGE"
 
 mkdir -p "$OUTROOT"
-# Legacy casket convention: filename ends in .sqfs.xz to denote internally-xz-compressed
-# squashfs (NOT an outer xz wrap). Confirmed against /mnt/hdd/casket/casket-*.sqfs.xz.
 # UTC date, matching casket-build.sh's expected-artifact check (a local-time date
 # here made the two disagree between 00:00 JST and 09:00 JST and the staged
 # registration failed with "expected artifact not found").
-OUT="$OUTROOT/casket-$(date -u +%Y%m%d)-ocp${VERSION}.sqfs.xz"
+OUT="$OUTROOT/casket-$(date -u +%Y%m%d)-ocp${VERSION}.$(casket_ext)"
 
 # Normalize mode bits — see phase-b-package.sh for rationale.
 log "chmod -R a+rX $STAGE"
 chmod -R a+rX "$STAGE"
 
-log "running mksquashfs -> $OUT"
+log "building casket image (${CASKET_FORMAT}) -> $OUT"
 
-mksquashfs "$STAGE" "$OUT" \
-    -comp xz -Xdict-size 100% \
-    -no-progress -noappend \
-    -all-root 2>&1 | tail -5
+casket_mkfs "$STAGE" "$OUT" -Xdict-size 100%
 
 if [[ -s "$OUT" ]]; then
     record_artifact "$OUT" "$ARTIFACT_OUT"
@@ -161,6 +155,6 @@ if [[ -s "$OUT" ]]; then
     log "verify: file '$OUT'"
     file "$OUT"
 else
-    die "mksquashfs produced no output"
+    die "casket_mkfs produced no output"
 fi
 

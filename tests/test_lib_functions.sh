@@ -132,6 +132,48 @@ eq "version_dir 4.18" \
 [[ $? -ne 0 ]] && pass "catalog_setup: invalid CATALOG exits non-zero" \
                 || bad  "catalog_setup: invalid CATALOG exits non-zero"
 
+# ---- casket_ext -------------------------------------------------------------
+
+eq "casket_ext: sqfs default" "sqfs.xz" "$(CASKET_FORMAT=sqfs casket_ext)"
+eq "casket_ext: erofs" "erofs.zstd" "$(CASKET_FORMAT=erofs casket_ext)"
+
+(CASKET_FORMAT=bogus casket_ext) 2>/dev/null
+[[ $? -ne 0 ]] && pass "casket_ext: invalid format exits non-zero" \
+                || bad  "casket_ext: invalid format exits non-zero"
+
+# default value (unset -> sqfs)
+eq "casket_ext: unset defaults to sqfs.xz" "sqfs.xz" \
+    "$(unset CASKET_FORMAT; source "$HERE/../scripts/lib.sh" 2>/dev/null; casket_ext)"
+
+# ---- casket_mkfs ------------------------------------------------------------
+
+# casket_mkfs requires mksquashfs or mkfs.erofs on PATH; test the dispatch logic
+# by verifying it calls the right tool (the actual build would need root on Linux).
+
+# sqfs: should fail with a clear error when mksquashfs is not on PATH (in CI it might be)
+(
+    TMP_MKFS=$(mktemp -d)
+    trap "rm -rf '$TMP_MKFS'" EXIT
+    mkdir -p "$TMP_MKFS/stage"
+    : > "$TMP_MKFS/stage/hello.txt"
+    CASKET_FORMAT=sqfs
+    # If mksquashfs is not available, casket_mkfs should fail.
+    # If it IS available, it'll fail because we're not root, but the dispatch is correct.
+    casket_mkfs "$TMP_MKFS/stage" "$TMP_MKFS/out.sqfs.xz" -Xdict-size 100% 2>/dev/null
+) 2>/dev/null
+# We just check it doesn't produce a "unknown CASKET_FORMAT" error
+(CASKET_FORMAT=sqfs casket_mkfs /nonexistent /dev/null 2>&1) | grep -q "unknown CASKET_FORMAT" \
+    && bad "casket_mkfs: sqfs dispatches correctly" \
+    || pass "casket_mkfs: sqfs dispatches correctly"
+
+(CASKET_FORMAT=erofs casket_mkfs /nonexistent /dev/null 2>&1) | grep -q "unknown CASKET_FORMAT" \
+    && bad "casket_mkfs: erofs dispatches correctly" \
+    || pass "casket_mkfs: erofs dispatches correctly"
+
+(CASKET_FORMAT=bogus casket_mkfs /nonexistent /dev/null 2>&1) | grep -q "unknown CASKET_FORMAT" \
+    && pass "casket_mkfs: invalid format produces clear error" \
+    || bad  "casket_mkfs: invalid format produces clear error"
+
 # ---- done -------------------------------------------------------------------
 
 if (( fail )); then

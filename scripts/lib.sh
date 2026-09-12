@@ -16,6 +16,10 @@ export CASKET_OUT
 : "${RELEASE_REGISTRY:=quay.io/openshift-release-dev/ocp-release}"
 : "${CONFIG_DIR:=${CASKET_WORK}/config}"
 : "${REGISTRY_PY:=${CASKET_WORK}/scripts/registry.py}"
+# Casket image format: sqfs (squashfs + xz, legacy default) or erofs (erofs + zstd,
+# better random-read performance for source browsing). Inspired by srpmix7's mkcasket
+# which supports both. RHEL 9+ kernels mount erofs natively.
+: "${CASKET_FORMAT:=sqfs}"
 
 log()  { printf '[%s] %s\n' "$(date +%H:%M:%S)" "$*" >&2; }
 die()  { log "ERROR: $*"; exit 1; }
@@ -68,6 +72,38 @@ artifact_path_from() {
     else
         printf '%s\n' "$fallback"
     fi
+}
+
+# File extension for the current CASKET_FORMAT.
+casket_ext() {
+    case "$CASKET_FORMAT" in
+        sqfs)  echo "sqfs.xz" ;;
+        erofs) echo "erofs.zstd" ;;
+        *) die "unknown CASKET_FORMAT: $CASKET_FORMAT (want sqfs or erofs)" ;;
+    esac
+}
+
+# casket_mkfs <stage_dir> <output_path> [extra squashfs flags...]
+# Builds a casket image from <stage_dir>. Extra flags are passed to mksquashfs
+# only (erofs ignores them). Both tools get -all-root (or --all-root).
+casket_mkfs() {
+    local stage="$1" out="$2"
+    shift 2
+    rm -f "$out"
+    mkdir -p "$(dirname "$out")"
+    case "$CASKET_FORMAT" in
+        sqfs)
+            require_cmd mksquashfs
+            mksquashfs "$stage" "$out" \
+                -comp xz "$@" \
+                -no-progress -all-root -noappend
+            ;;
+        erofs)
+            require_cmd mkfs.erofs
+            mkfs.erofs --all-root -z zstd "$out" "$stage"
+            ;;
+        *) die "unknown CASKET_FORMAT: $CASKET_FORMAT (want sqfs or erofs)" ;;
+    esac
 }
 
 version_dir() {

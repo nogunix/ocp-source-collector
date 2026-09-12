@@ -95,7 +95,7 @@ build_a() {
     (( APPLY )) || return 0
     mount_path="$(mount_path_for a "$UNIT" "$patch")"
     register "$patch" "$(artifact_path_from "$ARTIFACT_FILE" \
-        "$OUT_DIR/casket-$(date -u +%Y%m%d)-ocp${patch}.sqfs.xz")" "$mount_path"
+        "$OUT_DIR/casket-$(date -u +%Y%m%d)-ocp${patch}.$(casket_ext)")" "$mount_path"
     # Phase A never retires an old patch, so each z-stream adds a whole new
     # ocp<patch>/ work dir -- the stages accumulate by count as well as by size.
     reclaim "$(version_dir "$patch")/50-out"
@@ -114,7 +114,7 @@ build_b() {
     (( APPLY )) || return 0
     mount_path="$(mount_path_for b "$UNIT")"
     register "$digest" "$(artifact_path_from "$ARTIFACT_FILE" \
-        "$OUT_DIR/casket-$(date -u +%Y%m%d)-ocp${UNIT}-operators.sqfs.xz")" "$mount_path"
+        "$OUT_DIR/casket-$(date -u +%Y%m%d)-ocp${UNIT}-operators.$(casket_ext)")" "$mount_path"
     # No catalog flag is passed above, so CATALOG_SUFFIX is empty and the stage
     # is plain phase-b/<minor>. certified/community are built by another path.
     reclaim "$CASKET_WORK/phase-b/$UNIT/50-out"
@@ -154,7 +154,7 @@ build_b_operand() {
     (( APPLY )) || return 0
     mount_path="$(mount_path_for b-operand "$UNIT")"
     register "$digest" "$(artifact_path_from "$ARTIFACT_FILE" \
-        "$OUT_DIR/casket-$(date -u +%Y%m%d)-layered-ocp${UNIT}.sqfs.xz")" "$mount_path"
+        "$OUT_DIR/casket-$(date -u +%Y%m%d)-layered-ocp${UNIT}.$(casket_ext)")" "$mount_path"
     # One stage per product per minor -- ~190 of them, the largest single
     # contributor to the 2026-08-09 fill. combine.sh has already consumed them.
     #
@@ -189,7 +189,7 @@ build_a_rpm() {
     fingerprint="$(phase_a_rpm_fingerprint)"
     mount_path="$(mount_path_for a-rpm all)"
     register "$fingerprint" "$(artifact_path_from "$ARTIFACT_FILE" \
-        "$OUT_DIR/casket-$(date -u +%Y%m%d)-ocp-srpms.sqfs.xz")" "$mount_path"
+        "$OUT_DIR/casket-$(date -u +%Y%m%d)-ocp-srpms.$(casket_ext)")" "$mount_path"
     # phase-a-rpm/srpms/ is the collected input (the manual VM step) and stays;
     # only the packaging stage is derived.
     reclaim "$CASKET_WORK/phase-a-rpm/50-out"

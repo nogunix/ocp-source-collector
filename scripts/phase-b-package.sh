@@ -29,7 +29,7 @@ while (( $# )); do
 done
 [[ -n "$VERSION" ]] || die "version required (-v X.Y)"
 
-require_cmd mksquashfs jq sha256sum
+require_cmd jq sha256sum
 MINOR="$VERSION"
 catalog_setup
 WORK="${CASKET_WORK}/phase-b${CATALOG_SUFFIX}/${MINOR}"
@@ -43,7 +43,7 @@ STAGE="$WORK/50-out/stage"
 [[ -d "$GIT"          ]] || die "missing $GIT (run phase-b-fetch-source.sh)"
 
 DATE=$(date -u +%Y%m%d)
-OUT_NAME="casket-${DATE}-ocp${MINOR}${CATALOG_SUFFIX}-operators.sqfs.xz"
+OUT_NAME="casket-${DATE}-ocp${MINOR}${CATALOG_SUFFIX}-operators.$(casket_ext)"
 OUT_PATH="${OUT_DIR%/}/${OUT_NAME}"
 
 log "staging into $STAGE"
@@ -218,14 +218,10 @@ python3 "$SCRIPT_DIR/build-source-index.py" "$STAGE"
 log "chmod -R a+rX $STAGE"
 chmod -R a+rX "$STAGE"
 
-# 6. mksquashfs
-log "mksquashfs → $OUT_PATH"
-rm -f "$OUT_PATH"
-mkdir -p "$OUT_DIR"
-mksquashfs "$STAGE" "$OUT_PATH" \
-    -comp xz -Xbcj x86 \
-    -no-progress -all-root -no-xattrs \
-    -noappend
+# 6. Build casket image.
+log "building casket image (${CASKET_FORMAT}) → $OUT_PATH"
+
+casket_mkfs "$STAGE" "$OUT_PATH" -Xbcj x86 -no-xattrs
 
 record_artifact "$OUT_PATH" "$ARTIFACT_OUT"
 log "done"

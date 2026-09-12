@@ -36,11 +36,10 @@ while (( $# )); do
 done
 [[ -n "$VERSION" ]] || die "version required (-v X.Y)"
 [[ -n "$DATE" ]] || DATE=$(date -u +%Y%m%d)
-require_cmd mksquashfs
 
 MINOR="$VERSION"
 COMB="${CASKET_WORK}/phase-b-operand/_layered/${MINOR}/stage"
-OUT_PATH="${OUT_DIR%/}/casket-${DATE}-layered-ocp${MINOR}.sqfs.xz"
+OUT_PATH="${OUT_DIR%/}/casket-${DATE}-layered-ocp${MINOR}.$(casket_ext)"
 
 log "assembling combined stage for $MINOR"
 rm -rf "${CASKET_WORK}/phase-b-operand/_layered/${MINOR}"
@@ -86,12 +85,9 @@ See repo docs/phase-b-operand-plan.md for resolution method and known structural
 EOF
 
 chmod -R a+rX "$COMB"
-log "mksquashfs → $OUT_PATH"
-rm -f "$OUT_PATH"
-mkdir -p "$OUT_DIR"
-mksquashfs "$COMB" "$OUT_PATH" \
-    -comp xz -Xbcj x86 \
-    -no-progress -all-root -no-xattrs -noappend
+log "building casket image (${CASKET_FORMAT}) → $OUT_PATH"
+
+casket_mkfs "$COMB" "$OUT_PATH" -Xbcj x86 -no-xattrs
 
 record_artifact "$OUT_PATH" "$ARTIFACT_OUT"
 log "done: ${included[*]}"

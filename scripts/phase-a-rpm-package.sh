@@ -30,7 +30,7 @@ while (( $# )); do
   esac
 done
 
-require_cmd mksquashfs jq sha256sum rpm rpm2cpio cpio tar xargs
+require_cmd jq sha256sum rpm rpm2cpio cpio tar xargs
 
 PHASE_A_RPM="${CASKET_WORK}/phase-a-rpm"
 SRPM_DIR="${PHASE_A_RPM}/srpms"
@@ -43,7 +43,7 @@ EXTRACT_JOBS="${EXTRACT_JOBS:-8}"
 [[ -d "$RPMDB_DIR" ]] || die "no rpmdb tsvs at $RPMDB_DIR"
 
 DATE=$(date -u +%Y%m%d)
-OUT_NAME="casket-${DATE}-ocp-srpms.sqfs.xz"
+OUT_NAME="casket-${DATE}-ocp-srpms.$(casket_ext)"
 OUT_PATH="${OUT_DIR%/}/${OUT_NAME}"
 
 log "staging into $STAGE"
@@ -153,13 +153,10 @@ EOF
 log "chmod -R a+rX $STAGE"
 chmod -R a+rX "$STAGE"
 
-# 5. mksquashfs — same options as Phase A package.sh.
-log "mksquashfs → $OUT_PATH"
-rm -f "$OUT_PATH"
-mksquashfs "$STAGE" "$OUT_PATH" \
-    -comp xz -Xbcj x86 \
-    -no-progress -all-root -no-xattrs \
-    -noappend
+# 5. Build casket image — same format selection as Phase A package.sh.
+log "building casket image (${CASKET_FORMAT}) → $OUT_PATH"
+
+casket_mkfs "$STAGE" "$OUT_PATH" -Xbcj x86 -no-xattrs
 
 record_artifact "$OUT_PATH" "$ARTIFACT_OUT"
 log "done"

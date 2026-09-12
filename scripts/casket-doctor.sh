@@ -47,9 +47,9 @@ else
     warn "state/registry.json unreadable (fine on a view-only host using static-mounts only)"
 fi
 
-mounted=$(awk '$3=="squashfs" && $2 ~ /^\/srv\/sources-/' /proc/mounts | wc -l)
+mounted=$(awk '($3=="squashfs" || $3=="erofs") && $2 ~ /^\/srv\/sources-/' /proc/mounts 2>/dev/null | wc -l)
 if (( mounted > 0 )); then
-    ok "mounts: $mounted squashfs under /srv/sources-*"
+    ok "mounts: $mounted casket(s) under /srv/sources-*"
 else
     warn "no casket mounts yet — run: sudo ./scripts/casket-mounts.sh --apply"
 fi
@@ -67,6 +67,14 @@ if [[ "$MODE" == "build" ]]; then
     for c in oc curl sha256sum mksquashfs xz rpm2cpio cpio tar xargs flock; do
         command -v "$c" >/dev/null && ok "tool: $c" || bad "tool missing: $c"
     done
+    command -v mkfs.erofs >/dev/null && ok "tool: mkfs.erofs (CASKET_FORMAT=erofs)" \
+        || warn "mkfs.erofs missing (only needed for CASKET_FORMAT=erofs)"
+    SRPMIX7="${SRPMIX7:-${SCRIPT_DIR}/../srpmix7/srpmix7}"
+    if [[ -x "$SRPMIX7" ]]; then
+        ok "srpmix7: $SRPMIX7"
+    else
+        warn "srpmix7 not found at $SRPMIX7 (a-rpm uses built-in fallback; run: git submodule update --init)"
+    fi
     if [[ -r "$AUTHFILE" ]]; then
         ok "authfile: $AUTHFILE"
         for reg in quay.io registry.redhat.io; do

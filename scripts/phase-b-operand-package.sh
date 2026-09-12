@@ -32,7 +32,7 @@ done
 [[ -n "$VERSION" ]] || die "version required (-v X.Y)"
 [[ -n "$INFIX" ]]   || INFIX="$PKG"
 
-require_cmd mksquashfs jq sha256sum python3
+require_cmd jq sha256sum python3
 MINOR="$VERSION"
 WORK="${CASKET_WORK}/phase-b-operand/${PKG}/${MINOR}"
 DISC="$WORK/00-discover"
@@ -43,7 +43,7 @@ STAGE="$WORK/50-out/stage"
 [[ -d "$GIT"         ]] || die "missing $GIT (run phase-b-operand-fetch-source.sh)"
 
 DATE=$(date -u +%Y%m%d)
-OUT_NAME="casket-${DATE}-${INFIX}-ocp${MINOR}.sqfs.xz"
+OUT_NAME="casket-${DATE}-${INFIX}-ocp${MINOR}.$(casket_ext)"
 OUT_PATH="${OUT_DIR%/}/${OUT_NAME}"
 
 log "staging into $STAGE"
@@ -238,13 +238,9 @@ if [[ "$STAGE_ONLY" == "1" ]]; then
     exit 0
 fi
 
-log "mksquashfs → $OUT_PATH"
-rm -f "$OUT_PATH"
-mkdir -p "$OUT_DIR"
-mksquashfs "$STAGE" "$OUT_PATH" \
-    -comp xz -Xbcj x86 \
-    -no-progress -all-root -no-xattrs \
-    -noappend
+log "building casket image (${CASKET_FORMAT}) → $OUT_PATH"
+
+casket_mkfs "$STAGE" "$OUT_PATH" -Xbcj x86 -no-xattrs
 
 log "done"
 ls -lh "$OUT_PATH"
