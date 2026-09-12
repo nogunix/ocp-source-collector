@@ -14,7 +14,11 @@
 #
 # The tool list is what %prep sections actually reach for. git is not
 # optional: systemd applies its 731 patches with `git init` + `git apply`,
-# and without it %prep dies on line 1 of the patch loop.
+# and without it %prep dies on line 1 of the patch loop. Likewise:
+#   autoconf/automake/libtool - acl and audit run `autoreconf -fvi` in %prep
+#   gnupg2                    - attr and bzip2 verify the upstream tarball
+#                               signature via %{gpgverify}, which shells out
+#                               to gpg2 and fails %prep outright without it
 ARG BASE=registry.access.redhat.com/ubi9/ubi:latest
 FROM ${BASE}
 
@@ -22,6 +26,7 @@ RUN dnf install -y --setopt=install_weak_deps=False \
         rpm-build git patch tar gzip xz bzip2 zstd \
         findutils diffutils sed gawk grep \
         make perl-interpreter python3 which file unzip cpio \
+        autoconf automake libtool gnupg2 \
         zsh \
     && dnf clean all \
     && rm -rf /var/cache/dnf
