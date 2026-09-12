@@ -38,6 +38,7 @@ jobs:
 
       - name: shellcheck + bash -n (all *.sh)
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           rc=0
           # tracked shell scripts only (work dirs are gitignored anyway)
           mapfile -t sh < <(git ls-files '*.sh')
@@ -54,6 +55,7 @@ jobs:
 
       - name: python syntax + ruff
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           mapfile -t py < <(git ls-files '*.py')
           for f in "${py[@]}"; do
             python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$f" \
