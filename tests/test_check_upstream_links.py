@@ -69,26 +69,31 @@ class TestRowKey:
         assert _mod.row_key(row) == "https://github.com/org/repo\thead"
 
 
+# The module's urllib.request reference — monkeypatch needs to target
+# the same module object that the loaded script uses internally.
+_urllib_request = _mod.urllib.request
+
+
 # ------------------------------------------------------------------ http_status
 class TestHttpStatus:
     def test_success(self, monkeypatch):
         resp = types.SimpleNamespace(status=200)
         resp.__enter__ = lambda s: s
         resp.__exit__ = lambda s, *a: None
-        monkeypatch.setattr(urllib.request, "urlopen",
+        monkeypatch.setattr(_urllib_request, "urlopen",
                             lambda req, timeout=20: resp)
         assert _mod.http_status("https://example.com") == 200
 
     def test_http_error(self, monkeypatch):
         def raise_404(req, timeout=20):
             raise urllib.error.HTTPError("url", 404, "Not Found", {}, None)
-        monkeypatch.setattr(urllib.request, "urlopen", raise_404)
+        monkeypatch.setattr(_urllib_request, "urlopen", raise_404)
         assert _mod.http_status("https://example.com") == 404
 
     def test_connection_error(self, monkeypatch):
         def raise_err(req, timeout=20):
             raise ConnectionError("refused")
-        monkeypatch.setattr(urllib.request, "urlopen", raise_err)
+        monkeypatch.setattr(_urllib_request, "urlopen", raise_err)
         assert _mod.http_status("https://example.com") == 0
 
     def test_token_header(self, monkeypatch):
@@ -99,7 +104,7 @@ class TestHttpStatus:
         def capture(req, timeout=20):
             captured["auth"] = req.get_header("Authorization")
             return resp
-        monkeypatch.setattr(urllib.request, "urlopen", capture)
+        monkeypatch.setattr(_urllib_request, "urlopen", capture)
         _mod.http_status("https://api.github.com/repos/x/y", token="tok123")
         assert captured["auth"] == "Bearer tok123"
 
@@ -111,7 +116,7 @@ class TestHttpStatus:
         def capture(req, timeout=20):
             captured["auth"] = req.get_header("Authorization")
             return resp
-        monkeypatch.setattr(urllib.request, "urlopen", capture)
+        monkeypatch.setattr(_urllib_request, "urlopen", capture)
         _mod.http_status("https://example.com/foo", token="tok123")
         assert captured["auth"] is None
 
@@ -124,7 +129,7 @@ class TestCheckRepo:
         real_resp = types.SimpleNamespace()
         real_resp.__enter__ = lambda s: _io.BytesIO(body)
         real_resp.__exit__ = lambda s, *a: None
-        monkeypatch.setattr(urllib.request, "urlopen",
+        monkeypatch.setattr(_urllib_request, "urlopen",
                             lambda req, timeout=20: real_resp)
 
     def test_ok(self, monkeypatch):
@@ -141,7 +146,7 @@ class TestCheckRepo:
     def test_gone_404(self, monkeypatch):
         def raise_404(req, timeout=20):
             raise urllib.error.HTTPError("url", 404, "Not Found", {}, None)
-        monkeypatch.setattr(urllib.request, "urlopen", raise_404)
+        monkeypatch.setattr(_urllib_request, "urlopen", raise_404)
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "gone"
         assert "404" in detail
@@ -149,14 +154,14 @@ class TestCheckRepo:
     def test_gone_451(self, monkeypatch):
         def raise_451(req, timeout=20):
             raise urllib.error.HTTPError("url", 451, "Unavailable", {}, None)
-        monkeypatch.setattr(urllib.request, "urlopen", raise_451)
+        monkeypatch.setattr(_urllib_request, "urlopen", raise_451)
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "gone"
 
     def test_error_500(self, monkeypatch):
         def raise_500(req, timeout=20):
             raise urllib.error.HTTPError("url", 500, "ISE", {}, None)
-        monkeypatch.setattr(urllib.request, "urlopen", raise_500)
+        monkeypatch.setattr(_urllib_request, "urlopen", raise_500)
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "error"
         assert "500" in detail
@@ -164,7 +169,7 @@ class TestCheckRepo:
     def test_connection_error(self, monkeypatch):
         def raise_err(req, timeout=20):
             raise ConnectionError("timeout")
-        monkeypatch.setattr(urllib.request, "urlopen", raise_err)
+        monkeypatch.setattr(_urllib_request, "urlopen", raise_err)
         state, detail = _mod.check_repo("https://github.com/org/repo", None)
         assert state == "error"
 
