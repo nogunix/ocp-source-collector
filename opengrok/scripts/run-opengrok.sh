@@ -158,9 +158,23 @@ log "${#seen_mounts[@]} source mounts needed"
 # So: stop the unit around the recreate, and hand the container back to it
 # afterwards. Guarded by `unit_active` because this script must keep working on
 # a host where the unit was never installed.
+#
+# "activating" counts as running here, not just "active": a unit whose
+# `podman start` keeps failing sits in `activating (auto-restart)` between
+# RestartSec sleeps, never reporting "active". Matching only "active" left the
+# flapping unit up, which is exactly the fight described above -- hit on
+# 2026-09-13, when the container carried a stale entrypoint bind path from
+# before the repo was renamed (~/casket-work -> ~/ocp-source-collector), so
+# every `podman start` died with exit 125 and the unit flapped 36 times.
 OPENGROK_UNIT="${OPENGROK_UNIT:-opengrok.service}"
 unit_installed() { systemctl --user cat "$OPENGROK_UNIT" >/dev/null 2>&1; }
-if unit_installed && [ "$(systemctl --user is-active "$OPENGROK_UNIT" 2>/dev/null)" = "active" ]; then
+unit_running() {
+  case "$(systemctl --user is-active "$OPENGROK_UNIT" 2>/dev/null)" in
+    active|activating) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+if unit_installed && unit_running; then
   log "stopping $OPENGROK_UNIT while the container is recreated"
   systemctl --user stop "$OPENGROK_UNIT" >/dev/null 2>&1 || true
 fi
@@ -192,6 +206,10 @@ podman create --name "$CONTAINER" \
 
 if unit_installed; then
   log "starting via $OPENGROK_UNIT (it owns the running container)"
+  # Clear any failed state left by a previous restart loop: a unit that tripped
+  # its start-limit stays `failed` and refuses `start` ("start request repeated
+  # too quickly") until reset. Harmless on a healthy unit.
+  systemctl --user reset-failed "$OPENGROK_UNIT" >/dev/null 2>&1 || true
   systemctl --user start "$OPENGROK_UNIT"
 else
   log "starting container directly ($OPENGROK_UNIT not installed)"
