@@ -179,6 +179,52 @@ trap 'rm -rf "$TMP_OUT"' EXIT
     && pass "casket_mkfs: invalid format produces clear error" \
     || bad  "casket_mkfs: invalid format produces clear error"
 
+# ---- casket_mkfs erofs flags ------------------------------------------------
+# Verify the erofs branch passes the compression and feature flags by
+# intercepting the mkfs.erofs command line with a shim.
+
+TMP_SHIM=$(mktemp -d)
+cat > "$TMP_SHIM/mkfs.erofs" <<'SHIM'
+#!/bin/sh
+echo "$@" > "${EROFS_CAPTURE_FILE}"
+exit 0
+SHIM
+chmod +x "$TMP_SHIM/mkfs.erofs"
+
+EROFS_CAPTURE_FILE="$TMP_OUT/erofs_args.txt"
+export EROFS_CAPTURE_FILE
+
+(
+    export PATH="$TMP_SHIM:$PATH"
+    CASKET_FORMAT=erofs
+    mkdir -p "$TMP_OUT/erofs-stage"
+    : > "$TMP_OUT/erofs-stage/dummy.txt"
+    casket_mkfs "$TMP_OUT/erofs-stage" "$TMP_OUT/erofs-out.erofs.zstd" 2>/dev/null
+)
+
+if [[ -f "$EROFS_CAPTURE_FILE" ]]; then
+    erofs_args=$(<"$EROFS_CAPTURE_FILE")
+
+    [[ "$erofs_args" == *"--all-root"* ]] \
+        && pass "casket_mkfs erofs: --all-root passed" \
+        || bad  "casket_mkfs erofs: --all-root passed"
+
+    [[ "$erofs_args" == *"-z zstd,level=12"* ]] \
+        && pass "casket_mkfs erofs: -z zstd,level=12 passed" \
+        || bad  "casket_mkfs erofs: -z zstd,level=12 passed"
+
+    [[ "$erofs_args" == *"-C 131072"* ]] \
+        && pass "casket_mkfs erofs: -C 131072 (128K pcluster) passed" \
+        || bad  "casket_mkfs erofs: -C 131072 (128K pcluster) passed"
+
+    [[ "$erofs_args" == *"dedupe,fragments,ztailpacking"* ]] \
+        && pass "casket_mkfs erofs: -E dedupe,fragments,ztailpacking passed" \
+        || bad  "casket_mkfs erofs: -E dedupe,fragments,ztailpacking passed"
+else
+    bad "casket_mkfs erofs: shim was not called (capture file missing)"
+fi
+rm -rf "$TMP_SHIM"
+
 # ---- done -------------------------------------------------------------------
 
 if (( fail )); then
