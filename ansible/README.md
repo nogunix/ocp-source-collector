@@ -45,6 +45,41 @@ ansible-playbook -i inventory.ini casket-host.yml -e casket_repo=/path/to/ocp-so
 - **Lingering**: without `loginctl enable-linger`, the user-scope
   `casket-mcp`/`opengrok` services die at logout.
 
+## Tests
+
+```bash
+bash tests/test_ansible.sh
+```
+
+Runs in CI (`.github/workflows/ci.yml`, via the `tests/*.sh` loop). It
+syntax-checks both playbooks, confirms every module they call resolves, and
+runs `ansible-lint --offline` over this directory.
+
+These are static checks only. The playbooks install systemd units, relabel a
+file for SELinux and open firewalld ports, so an actual run needs a real host —
+CI cannot do it, for the same reason it cannot run the collection pipeline.
+`--check` against a live host is the closest thing to a dry run:
+
+```bash
+ansible-playbook -i inventory.ini casket-host.yml --check --diff
+```
+
+Read a `--check` run with the `command` tasks in mind — check mode predicts
+them instead of running them, and the three here each report differently
+(measured, not assumed):
+
+| task | check-mode result | why |
+| --- | --- | --- |
+| `ensure-venv.sh`, `loginctl enable-linger` | `changed` if the `creates:` path is missing, `ok` if it exists | the `creates:` guard is all check mode has to go on |
+| `restorecon` | `skipped` | its `changed_when` reads the command's `stdout`, and check mode produces none |
+
+So a `changed` on those first two is a prediction, and the `skipped` restorecon
+is not a problem — neither tells you the task would actually do anything.
+
+Rule exceptions live in [`../.ansible-lint`](../.ansible-lint), one entry with
+its reasoning; `tests/test_ansible.sh` fails if that list grows without the
+count there being updated, so silently muting a rule is not a one-line change.
+
 ## Teardown
 
 ```bash

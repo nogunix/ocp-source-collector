@@ -16,6 +16,10 @@ Thank you for your interest in contributing. This guide covers the basics.
 - [ShellCheck](https://www.shellcheck.net/) (shell linting)
 - [Ruff](https://docs.astral.sh/ruff/) (`pip install ruff`, Python linting)
 - `pytest` and `pyyaml` (`pip install pytest pyyaml`, for Python tests)
+- `ansible` and `ansible-lint` (`dnf install ansible` + `pip install
+  ansible-lint`, for `tests/test_ansible.sh`). Install the full `ansible`
+  package rather than `ansible-core` alone: the playbooks call
+  `community.general` and `ansible.posix`, and the test asserts those resolve.
 
 The full pipeline additionally requires `oc`, `jq`, `mksquashfs`, `xz`, and a
 registry pull secret, but these are **not** needed for linting or running the
@@ -31,11 +35,7 @@ shellcheck -S error -e SC1091 scripts/*.sh
 ruff check scripts/*.py mcp/*.py
 
 # Tests (no network, no registry needed)
-bash tests/test_resolve.sh
-bash tests/test_stage.sh
-bash tests/test_reclaim.sh
-bash tests/test_freshness.sh
-bash tests/test_artifact_path.sh
+for t in tests/*.sh; do bash "$t" || echo "FAILED $t"; done
 python3 -m pytest tests/ -q
 
 # Python coverage (as CI measures it)
@@ -43,7 +43,9 @@ python3 -m pytest tests/ -q --cov=scripts --cov=mcp --cov-branch \
   --cov-report=term-missing
 ```
 
-All of these run in CI on every push and pull request.
+All of these run in CI on every push and pull request. CI discovers the bash
+tests with the same `tests/*.sh` glob, so a new one is picked up by dropping the
+file in — there is no list to update, in this file or in the workflow.
 
 `scripts/*.py` and `mcp/*.py` are at 100% statement and branch coverage, and CI
 fails below that (`--cov-fail-under=100`). New Python code therefore needs tests

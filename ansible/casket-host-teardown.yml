@@ -32,7 +32,9 @@
         name: opengrok.service
         state: stopped
         enabled: false
-      ignore_errors: true  # unit may not exist on a host that never ran casket-host.yml
+      # The unit may not exist at all on a host that never ran
+      # casket-host.yml; a teardown must not fail on that.
+      failed_when: false
 
     - name: Stop + disable casket-mcp.service (user)
       ansible.builtin.systemd:
@@ -40,7 +42,7 @@
         name: casket-mcp.service
         state: stopped
         enabled: false
-      ignore_errors: true
+      failed_when: false
 
     - name: Remove user unit files
       ansible.builtin.file:
@@ -67,7 +69,7 @@
         name: casket-mounts.service
         state: stopped
         enabled: false
-      ignore_errors: true
+      failed_when: false
 
     - name: Remove casket-mounts.service (system)
       become: true

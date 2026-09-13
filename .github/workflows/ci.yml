@@ -68,13 +68,19 @@ jobs:
     steps:
       - name: install runtime
         run: |
+          # `ansible` (not just ansible-core) for the community.general and
+          # ansible.posix collections the playbooks call; tests/test_ansible.sh
+          # asserts they resolve, so a bare ansible-core would fail the build.
+          # ansible-lint is not packaged for Fedora, hence pip.
           dnf install -y --setopt=install_weak_deps=False \
-            python3 python3-pip findutils git-core ripgrep
+            python3 python3-pip findutils git-core ripgrep ansible
           dnf clean all
-          python3 -m pip install --quiet pytest pytest-cov
+          python3 -m pip install --quiet pytest pytest-cov ansible-lint
           echo "--- versions ---"
           bash --version | head -1
           python3 --version
+          ansible --version | head -1
+          ansible-lint --version
 
       - uses: actions/checkout@v4
 

@@ -1,0 +1,23 @@
+---
+# ansible-lint configuration for the playbooks under ansible/.
+#
+# Enforced by tests/test_ansible.sh, which CI runs through the tests/*.sh
+# loop in .github/workflows/ci.yml. The default profile applies; only the
+# rule below is turned off, and only for the reason recorded here.
+
+skip_list:
+  # no-handler: "Tasks that run when changed should likely be handlers."
+  #
+  # The flagged tasks are `daemon_reload` / `restorecon` steps gated on a
+  # preceding task's `.changed`. Handlers run at the END of a play, but
+  # casket-host.yml enables and starts the units immediately after its
+  # reload -- moving that reload into a handler would let systemd start the
+  # units from the stale unit files it had already loaded, which is the exact
+  # bug the inline reload exists to prevent.
+  #
+  # Only the teardown's copies are flagged at all: casket-host.yml writes the
+  # identical pattern and escapes the rule solely because its condition is a
+  # compound `a.changed or b.changed` rather than a bare `x.changed`. Skipping
+  # the rule keeps both playbooks written the same way instead of splitting
+  # them on an accident of how the condition is spelled.
+  - no-handler

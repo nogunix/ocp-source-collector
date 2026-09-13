@@ -12,7 +12,7 @@
 # Override the checkout path (defaults to $CASKET_WORK, then ~/ocp-source-collector):
 #   ansible-playbook -i inventory.ini casket-host.yml -e casket_repo=/path/to/ocp-source-collector
 
-- name: casket-host search infrastructure (casket-mounts, casket-mcp, OpenGrok)
+- name: Set up casket-host search infrastructure (casket-mounts, casket-mcp, OpenGrok)
   hosts: localhost
   gather_facts: true
   vars:
@@ -146,7 +146,7 @@
       when: opengrok_start is failed
 
     # --- keep user services running without an active login session ---
-    - name: Enable lingering for {{ casket_user }} (user services survive logout)
+    - name: Enable lingering so user services survive logout for {{ casket_user }}
       become: true
       ansible.builtin.command: "loginctl enable-linger {{ casket_user }}"
       args:
