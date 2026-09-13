@@ -100,7 +100,19 @@ casket_mkfs() {
             ;;
         erofs)
             require_cmd mkfs.erofs
-            mkfs.erofs --all-root -z zstd "$out" "$stage"
+            # Every flag here is load-bearing; measured on ocp4.14.58
+            # (20.25 GB, 1.87M files) against the 1.47 GB xz squashfs:
+            #   bare `-z zstd`                       8.74 GB, 331s metadata walk
+            #   + dedupe,fragments,ztailpacking,L12  1.86 GB,   9.4s
+            #   + -C 131072                          1.61 GB,   7.0s
+            # 64% of the tree is under 4 KB, so without fragments/ztailpacking
+            # each of those files burns a whole 4 KB block (4.57 GB of floor on
+            # this tree alone); -C matches squashfs's 128 KB compression window,
+            # which the default 4 KB pcluster is 32x smaller than.
+            mkfs.erofs --all-root \
+                -z zstd,level=12 -C 131072 \
+                -E dedupe,fragments,ztailpacking \
+                "$out" "$stage"
             ;;
         *) die "unknown CASKET_FORMAT: $CASKET_FORMAT (want sqfs or erofs)" ;;
     esac

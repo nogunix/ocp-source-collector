@@ -1,5 +1,6 @@
 #!/bin/bash
-# Reconcile the casket squashfs mounts under /srv against the desired state:
+# Reconcile the casket mounts (squashfs or erofs) under /srv against the
+# desired state:
 #   desired = state/registry.json entries with status=live
 #           + config/static-mounts.tsv (caskets outside the registry: the two
 #             RHEL caskets, catalog caskets, anything hand-managed)
@@ -43,10 +44,14 @@ done < <(
 )
 [[ ${#WANT[@]} -gt 0 ]] || die "desired state is empty (registry unreadable and no $STATIC_TSV?) — refusing to unmount everything"
 
-# --- current state: squashfs mounts under /srv/sources-* -----------------
+# --- current state: casket mounts under /srv/sources-* -------------------
+# Both filesystems count: CASKET_FORMAT selects squashfs or erofs per build, so
+# a fleet mid-migration carries each. Matching only squashfs would leave erofs
+# caskets out of HAVE, and every run would then treat a mounted casket as
+# missing and stack another mount on top of it.
 declare -A HAVE
 while read -r dev mnt fstype _; do
-    [[ "$fstype" == "squashfs" && "$mnt" == /srv/sources-* ]] || continue
+    [[ ( "$fstype" == "squashfs" || "$fstype" == "erofs" ) && "$mnt" == /srv/sources-* ]] || continue
     backing=$(losetup -nO BACK-FILE "$dev" 2>/dev/null | head -1 | awk '{$1=$1};1')
     HAVE["$mnt"]="${backing:-unknown}"
 done < /proc/mounts
