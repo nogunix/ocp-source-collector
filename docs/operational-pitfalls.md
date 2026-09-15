@@ -267,6 +267,41 @@ that one a plain `systemd-run --user` is enough. Both failure modes abort
 *before* the script starts, so a botched invocation is harmless — but it looks
 exactly like the script failing.
 
+**(2026-09-15) The same rule governs *installed* system units, not just
+`systemd-run` — and it cost a two-day outage.** `casket-mounts.service` lives
+in `/etc/systemd/system/` and named its script directly
+(`ExecStart=/home/<user>/ocp-source-collector/scripts/casket-mounts.sh
+--apply`). It had been running fine through the 2026-09-11 boot, so nobody
+connected it to the 2026-08-13 note above. Which label let `init_t` exec it
+until then is not recoverable after the fact — what is certain is that a
+throwaway `podman run -v ~/ocp-source-collector:…:Z` relabelled the whole tree
+to `container_file_t:s0:c405,c705` (no `:Z` appears anywhere in this repo's own
+scripts, and no surviving container carries that MCS pair), and that from the
+next boot the unit failed `203/EXEC` every time. The blast radius is much wider than
+the unit: **0 of 87 squashfs mounted**, so `/srv/sources-*` were all empty,
+`casket-mcp` answered on :8765 while serving nothing, and `opengrok.service`
+spun in `activating (start-pre)` for 1356 restarts because its `ExecStartPre`
+polls `casket-mounts.service` — taking `:8080` `/xref/` down with it.
+
+**`restorecon` alone does NOT fix this, and the second failure looks identical.**
+`restorecon -RF` restores the policy default `user_home_t`, which `init_t` also
+may not execute, so the service fails with the same `203/EXEC`. Do not read
+that as "the relabel didn't take" — check the AVC's `tcontext`, which changes
+from `container_file_t` to `user_home_t`. The actual fix needs no SELinux policy
+change at all: `init_t` *may* read `user_home_t`, so exec `bin_t` and pass the
+script as an argument —
+
+    ExecStart=/usr/bin/bash /home/<user>/ocp-source-collector/scripts/casket-mounts.sh --apply
+
+Patch it in **both** `systemd/casket-mounts.service` and the sed in
+`scripts/install-mounts-service.sh`: the installer rewrites `ExecStart` wholesale,
+so fixing only the installed unit is silently reverted by the next reinstall.
+`tests/test_config_syntax.sh` now fails the build if a system unit in `systemd/`
+execs anything outside `/usr`, `/bin` or `/sbin`, or if the installer drops the
+interpreter. User units are exempt — they run in the user's own domain, not
+`init_t`, which is why `casket-auto-update.service` may name its `%h` script
+directly.
+
 ### Symlink cycles hang the indexer silently, forever
 
 (2026-08-08) OpenGrok's post-index cleanup — `IndexDatabase.finishWriting`
