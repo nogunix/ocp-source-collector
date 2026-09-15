@@ -14,7 +14,13 @@ RemainAfterExit=yes
 # This path is a placeholder. Do not edit it by hand — run
 # `sudo ./scripts/install-mounts-service.sh`, which rewrites ExecStart with
 # THIS checkout's absolute path (a system unit cannot use %h).
-ExecStart=/path/to/ocp-source-collector/scripts/casket-mounts.sh --apply
+# The explicit /usr/bin/bash is REQUIRED, not cosmetic. SELinux is Enforcing
+# and a system unit runs as init_t, which may not *execute* a file labelled
+# user_home_t — naming the script directly dies at status=203/EXEC with
+# `avc: denied { execute }` before a single line runs. init_t may still *read*
+# user_home_t, so execing bin_t (/usr/bin/bash) and passing the script as an
+# argument works. See docs/operational-pitfalls.md.
+ExecStart=/usr/bin/bash /path/to/ocp-source-collector/scripts/casket-mounts.sh --apply
 
 [Install]
 WantedBy=multi-user.target
