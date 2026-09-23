@@ -1,0 +1,15 @@
+# Weekly wake for upstream-link-check.service. Wednesday morning, not the
+# Saturday slot the Actions job used: casket-auto-update runs Fri 23:30 for
+# 2.5-3 days, and although the link check only reads the mounts, keeping it
+# out of that window avoids sharing the GitHub API quota with the submodule
+# collection and makes a finding easy to act on during the week.
+[Unit]
+Description=casket-ocp upstream link-health check (weekly, Wed 09:00)
+
+[Timer]
+OnCalendar=Wed *-*-* 09:00:00
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

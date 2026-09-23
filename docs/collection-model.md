@@ -87,8 +87,15 @@ Generated per build and **bundled inside the casket** (= self-describing archive
       `.github/workflows/upstream-link-check.yml` (Saturday 09:00 JST) runs
       `scripts/check-upstream-links.py` checking API (repo existence/rename) + codeload
       HEAD (ref re-fetchability). Collected content is safe inside caskets, so
-      detections indicate "re-fetchability warnings". Re-run export and commit
-      the manifest when the collection set changes.
+      detections indicate "re-fetchability warnings".
+      **Moved to casket-host on 2026-09-23**: `state/` is host-local and never
+      committed to the public repo (since 2026-09-12), so the Actions job had no
+      manifest to read and failed every week. It now runs as
+      `systemd/upstream-link-check.timer` (Wed 09:00) via
+      `scripts/upstream-link-check.sh`, which regenerates the manifest from
+      `/srv` on every run, so it can no longer go stale. The workflow stays as a
+      fallback that skips with a notice when the manifest is absent. See
+      `docs/operations.md`.
 - [ ] z:none remaining items systematic audit: Collect z:none × vcs-ref present
       from all layered labels.tsv, use GitHub commit-hash search API
       (`/search/commits?q=hash:<sha>`) to auto-identify owning repos →

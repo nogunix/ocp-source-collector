@@ -92,6 +92,27 @@ List artifacts awaiting swap with `cat state/auto-update.status` or `python3 scr
 
 **Phase A's swap is additive; A-rpm/B/B-operand swaps are replacements**: Phase A creates a separate mount per patch version (`/srv/sources-ocp<patch>`), so a patch bump adds a new mount while old patch mounts remain (the benefit is that old version source references keep working). `casket-swap.sh` detects this and does not retire the old `live` registry entry for Phase A (so `cleanup.sh` won't delete it). A-rpm/B/B-operand have stable mount targets (per-minor or single path), so old entries are transitioned to retired and become candidates for `cleanup.sh`.
 
+## Upstream link-health check (upstream-link-check)
+
+A weekly early warning for sources that could no longer be **re-fetched** from upstream (deleted, renamed or private repo; removed tag). Content that is already collected stays safe inside the caskets. Runs on casket-host since 2026-09-23. Before that it was a GitHub Actions job, but `state/` is not in the public repo, so the job never had a manifest to read.
+
+```
+systemd/upstream-link-check.service     → scripts/upstream-link-check.sh (export + check)
+systemd/upstream-link-check.timer       Wakes up every Wednesday 09:00 (outside the auto-update window)
+state/upstream-sources.tsv              Manifest regenerated from /srv/sources-*/…/git/INDEX.tsv on every run
+state/upstream-links-baseline.txt       Accepted, known rot; only NEW rot fails the unit
+```
+
+```bash
+ln -s $CASKET_WORK/systemd/upstream-link-check.service ~/.config/systemd/user/
+ln -s $CASKET_WORK/systemd/upstream-link-check.timer   ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now upstream-link-check.timer
+journalctl --user -u upstream-link-check.service -e    # NEW ROT / RENAMED lines
+```
+
+A failed unit means NEW rot. After reviewing it, accept it with `python3 scripts/check-upstream-links.py --write-baseline`. The GitHub token is taken the same way as for auto-update (`GITHUB_TOKEN`, else `gh auth token`). If no caskets are mounted, the export refuses to overwrite the manifest and the unit fails. It never passes on an empty manifest.
+
 ## Mount management (since 2026-07-11, fstab-less)
 
 Casket mounts are no longer written to fstab (removed after it grew to 50+ lines; all casket lines were removed at the time of `/etc/fstab.bak-20260711-pre-reconciler`). The single sources of truth are:

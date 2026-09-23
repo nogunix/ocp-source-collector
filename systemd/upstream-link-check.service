@@ -1,0 +1,30 @@
+# Weekly upstream link-health check (docs/collection-model.md §8): regenerate
+# state/upstream-sources.tsv from the mounted caskets and probe every
+# (repo, ref) for re-fetchability. Read-only towards the caskets; writes only
+# state/upstream-sources.tsv. Moved here from GitHub Actions on 2026-09-23
+# because the manifest comes from /srv and state/ is not in the public repo.
+# Install (user unit, no root):
+#   ln -s $CASKET_WORK/systemd/upstream-link-check.service ~/.config/systemd/user/
+#   ln -s $CASKET_WORK/systemd/upstream-link-check.timer   ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now upstream-link-check.timer
+# Run it now / read the result:
+#   systemctl --user start upstream-link-check.service
+#   journalctl --user -u upstream-link-check.service -e     # NEW ROT / RENAMED lines
+# A failed unit (exit 1) means NEW rot beyond state/upstream-links-baseline.txt;
+# after reviewing, accept it with
+#   python3 scripts/check-upstream-links.py --write-baseline
+[Unit]
+Description=casket-ocp upstream link-health check (weekly)
+
+[Service]
+Type=oneshot
+# gh (for the token fallback) may live in ~/bin; user units don't inherit the
+# login shell profile.
+Environment=PATH=%h/bin:/usr/local/bin:/usr/bin:/bin
+# Optional explicit GITHUB_TOKEN; otherwise the script borrows `gh auth token`.
+EnvironmentFile=-%h/.config/casket/auto-update.env
+ExecStart=%h/ocp-source-collector/scripts/upstream-link-check.sh
+# ~924 API calls + ~3600 codeload HEADs at --jobs 8; well under an hour.
+TimeoutStartSec=2h
+Nice=10

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Export the union of upstream source coordinates recorded in every mounted
-# casket's git/INDEX.tsv into state/upstream-sources.tsv — the checked-in
-# manifest that .github/workflows/upstream-link-check.yml probes weekly.
+# casket's git/INDEX.tsv into state/upstream-sources.tsv — the manifest that
+# scripts/upstream-link-check.sh (upstream-link-check.timer) probes weekly.
 #
 # Columns: repo | ref | version | kind | seen_in
 #   ref     commit sha or branch as recorded (may be empty)
@@ -11,9 +11,10 @@
 # The checker mirrors the fetch pipelines' fallback chain (sha -> v<ver> ->
 # <ver> -> HEAD), so "bad" means "not re-fetchable by the pipeline today".
 #
-# Why a committed manifest: the Actions runner cannot see /srv. Content
-# already fetched lives safely inside caskets — this is early-warning
-# monitoring of RE-fetchability (docs/collection-model.md §8).
+# state/ is host-local and not committed to the public repo, so the check runs
+# here, regenerating this file each time. Content already fetched lives safely
+# inside caskets — this is early-warning monitoring of RE-fetchability
+# (docs/collection-model.md §8).
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="$SCRIPT_DIR/../state/upstream-sources.tsv"
@@ -32,6 +33,15 @@ OUT="$SCRIPT_DIR/../state/upstream-sources.tsv"
         }' "$idx"
     done | sort -u | awk -F'\t' '!seen[$1"\t"$2"\t"$3"\t"$4]++'
 } > "$OUT.tmp"
+
+# No caskets mounted (or every INDEX.tsv unreadable) yields a header-only file.
+# Replacing a good manifest with that would make the checker report "0 rows,
+# all ok" -- a silent pass -- so refuse and keep the previous manifest.
+if ! grep -qv '^#' "$OUT.tmp"; then
+    rm -f "$OUT.tmp"
+    echo "no GitHub rows found under /srv/sources-*/ (caskets not mounted?); keeping $OUT" >&2
+    exit 1
+fi
 mv "$OUT.tmp" "$OUT"
 
 n=$(grep -vc '^#' "$OUT"); r=$(grep -v '^#' "$OUT" | cut -f1 | sort -u | wc -l)
