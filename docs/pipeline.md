@@ -33,7 +33,7 @@ Script structure and execution steps for each phase. For artifact contents see [
 | `repackage-add-index.sh`          | (ops) Retrofit index layer onto existing caskets: overlay `INDEX.tsv`/`by-component/`/`by-repo/` onto read-only mount via overlayfs, then re-mksquashfs (handles both single A/B and per-product layered B-operand layouts) |
 | `swap-source-index.sh`            | (ops) Swap fstab to indexed caskets + restart mounts (dry-run by default, `--apply` to execute). All 24 caskets deployed as `casket-20260608-*` on 2026-06-08 |
 
-A-rpm auxiliary files under `$CASKET_WORK/phase-a-rpm/vm/`:
+A-rpm legacy VM files under `$CASKET_WORK/phase-a-rpm/vm/` (superseded by `scripts/phase-a-rpm-collect.sh` + `containers/srpm-collect/`, see [a-rpm-collection.md](a-rpm-collection.md)):
 
 | File | Role |
 |------|------|
@@ -88,7 +88,9 @@ Measured: ~12 minutes for 7 versions (~2 min per version, as of 2026-05-27). The
 
 ### A-rpm pipeline (rhel-coreos SRPM collection)
 
-A sub-phase that drills into the `rhel-coreos` image from the same release payload as Phase A, at the RPM level. Runs `dnf download --source` on a RHEL 9 machine with a Red Hat subscription (this project uses the libvirt VM `rhel9-srpm`). Only the bootstrap is executed from the Fedora host.
+A sub-phase that drills into the `rhel-coreos` image from the same release payload as Phase A, at the RPM level.
+
+> **Since 2026-08 the standard procedure is container-based** (`scripts/phase-a-rpm-collect.sh`, no VM) plus an incremental overlay onto the live casket. See [a-rpm-collection.md](a-rpm-collection.md), which also covers the node-OS extensions and in-container streams. The VM workflow below is kept for reference only.
 
 ```bash
 # 1. Start the RHEL 9 VM (Fedora host side, requires sudo)

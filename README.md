@@ -154,7 +154,7 @@ See [docs/operations.md](docs/operations.md) for the full flow.
 |-------------|---------|-----------|
 | Bash 4+ | All pipeline scripts | **Yes** |
 | Python 3.9+ | `collect-deps.py`, `collect-submodules.py`, `build-source-index.py`, `registry.py` | **Yes** |
-| Red Hat subscription | Pull secret, operator catalogs, RHEL 9 VM for A-rpm, EUS SRPMs | **Yes** (Phase A GitHub-only without it) |
+| Red Hat subscription | Pull secret, operator catalogs, A-rpm SRPMs (container registers via activation key), EUS SRPMs | **Yes** (Phase A GitHub-only without it) |
 
 ### CLI tools
 

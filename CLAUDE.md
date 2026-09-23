@@ -42,9 +42,11 @@ See [docs/pipeline.md](docs/pipeline.md) for full script tables, execution examp
 
 ### A-rpm: SRPMS from RHEL coreos
 ```bash
-./scripts/phase-a-rpm-package.sh
+scripts/phase-a-rpm-extensions-inventory.sh -o phase-a-rpm/rpmdb-extensions-<date>  # A2, copy *-extensions.tsv into rpmdb-<date>/
+CASKET_COLLECT_STAMP=<date> scripts/phase-a-rpm-collect.sh                         # A + B in a container (no VM)
+scripts/repackage-srpms-refresh.sh -m /srv/sources-ocp-srpms -s … -r … -o …        # overlay onto the live casket
 ```
-Requires RHEL 9 VM (`rhel9-srpm` libvirt guest) with `dnf download --source` capability. See [docs/pipeline.md](docs/pipeline.md#a-rpm-pipeline-rhel-coreos-srpm-collection) for the full VM workflow.
+Container-based since 2026-08 (entitlement via `~/.config/casket/rhsm.env`); the `rhel9-srpm` VM workflow is legacy. Follow [docs/a-rpm-collection.md](docs/a-rpm-collection.md) — `-r` replaces `by-ocp/` wholesale, so the rpmdb dir must carry the `-extensions` tsvs too.
 
 ### Phase B: Operator sources
 ```bash
