@@ -547,9 +547,20 @@ Smaller traps found on the way:
   for kata-containers, which only has the bare tag, so the row read as a 404.
   Keep every candidate with that suffix.
 - **`INDEX.tsv`'s ref is the label sha, not what was fetched.** About half of
-  B-operand tarballs are `exact=0`, i.e. a branch or tag stands in for that
-  sha. Phase B caskets do not package the fetch record (`git-v2.tsv`), so
-  their rows get the full chain.
+  B-operand tarballs are `exact=0` (a branch or tag stands in for that sha),
+  and Phase B is worse: **27 of 139** 4.18 redhat tarballs are exact. Two
+  consequences:
+  - casket-mcp's `permalink` linked to that sha with `exact: true`, which is a
+    404 when the sha is Konflux-internal. It now reads `meta/git-fetched.tsv`
+    and, for `exact=0`, links the fetched tag/branch with `exact: false` and
+    the label sha as `built_from`. The archive top dir cannot tell `v1.2.3`
+    from `1.2.3`, so it returns `alt_url` too.
+  - Phase B caskets carried no fetch record at all. `phase-b-package.sh` now
+    writes `meta/git-fetched.tsv` via `scripts/archive-provenance.py`, reading
+    each tarball's top dir, so the link check can cut Phase B chains at the
+    winner as well. Caskets built before 2026-09-23 lack the file until they
+    are rebuilt: their rows get the full chain and their permalinks keep the
+    label sha.
 - **One transient probe failure failed the whole unit.** A Phase A row read bad
   once and returned 200 on the next probe. A non-404 answer (timeout, 429, 5xx) is
   now retried once, and a 404 is final.

@@ -679,6 +679,46 @@ def _parse_submodules(tsv_path: str) -> list[dict]:
     return rows
 
 
+def _fetched_approx(unit_dir: str, src_dir: str, repo_url: str) -> tuple[bool, list[str]]:
+    """Consult meta/git-fetched.tsv (B and B-operand caskets) for src_dir.
+
+    -> (approx, refs). approx=False when the tree is the INDEX.tsv commit, or
+    the casket has no record (Phase A, older caskets). Otherwise refs are the
+    GitHub refs the tree may have come from, likeliest first ([] if the ref
+    cannot be recovered). The INDEX.tsv ref is the image's vcs-ref label, and
+    for about half of B-operand and 4 in 5 Phase B trees that commit is
+    Konflux-internal: not on public GitHub, so a link to it is a 404.
+    """
+    path = os.path.join(unit_dir, "meta", "git-fetched.tsv")
+    row = None
+    try:
+        with open(path) as f:
+            for line in f:
+                c = line.rstrip("\n").split("\t")
+                if len(c) >= 4 and c[0] == f"{src_dir}.tar.gz":
+                    row = c
+                    break
+    except OSError:
+        return False, []
+    if row is None or row[3] == "1":
+        return False, []
+    url = row[1]
+    if url.startswith("pre-existing:"):
+        # GitHub archive top dir "<repo>-<ref>": branch slashes become dashes
+        # and a tag's leading "v" is dropped, so v1.2.3 and 1.2.3 read alike.
+        top = url[len("pre-existing:"):]
+        name = repo_url.rstrip("/").removesuffix(".git").rsplit("/", 1)[-1]
+        if not top.lower().startswith(name.lower() + "-"):
+            return True, []   # renamed repo or unreadable archive
+        ref = top[len(name) + 1:]
+        # The pipeline tries v<ver> before <ver>, so the v form leads.
+        return True, ([f"v{ref}", ref] if ref[:1].isdigit() else [ref])
+    ref = url.split("/archive/", 1)[-1].removesuffix(".tar.gz")
+    for p in ("refs/heads/", "refs/tags/"):
+        ref = ref.removeprefix(p)
+    return True, [ref]
+
+
 def _github_url(repo_url: str) -> str | None:
     """Extract a GitHub base URL from a repo URL, or None if not GitHub."""
     if not repo_url:
@@ -784,12 +824,31 @@ def permalink(path: str, line: int = 0) -> dict:
                     "exact": True, "source": "INDEX",
                     "file": file_in_tree, "path": rp, "mount": mount.name,
                     "note": "repo is not on GitHub — no permalink available"}
-        result = {
-            "url": f"{gh_base}/blob/{ref}/{file_in_tree}",
-            "repo": gh_base, "ref": ref, "exact": True,
-            "source": "INDEX",
-            "file": file_in_tree, "path": rp, "mount": mount.name,
-        }
+        approx, refs = _fetched_approx(unit_dir, src_dir, repo_url)
+        if not approx:
+            result = {
+                "url": f"{gh_base}/blob/{ref}/{file_in_tree}",
+                "repo": gh_base, "ref": ref, "exact": True,
+                "source": "INDEX",
+                "file": file_in_tree, "path": rp, "mount": mount.name,
+            }
+        else:
+            result = {
+                "url": f"{gh_base}/blob/{refs[0]}/{file_in_tree}" if refs else None,
+                "repo": gh_base, "ref": refs[0] if refs else None, "exact": False,
+                "built_from": ref, "source": "INDEX+git-fetched",
+                "file": file_in_tree, "path": rp, "mount": mount.name,
+                "note": ("the image was built from built_from, which is not on "
+                         "public GitHub; this tree is the tag/branch the fetch "
+                         "fell back to, and a branch head has moved since — "
+                         "treat as approximate"),
+            }
+            if len(refs) > 1:
+                result["alt_url"] = f"{gh_base}/blob/{refs[1]}/{file_in_tree}"
+                result["note"] += ("; the archive cannot tell tag v<X> from "
+                                   "<X>, so if url 404s try alt_url")
+            if not refs:
+                result["note"] += "; the fetched ref could not be recovered"
 
     if line and result.get("url"):
         result["url"] += f"#L{line}"

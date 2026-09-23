@@ -304,3 +304,76 @@ def test_permalink_ignores_submodule_row_of_other_component(tmp_path, monkeypatc
     assert result["source"] == "INDEX"
     assert result["repo"] == "https://github.com/openshift/cluster-version-operator"
     assert result["file"] == "pkg/cvo.go"
+
+
+# ------------------------------------ fallback-fetched trees (git-fetched.tsv)
+_KRP = ("ose-kube-rbac-proxy-095fa67c257b",
+        "https://github.com/openshift/kube-rbac-proxy",
+        "095fa67c257b0380184266438efbc2218c4e1761", "4.20.0", "ose-kube-rbac-proxy")
+
+
+def _fetched_casket(tmp_path, monkeypatch, fetched_rows, index_row=_KRP):
+    mount = _make_casket(tmp_path, mount_name="sources-ocp4.18-operators",
+                         index_rows=[index_row])
+    with open(mount / "meta" / "git-fetched.tsv", "w") as f:
+        f.write("# tarball\turl\tkind\texact\n")
+        f.writelines("\t".join(row) + "\n" for row in fetched_rows)
+    monkeypatch.setattr(be, "SRV", str(tmp_path / "srv"))
+    monkeypatch.setattr(be, "ROOT_PREFIX", str(tmp_path / "srv" / "sources-"))
+    return str(mount / "git" / index_row[0] / "pkg" / "operator" / "starter.go")
+
+
+def test_permalink_fallback_branch(tmp_path, monkeypatch):
+    path = _fetched_casket(tmp_path, monkeypatch, [
+        ("other.tar.gz", "pre-existing:other-main", "preexisting", "0"),
+        (f"{_KRP[0]}.tar.gz", "pre-existing:kube-rbac-proxy-release-4.20", "preexisting", "0"),
+    ])
+    r = be.permalink(path)
+    assert r["url"] == ("https://github.com/openshift/kube-rbac-proxy"
+                        "/blob/release-4.20/pkg/operator/starter.go")
+    assert r["exact"] is False and r["ref"] == "release-4.20"
+    assert r["built_from"] == _KRP[2]
+    assert "alt_url" not in r
+
+
+def test_permalink_fallback_tag_is_ambiguous(tmp_path, monkeypatch):
+    path = _fetched_casket(tmp_path, monkeypatch, [
+        (f"{_KRP[0]}.tar.gz", "pre-existing:kube-rbac-proxy-4.20.0", "preexisting", "0")])
+    r = be.permalink(path)
+    assert r["ref"] == "v4.20.0"
+    assert r["alt_url"].endswith("/blob/4.20.0/pkg/operator/starter.go")
+    assert "alt_url" in r["note"]
+
+
+def test_permalink_fallback_real_url(tmp_path, monkeypatch):
+    path = _fetched_casket(tmp_path, monkeypatch, [
+        (f"{_KRP[0]}.tar.gz",
+         "https://github.com/openshift/kube-rbac-proxy/archive/refs/tags/v4.20.0.tar.gz",
+         "tag", "0")])
+    r = be.permalink(path)
+    assert r["ref"] == "v4.20.0" and r["exact"] is False
+    assert "alt_url" not in r
+
+
+def test_permalink_fallback_unrecoverable_ref(tmp_path, monkeypatch):
+    path = _fetched_casket(tmp_path, monkeypatch, [
+        (f"{_KRP[0]}.tar.gz", "pre-existing:new-name-main", "preexisting", "0")])
+    r = be.permalink(path)
+    assert r["url"] is None and r["ref"] is None and r["exact"] is False
+    assert "could not be recovered" in r["note"]
+
+
+def test_permalink_exact_fetch_keeps_index_ref(tmp_path, monkeypatch):
+    path = _fetched_casket(tmp_path, monkeypatch, [
+        (f"{_KRP[0]}.tar.gz", f"pre-existing:kube-rbac-proxy-{_KRP[2]}", "sha", "1")])
+    r = be.permalink(path)
+    assert r["exact"] is True and r["ref"] == _KRP[2]
+    assert "built_from" not in r
+
+
+def test_permalink_unlisted_dir_keeps_index_ref(tmp_path, monkeypatch):
+    path = _fetched_casket(tmp_path, monkeypatch, [
+        ("short-row.tar.gz",),
+        ("unrelated.tar.gz", "pre-existing:x-main", "preexisting", "0")])
+    r = be.permalink(path)
+    assert r["exact"] is True and r["source"] == "INDEX"

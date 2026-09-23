@@ -142,8 +142,10 @@ def permalink(path: str, line: int = 0) -> dict:
     through INDEX.tsv and SUBMODULES.tsv automatically — the caller never
     needs to grep these files or handle submodule path stripping. Returns
     {url, repo, ref, exact, source, file, mount}. exact=false means the
-    submodule ref is a branch-head approximation. url=null when the repo is
-    not on GitHub."""
+    tree is an approximation: a submodule branch head, or (B / B-operand) a
+    tag/branch the fetch fell back to because the image's commit — returned
+    as built_from — is not on public GitHub; alt_url may follow. url=null when
+    the repo is not on GitHub or the fetched ref cannot be recovered."""
     return be.permalink(path, line)
 
 
