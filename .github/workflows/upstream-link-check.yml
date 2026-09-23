@@ -1,13 +1,17 @@
 # Weekly upstream link-health check (docs/collection-model.md §8).
 # Probes every (repo, ref) recorded in state/upstream-sources.tsv — the
-# committed flattening of the caskets' provenance records — against the
-# GitHub API (repo existence/rename) and codeload archive URLs (the exact
-# URL family the fetch pipelines use). Collected content is safe inside the
-# caskets; a failure here is an early warning that a source could not be
-# RE-fetched today (repo deleted/renamed/private, tag removed).
+# flattening of the caskets' provenance records — against the GitHub API
+# (repo existence/rename) and codeload archive URLs (the exact URL family the
+# fetch pipelines use). Collected content is safe inside the caskets; a
+# failure here is an early warning that a source could not be RE-fetched
+# today (repo deleted/renamed/private, tag removed).
 #
-# Refresh the manifest on casket-host with scripts/export-upstream-sources.sh
-# and commit it whenever the collection set changes.
+# The check's real home is casket-host (systemd/upstream-link-check.timer),
+# which regenerates the manifest from the mounted caskets on every run. This
+# public repo deliberately does not carry state/ (host-local production state,
+# excluded since 2026-09-12), so here the manifest is normally absent and the
+# job ends with a notice instead of failing every week. It still runs the real
+# check if a manifest is ever committed.
 name: upstream-link-check
 
 on:
@@ -24,14 +28,24 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+      - name: Look for the manifest
+        id: manifest
+        run: |
+          if [[ -f state/upstream-sources.tsv ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::state/upstream-sources.tsv is not in this repo (state/ is host-local); the link check runs on casket-host via upstream-link-check.timer. Skipping."
+          fi
       - name: Check upstream links
+        if: steps.manifest.outputs.present == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o pipefail
           python3 scripts/check-upstream-links.py --jobs 8 | tee link-check-report.txt
       - name: Upload report
-        if: always()
+        if: always() && steps.manifest.outputs.present == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: link-check-report
