@@ -120,3 +120,65 @@ class TestCollect:
         assert by_label["sources-ocp4.20.22"][5] == ""          # legacy chain
         assert by_label["sources-layered-ocp4.16/acm"][5].split()[-1] \
             == "refs/heads/release-4.20"                         # cut at winner
+
+    def test_edge_rows(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(_mod, "SRV", str(tmp_path))
+        other = "https://github.com/org/other"
+        idx = self._casket(tmp_path, "sources-ocp4.18-operators", [
+            ("gl", "https://gitlab.com/x/y", SHA, "1.0", "x"),   # not github
+            ("short", REPO),                                     # malformed
+            ("empty", REPO, "", "", "x"),                        # nothing to probe
+            ("a-head", REPO, "", "", "x"),                       # head row
+            ("op1", REPO, SHA, "1.0", "x"),
+            ("op2", REPO, SHA, "1.0", "x"),                      # duplicate of op1
+            ("op3", other, "", "2.0", "x"),                      # same label again
+        ])                                                       # no git-fetched.tsv
+        rows = _mod.collect([idx])
+        assert [r[3] for r in rows].count("head") == 1
+        assert len([r for r in rows if r[0] == REPO and r[1] == SHA]) == 1
+        tag_row = next(r for r in rows if r[0] == other)
+        assert tag_row[3] == "tag" and tag_row[5].endswith("HEAD")
+
+
+class TestEdgeCases:
+    def test_real_url_not_in_candidates_keeps_list(self):
+        cands = [SHA, "refs/heads/main"]
+        assert _mod.cut_at_winner(cands, "https://example.com/x.tar.gz", REPO) == cands
+
+    def test_no_queries_skips_bash(self):
+        assert _mod.pipeline_candidates([]) == []
+
+    def test_blank_lines_ignored_and_count_checked(self, monkeypatch):
+        import types
+        monkeypatch.setattr(_mod.subprocess, "run",
+                            lambda *a, **k: types.SimpleNamespace(stdout="u1\n\n--\n"))
+        assert _mod.pipeline_candidates([(REPO, "", "", "4.18")]) == [["u1"]]
+        try:
+            _mod.pipeline_candidates([(REPO, "", "", "4.18"), (REPO, "", "", "4.19")])
+        except RuntimeError as e:
+            assert "1 answers for 2 rows" in str(e)
+        else:
+            raise AssertionError("expected RuntimeError")
+
+
+class TestMain:
+    def test_writes_manifest(self, tmp_path, monkeypatch, capsys):
+        monkeypatch.setattr(_mod, "SRV", str(tmp_path))
+        out = tmp_path / "upstream-sources.tsv"
+        monkeypatch.setattr(_mod, "OUT", str(out))
+        TestCollect()._casket(tmp_path, "sources-ocp4.20.22",
+                              [("krp-abc", REPO, SHA, "4.20.0", "x")])
+        TestCollect()._casket(tmp_path, "sources-layered-ocp4.16/acm",
+                              [("krp-095f", REPO, SHA, "4.20.0", "x")])
+        assert _mod.main() == 0
+        lines = out.read_text().splitlines()
+        assert lines[0].startswith("# repo") and len(lines) == 3
+        assert "1 with pipeline candidates" in capsys.readouterr().out
+
+    def test_refuses_empty_manifest(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(_mod, "SRV", str(tmp_path))
+        out = tmp_path / "upstream-sources.tsv"
+        out.write_text("keep\n")
+        monkeypatch.setattr(_mod, "OUT", str(out))
+        assert _mod.main() == 1
+        assert out.read_text() == "keep\n"
