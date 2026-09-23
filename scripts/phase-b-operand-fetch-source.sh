@@ -151,6 +151,7 @@ url_kind() {
     case "$1" in
         */archive/refs/tags/*)  printf 'tag' ;;
         */archive/refs/heads/*) printf 'branch' ;;
+        */archive/HEAD.tar.gz)  printf 'branch' ;;   # default branch, not a sha
         *)                      printf 'sha' ;;
     esac
 }

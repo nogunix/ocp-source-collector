@@ -103,7 +103,10 @@ Generated per build and **bundled inside the casket** (= self-describing archive
       (called from `lib-resolve.sh`, not re-implemented) into a 6th manifest
       column, cut after the candidate B-operand actually won
       (`meta/git-fetched.tsv`). Not-re-fetchable rows dropped from 1,388 to
-      ~80 on the first run.
+      77 on the first run, and those 77 exposed a pipeline gap: 13 repos
+      whose default branch is neither main nor master (OADP's `oadp-dev`,
+      `develop`, `ubi10`, ...) had no candidate left. `candidate_source_urls()`
+      now ends with the `HEAD` archive (recorded exact=0), which clears all 77.
 - [ ] z:none remaining items systematic audit: Collect z:none × vcs-ref present
       from all layered labels.tsv, use GitHub commit-hash search API
       (`/search/commits?q=hash:<sha>`) to auto-identify owning repos →

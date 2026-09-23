@@ -218,6 +218,7 @@ dl_one() {
             case "$u" in
                 */archive/refs/tags/*)  kind="tag:${u##*/refs/tags/}" ;;
                 */archive/refs/heads/*) kind="branch:${u##*/refs/heads/}" ;;
+                */archive/HEAD.tar.gz)  kind="branch:HEAD" ;;
             esac
             echo "OK   $fname $kind ($size bytes)" >> "$LOG"
             return

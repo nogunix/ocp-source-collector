@@ -86,7 +86,8 @@ class TestPipelineCandidates:
         # no ref / no version: only the minor branch and default branches
         assert got[1] == [f"{REPO}/archive/refs/heads/release-4.18.tar.gz",
                           f"{REPO}/archive/refs/heads/main.tar.gz",
-                          f"{REPO}/archive/refs/heads/master.tar.gz"]
+                          f"{REPO}/archive/refs/heads/master.tar.gz",
+                          f"{REPO}/archive/HEAD.tar.gz"]
         assert got[2][0] == f"{REPO}/archive/{SHA}.tar.gz"
         assert f"{REPO}/archive/refs/heads/release-4.19.tar.gz" in got[2]
 

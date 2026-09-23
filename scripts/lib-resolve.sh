@@ -26,6 +26,7 @@ normalize_github() {
 #   2. per-repo family strategy                  (gitops/istio/serverless/compliance)
 #   3. version tags  (v<ver>, <ver>, base forms, the .0 release of that MAJ.MIN)
 #   4. branches      (release-<product-minor>, release-<ocp-minor>, main, master)
+#   5. HEAD          (the repo's default branch, whatever it is called)
 # ver is the product version (e.g. 1.37.1 or v1.20.4); minor is the OCP minor.
 #
 # Only candidate 1 is the source the image was actually built from. Everything
@@ -101,4 +102,10 @@ candidate_source_urls() {
     printf '%s\n' "$base/archive/refs/heads/release-${minor}.tar.gz"
     printf '%s\n' "$base/archive/refs/heads/main.tar.gz"
     printf '%s\n' "$base/archive/refs/heads/master.tar.gz"
+    # Last resort: the default branch by whatever name. OADP (oadp-dev),
+    # Infinidat (develop), redhat-openjdk-containers (ubi10) and others use
+    # neither main nor master, so without this the chain dead-ends for them;
+    # their caskets only hold content because an older fetch took HEAD. Found
+    # by the upstream link check, 2026-09-23 (30 rows across 13 repos).
+    printf '%s\n' "$base/archive/HEAD.tar.gz"
 }

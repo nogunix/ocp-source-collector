@@ -85,6 +85,12 @@ emits "apicurio: <ver>.Final tag" \
   "https://github.com/Apicurio/apicurio-registry/archive/refs/tags/2.6.13.Final.tar.gz" \
   -- https://github.com/Apicurio/apicurio-registry "" 2.6.13-r4 4.18
 
+# OADP's default branch is oadp-dev: neither main nor master exists, so only
+# the HEAD archive reaches it. It must come last, after every named branch.
+eq "default branch (HEAD) is the last resort" \
+  "$(candidate_source_urls https://github.com/migtools/oadp-cli "" 1.6.1 4.22 | tail -1)" \
+  "https://github.com/migtools/oadp-cli/archive/HEAD.tar.gz"
+
 echo "# the exact commit stays first — approximations must never outrank it"
 eq "exact sha is candidate #1" \
   "$(candidate_source_urls https://github.com/migtools/mig-operator 1d63ee93 1.8.15 4.18 | head -1)" \
