@@ -491,6 +491,71 @@ remaining hard cases need version mapping: pipelines (product v1.22 ↔ tektoncd
 v0.79) and compliance (RH ahead of public tags).
 
 
+## Upstream link check
+
+### The checker must walk the pipeline's own fallback chain (2026-09-23)
+
+`upstream-link-check` answers one question: could the pipeline **re-fetch**
+this source today? It went wrong in four layers, each hiding the next.
+
+**1. The Actions job never had a manifest.** The workflow read
+`state/upstream-sources.tsv`, but `state/` has been excluded from the public
+repo since 2026-09-12 (host-local production state), so every Saturday run
+exited 2 ("manifest missing"). The file existed on casket-host all along, just
+never committed. The check now runs there (`upstream-link-check.timer`, Wed
+09:00) and the workflow skips with a notice when the manifest is absent.
+
+**2. The local manifest was two months stale.** 3,604 rows from 07-19 against
+5,004 once regenerated: the B-operand caskets had roughly doubled in the
+meantime. `scripts/upstream-link-check.sh` now regenerates it from `/srv` on
+every run. The exporter refuses to overwrite it with a header-only file when
+nothing is mounted, because the checker would report "0 rows, all ok".
+
+**3. The checker judged rows by a different chain than the pipeline used.**
+The first full run reported **985 NEW** of 1,388 bad rows, and none of them
+was rot. **0 of the 985 were in the 07-19 manifest**; all came from caskets
+added since. B / B-operand rows record the image's `vcs-ref`, which is often
+a Konflux-internal commit that 404s on public GitHub (one sha,
+`a467c5c3…`, appears against three unrelated repos). The fetchers then fall
+back through `candidate_source_urls()` (tags, `release-*`, main/master), but
+the checker only tried sha → `v<ver>` → `<ver>`. The exporter now writes each
+row's chain into a 6th manifest column by calling `lib-resolve.sh` itself,
+not a Python copy. For B-operand it cuts the chain after the candidate that
+actually won (`meta/git-fetched.tsv`). If that branch disappears and only
+main still answers, the pipeline would fetch different content, and the
+check must flag it. Bad rows dropped from 1,388 to 77.
+
+Before accepting a large baseline, split the NEW rows by whether they existed
+in the previous manifest. An analysis run against the stale 07-19 manifest
+concluded "B-operand: 0 failures", while the current one had 816. Always
+check which manifest a number came from.
+
+**4. The remaining 77 were a real pipeline gap.** All 77 rows belong to 13
+repos whose default branch is neither main nor master: OADP's `oadp-dev`,
+Infinidat's `develop`, redhat-openjdk-containers' `ubi10`, and archived
+syndesis' `1.15.x`. The caskets held their content only because an older
+fetch took the default branch. **`record_existing` never walks the chain**
+for a tarball already on disk (it just logs `SKIP`), so rebuilds kept passing
+while a from-scratch fetch would have failed. `candidate_source_urls()` now
+ends with `archive/HEAD.tar.gz`, classified as a branch (exact=0 /
+`branch:HEAD`), never a sha. After that: 7,409 / 7,409 re-fetchable and an
+empty baseline.
+
+Smaller traps found on the way:
+- **A GitHub archive's top dir cannot tell `v1.2.3` from `1.2.3`.** Both unpack
+  to `<repo>-1.2.3`. Cutting the chain at the first match kept `v1.10.3` alone
+  for kata-containers, which only has the bare tag, so the row read as a 404.
+  Keep every candidate with that suffix.
+- **`INDEX.tsv`'s ref is the label sha, not what was fetched.** About half of
+  B-operand tarballs are `exact=0`, i.e. a branch or tag stands in for that
+  sha. Phase B caskets do not package the fetch record (`git-v2.tsv`), so
+  their rows get the full chain.
+- **One transient probe failure failed the whole unit.** A Phase A row read bad
+  once and returned 200 on the next probe. A non-404 answer (timeout, 429, 5xx) is
+  now retried once, and a 404 is final.
+- **`IFS=$'\t' read` collapses empty fields** (same trap as the Phase B
+  overhaul). The bash bridge sends empty ref/version as `-`.
+
 ## Build and storage
 
 ### Accumulated stages fill the root fs (ENOSPC)

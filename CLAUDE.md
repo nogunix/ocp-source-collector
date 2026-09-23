@@ -96,4 +96,5 @@ Detailed incident reports and hard-won lessons are in [docs/operational-pitfalls
 - **[Submodule collection](docs/operational-pitfalls.md#submodule-collection)** — empty dirs from `git archive`, GitHub API rate limits, index invisibility, backfill decisions
 - **[OpenGrok](docs/operational-pitfalls.md#opengrok)** — keep-patches cap, staging tree inode trap, symlink cycle hang, `--disableRepository` persistence
 - **[B-operand coverage](docs/operational-pitfalls.md#b-operand-source-coverage)** — empty `git/` causes, resolution strategies, deployment numbers
+- **[Upstream link check](docs/operational-pitfalls.md#upstream-link-check)** — pipeline-faithful candidate chains, stale manifest, default-branch (HEAD) gap
 - **[Build and storage](docs/operational-pitfalls.md#build-and-storage)** — ENOSPC, hardlink farm, thin casket detection, artifact naming, freshness check modes, shell gotchas
