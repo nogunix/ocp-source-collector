@@ -9,7 +9,7 @@
 #   catalog/<operator>/catalog.json    (FBC, verbatim)
 #   bundles/<operator>/<head>/{manifests,metadata}/
 #   git/<name>-<short_sha>.tar.gz      (deduped)
-#   meta/{MANIFEST.json,README.txt,operators.tsv,containers.tsv,git.tsv,labels.tsv,fetch*.log}
+#   meta/{MANIFEST.json,README.txt,operators.tsv,containers.tsv,git.tsv,git-fetched.tsv,labels.tsv,fetch*.log}
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -98,6 +98,11 @@ cp "$DISC"/{operators.tsv,bundles.tsv,containers.tsv,labels.tsv} "$STAGE/meta/" 
 cp "$GIT_TSV" "$STAGE/meta/git.tsv" 2>/dev/null || true
 cp "$BUNDLES/fetch.log" "$STAGE/meta/bundles-fetch.log" 2>/dev/null || true
 cp "$GIT/fetch.log"     "$STAGE/meta/git-fetch.log"     2>/dev/null || true
+# Which ref each tarball really came from (sha = the image's commit, else a
+# tag/branch standing in for it). Same format as b-operand's git-fetched.tsv;
+# read by export-upstream-sources.py and casket-mcp's permalink. 4.18 had
+# 27 of 139 tarballs at the exact sha, so this is not a corner case.
+python3 "$SCRIPT_DIR/archive-provenance.py" "$GIT" "$GIT_TSV" > "$STAGE/meta/git-fetched.tsv"
 
 # Build MANIFEST.json via python — easier TSV handling than jq slurpfile.
 log "building MANIFEST.json"
@@ -145,9 +150,12 @@ catalog/<operator>/catalog.json   File-Based Catalog (FBC), NDJSON, verbatim fro
 bundles/<operator>/<head>/...     Per-operator default-channel HEAD bundle:
                                     manifests/ : CSV + CRDs (the OLM payload)
                                     metadata/  : bundle annotations.yaml etc.
-git/<name>-<sha>/...              GitHub source at the commit recorded in the
-                                  operator container's vcs-ref label, deduped by
-                                  (source_url, full_sha). Extracted from the
+git/<name>-<sha>/...              GitHub source for the operator container's
+                                  vcs-ref label, deduped by (source_url, full_sha):
+                                  that exact commit where meta/git-fetched.tsv
+                                  says exact=1, otherwise the tag/branch the fetch
+                                  fell back to (the labelled commit is often not
+                                  on public GitHub). Extracted from the
                                   GitHub archive tarball (top-level dir stripped),
                                   so the source tree is readable directly without
                                   unpacking. meta/git.tsv still references the
@@ -157,6 +165,8 @@ meta/operators.tsv                operator | default_channel | head_bundle | hea
 meta/containers.tsv               operator | head_bundle | containerImage | csv_version
 meta/labels.tsv                   containerImage | source_url | vcs_ref
 meta/git.tsv                      operator | source_url | vcs_ref | tarball ("NO_SOURCE" if unresolved)
+meta/git-fetched.tsv              tarball | pre-existing:<archive top dir> | sha|preexisting | exact
+                                  exact=0: git/<name>/ is a tag/branch standing in for vcs_ref
 meta/MANIFEST.json                machine-readable index (sha256, totals, all of the above)
 deps/<eco>/<name>@<version>/
                        Dependency SOURCE for the trees that do not carry it
