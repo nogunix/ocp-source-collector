@@ -100,6 +100,8 @@ A weekly early warning for sources that could no longer be **re-fetched** from u
 systemd/upstream-link-check.service     → scripts/upstream-link-check.sh (export + check)
 systemd/upstream-link-check.timer       Wakes up every Wednesday 09:00 (outside the auto-update window)
 state/upstream-sources.tsv              Manifest regenerated from /srv/sources-*/…/git/INDEX.tsv on every run
+                                        (scripts/export-upstream-sources.py; B/B-operand rows carry the
+                                        pipeline's own fallback chain so only real rot is reported)
 state/upstream-links-baseline.txt       Accepted, known rot; only NEW rot fails the unit
 ```
 

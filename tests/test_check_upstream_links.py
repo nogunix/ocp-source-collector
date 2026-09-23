@@ -391,3 +391,49 @@ class TestMain:
 
         assert _mod.main() == 0
         assert "1 repos / 1 rows" in capsys.readouterr().out
+
+
+# ------------------------------------------------------- manifest candidates
+class TestListedCandidates:
+    def test_listed_candidates_replace_legacy_chain(self, monkeypatch):
+        calls = []
+        def fake_status(url, method="GET", **kw):
+            calls.append(url)
+            return 200 if url.endswith("refs/heads/release-4.20") else 404
+        monkeypatch.setattr(_mod, "http_status", fake_status)
+        row = ("https://github.com/org/repo", "abc", "4.20.0", "pin", "lbl",
+               "abc refs/tags/v4.20.0 refs/heads/release-4.20")
+        state, detail = _mod.check_row(row)
+        assert state == "ok"
+        assert detail == "refs/heads/release-4.20"
+        assert calls[-1] == "https://codeload.github.com/org/repo/tar.gz/refs/heads/release-4.20"
+
+    def test_empty_candidates_column_uses_legacy_chain(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(_mod, "http_status",
+                            lambda url, method="GET", **kw: calls.append(url) or 404)
+        row = ("https://github.com/org/repo", "abc", "1.0", "pin", "lbl", "")
+        assert _mod.check_row(row)[0] == "bad"
+        assert [u.rsplit("/", 1)[1] for u in calls] == ["abc", "v1.0", "1.0"]
+
+    def test_row_key_ignores_candidates(self):
+        row = ("https://github.com/org/repo", "abc", "1.0", "pin", "lbl", "x y")
+        assert _mod.row_key(row) == "https://github.com/org/repo\tabc"
+
+
+class TestTransientRetry:
+    def test_transient_failure_is_retried(self, monkeypatch):
+        answers = iter([0, 200])
+        monkeypatch.setattr(_mod, "RETRY_DELAY", 0)
+        monkeypatch.setattr(_mod, "http_status", lambda url, method="GET", **kw: next(answers))
+        row = ("https://github.com/org/repo", "abc", "", "pin", "lbl")
+        assert _mod.check_row(row) == ("ok", "abc")
+
+    def test_404_is_not_retried(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(_mod, "RETRY_DELAY", 0)
+        monkeypatch.setattr(_mod, "http_status",
+                            lambda url, method="GET", **kw: calls.append(url) or 404)
+        row = ("https://github.com/org/repo", "abc", "", "pin", "lbl")
+        assert _mod.check_row(row)[0] == "bad"
+        assert len(calls) == 1

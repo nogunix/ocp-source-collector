@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
 
 # Same credential handling as casket-auto-update.sh: prefer an exported
-# token, else borrow the gh CLI's. ~924 repos means ~924 API calls, far over
+# token, else borrow the gh CLI's. ~1000 repos means ~1000 API calls, far over
 # the 60/h unauthenticated quota, so without a token most repos read "error".
 if [[ -z "${GITHUB_TOKEN:-}" ]]; then
     if [[ -n "${GH_TOKEN:-}" ]]; then
@@ -32,5 +32,5 @@ if [[ -z "${GITHUB_TOKEN:-}" ]]; then
 fi
 [[ -n "${GITHUB_TOKEN:-}" ]] || log "WARNING: no GITHUB_TOKEN and no usable gh credential -- repo checks will hit the 60/h quota"
 
-"$SCRIPT_DIR/export-upstream-sources.sh"
+python3 "$SCRIPT_DIR/export-upstream-sources.py"
 exec python3 "$SCRIPT_DIR/check-upstream-links.py" --jobs 8 "$@"

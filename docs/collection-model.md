@@ -82,7 +82,7 @@ Generated per build and **bundled inside the casket** (= self-describing archive
 ## 8. TODO (remaining formalization items)
 
 - [x] Weekly link health check via GitHub Actions (implemented 2026-07-18):
-      `scripts/export-upstream-sources.sh` flattens all casket INDEX.tsv files into
+      `scripts/export-upstream-sources.py` flattens all casket INDEX.tsv files into
       `state/upstream-sources.tsv` (repo↔ref↔kind↔first-seen-casket), and
       `.github/workflows/upstream-link-check.yml` (Saturday 09:00 JST) runs
       `scripts/check-upstream-links.py` checking API (repo existence/rename) + codeload
@@ -96,6 +96,14 @@ Generated per build and **bundled inside the casket** (= self-describing archive
       `/srv` on every run, so it can no longer go stale. The workflow stays as a
       fallback that skips with a notice when the manifest is absent. See
       `docs/operations.md`.
+      **Pipeline-faithful candidates (2026-09-23)**: B / B-operand rows record
+      the image's vcs-ref, which is often a Konflux-internal commit absent from
+      public GitHub, while the pipelines fall back through tags and branches.
+      The export now writes each such row's `candidate_source_urls()` chain
+      (called from `lib-resolve.sh`, not re-implemented) into a 6th manifest
+      column, cut after the candidate B-operand actually won
+      (`meta/git-fetched.tsv`). Not-re-fetchable rows dropped from 1,388 to
+      ~80 on the first run.
 - [ ] z:none remaining items systematic audit: Collect z:none × vcs-ref present
       from all layered labels.tsv, use GitHub commit-hash search API
       (`/search/commits?q=hash:<sha>`) to auto-identify owning repos →
