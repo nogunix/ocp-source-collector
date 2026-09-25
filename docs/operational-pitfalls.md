@@ -441,6 +441,12 @@ Fixes: `stage-sources.sh` writes a `SOURCE-NOT-COLLECTED.txt` naming the
 per-component reason (and the `ocp-<patch>` project when the payload happens to
 have that repo) instead of an empty dir — symlinking the Phase A copies in was
 rejected at ~20G of SSD per minor for 1.6G of shared infra source.
+Since 2026-09-25 those notes live in `layered-<minor>/_not-collected/<product>.txt`.
+Products that only carry payload-repo sidecars are grouped under
+`_sidecar-only/` (lib-stage.sh `payload_only`). Mixed in at the top, the 29
+stubs and 25 sidecar-only products made 4.20's listing unreadable, and
+`cephcsi-operator/ose-kube-rbac-proxy` read as the product's own source. The
+sidecars are regrouped, never dropped: 0 of 25 carried the payload commit.
 `phase-b-operand-fetch-source.sh` now walks `candidate_source_urls` instead of
 just sha→`v<ver>` (probe: 156/156 unfetchable 4.18 repos get *something*), but
 155 of those 156 only answer on a **branch head**, so every non-exact hit is

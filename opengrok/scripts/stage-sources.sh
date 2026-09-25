@@ -81,7 +81,7 @@ DATA_DIR="${DATA_DIR:-/srv/opengrok-data}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="${CONFIG_DIR:-$SCRIPT_DIR/../../config}"
 # shellcheck source=lib-stage.sh
-source "$SCRIPT_DIR/lib-stage.sh"   # cap_patches, is_kept
+source "$SCRIPT_DIR/lib-stage.sh"   # cap_patches, is_kept, payload_only, link_git_phase
 
 log() { printf '[stage-sources] %s\n' "$*" >&2; }
 
@@ -148,17 +148,18 @@ stage_or_note_empty() {
   if ! link_git_phase "$gitdir" "$proj"; then
     EMPTY="$EMPTY${proj#$STAGE_DIR/}
 "
-    write_source_note "$(dirname "$gitdir")" "$proj" "$minor"
+    write_source_note "$(dirname "$gitdir")" "$proj/SOURCE-NOT-COLLECTED.txt" \
+      "$minor" "$(basename "$proj")"
   fi
 }
 
-# write_source_note <casket-component-dir> <projdir> <minor>
+# write_source_note <casket-component-dir> <note-file> <minor> <name>
 # <casket-component-dir> is the dir holding git/ and meta/ on the mount.
 write_source_note() {
-  local casket="$1" proj="$2" minor="${3:-}" note="$2/SOURCE-NOT-COLLECTED.txt"
-  mkdir -p "$proj"
+  local casket="$1" note="$2" minor="${3:-}" name="$4"
+  mkdir -p "$(dirname "$note")"
   {
-    printf 'No source was collected for %s.\n\n' "$(basename "$proj")"
+    printf 'No source was collected for %s.\n\n' "$name"
     printf 'This is a collection gap, not an indexing gap: the casket at\n'
     printf '  %s\n' "$casket"
     printf 'has an empty git/, so OpenGrok has nothing to index here. Per-component\n'
@@ -192,6 +193,35 @@ write_source_note() {
     printf '      rg -n "<pattern>" %s/deps/\n' "$casket"
     printf '  - meta/git.tsv and meta/labels.tsv on the mount are the raw record.\n'
   } > "$note"
+}
+
+# write_sidecar_readme <layered-mount> <readme> <minor> <newline-separated products>
+write_sidecar_readme() {
+  local mount="$1" readme="$2" minor="$3" prods="$4" prod
+  {
+    printf 'Products whose collected source is ONLY sidecar images (kube-rbac-proxy,\n'
+    printf 'oauth-proxy, oc, CSI sidecars, ...) that the %s payload also ships.\n\n' "$minor"
+    printf 'The product'"'"'s own operator/operand resolved to no source, so these trees\n'
+    printf 'are not the product -- they are grouped here instead of at the top of\n'
+    printf 'layered-%s/. They are still the exact builds each product ships, which\n' "$minor"
+    printf 'differ from the payload commit, so they stay indexed.\n\n'
+    printf 'Per product: repo, the commit it ships, and the payload build of that repo.\n\n'
+    while IFS= read -r prod; do
+      [ -n "$prod" ] || continue
+      printf '%s\n' "$prod"
+      awk -F'\t' -v mapf="$PHASE_A_MAP" -v minor="$minor" '
+        BEGIN {
+          while ((getline line < mapf) > 0) {
+            split(line, f, "\t")
+            if (f[1] == minor) where[f[2]] = f[3]
+          }
+        }
+        FNR > 1 && $1 != "" {
+          printf "  %-46s %.12s  (payload: %s)\n", $2, $3, where[$2]
+        }' "$mount/$prod/git/INDEX.tsv"
+      printf '\n'
+    done <<< "$prods"
+  } > "$readme"
 }
 
 log "rebuilding staging tree at $STAGE_DIR"
@@ -255,16 +285,41 @@ done
 
 # Phase B-operand: /srv/sources-layered-ocp<minor>/<product>/git/  (cnv/acs/mce/...)
 #   -> layered-<minor>/<product>/<clean-name>  (one project per minor, product subdirs)
+#
+# Only products with source of their own sit at the top of layered-<minor>/.
+# Two kinds are grouped out of the way, because at the top they made the
+# listing unreadable (4.20: 29 stubs of ~16 lines and 25 sidecar-only products
+# among 149, reported 2026-09-25):
+#   _not-collected/<product>.txt  no tree at all (the SOURCE-NOT-COLLECTED note)
+#   _sidecar-only/<product>/      only payload-repo sidecar builds (payload_only);
+#                                 still symlinked and indexed, since none is the
+#                                 payload commit
 for m in "$SRV_ROOT"/sources-layered-ocp[0-9]*; do
   [ -d "$m" ] || continue
   minor="$(basename "$m" | sed -E 's/^sources-layered-ocp//')"
   is_allowed "$minor" || { log "Phase B-operand: layered-$minor (skipped)"; continue; }
+  lay="$STAGE_DIR/layered-$minor"
+  sidecar=""
   for p in "$m"/*/; do
     [ -d "$p/git" ] || continue
     prod="$(basename "$p")"
-    log "Phase B-operand: layered-$minor/$prod"
-    stage_or_note_empty "$p/git" "$STAGE_DIR/layered-$minor/$prod" "$minor"
+    if payload_only "$p/git/INDEX.tsv" "$PHASE_A_MAP" "$minor"; then
+      log "Phase B-operand: layered-$minor/_sidecar-only/$prod (payload-repo sidecars only)"
+      link_git_phase "$p/git" "$lay/_sidecar-only/$prod" || true
+      sidecar="$sidecar$prod
+"
+    else
+      log "Phase B-operand: layered-$minor/$prod"
+      if ! link_git_phase "$p/git" "$lay/$prod"; then
+        EMPTY="${EMPTY}layered-$minor/_not-collected/$prod
+"
+        write_source_note "${p%/}" "$lay/_not-collected/$prod.txt" "$minor" "$prod"
+      fi
+    fi
   done
+  if [ -n "$sidecar" ]; then
+    write_sidecar_readme "$m" "$lay/_sidecar-only/README.txt" "$minor" "$sidecar"
+  fi
 done
 
 # Phase A-rpm: stage SRPMs as ONE PROJECT PER OCP VERSION (srpms-<ver>), to

@@ -129,6 +129,40 @@ n=$(ls -1 "$TMP/stage/dup" | wc -l)
 (( n == 2 )) && pass "clean-name collision keeps both trees" \
     || { bad "clean-name collision keeps both trees"; printf '       got=%d links\n' "$n"; }
 
+echo "# payload_only — sidecar-only layered products are grouped, not mixed in"
+MAP="$TMP/phase-a-map.tsv"
+printf '4.20\thttps://github.com/openshift/kube-rbac-proxy\tocp-4.20.35/kube-rbac-proxy\n4.20\thttps://github.com/openshift/oc\tocp-4.20.35/cli\n4.22\thttps://github.com/openshift/router\tocp-4.22.11/router\n' > "$MAP"
+idx() { printf 'dir\trepo\tref\tversion\tcomponents\n'; printf '%s\n' "$@"; }
+
+# cephcsi-operator's shape: its own operator is z:none, only the rbac proxy came back.
+idx "ose-kube-rbac-proxy-6dd7486b8c21	https://github.com/openshift/kube-rbac-proxy	6dd7486b8c21	4.20.0	ose-kube-rbac-proxy" > "$TMP/side.tsv"
+payload_only "$TMP/side.tsv" "$MAP" 4.20 \
+    && pass "all trees are payload repos -> sidecar-only" || bad "all trees are payload repos -> sidecar-only"
+
+# Repo match, not commit: the layered build is never the payload commit.
+idx "cli-aaaaaaaaaaaa	https://github.com/openshift/oc	aaaaaaaaaaaa		cli" \
+    "ose-kube-rbac-proxy-bbbbbbbbbbbb	https://github.com/openshift/kube-rbac-proxy	bbbbbbbbbbbb		x" > "$TMP/side2.tsv"
+payload_only "$TMP/side2.tsv" "$MAP" 4.20 \
+    && pass "several payload-repo trees, any commit -> sidecar-only" || bad "several payload-repo trees, any commit -> sidecar-only"
+
+# The product's own tree next to a sidecar: it has real source, stays at the top.
+idx "ose-kube-rbac-proxy-6dd7486b8c21	https://github.com/openshift/kube-rbac-proxy	6dd7486b8c21		x" \
+    "mig-controller-fd13940869e0	https://github.com/migtools/mig-controller	fd13940869e0		mig-controller" > "$TMP/mixed.tsv"
+payload_only "$TMP/mixed.tsv" "$MAP" 4.20 \
+    && bad "a non-payload tree keeps the product at the top" || pass "a non-payload tree keeps the product at the top"
+
+# Keyed by minor: 4.22's payload repos say nothing about a 4.20 product.
+idx "router-cccccccccccc	https://github.com/openshift/router	cccccccccccc		router" > "$TMP/router.tsv"
+payload_only "$TMP/router.tsv" "$MAP" 4.20 \
+    && bad "another minor's payload does not count" || pass "another minor's payload does not count"
+
+# Empty git/ (INDEX.tsv header only) is not-collected, not sidecar-only.
+idx > "$TMP/none.tsv"
+payload_only "$TMP/none.tsv" "$MAP" 4.20 \
+    && bad "no trees is not sidecar-only" || pass "no trees is not sidecar-only"
+payload_only "$TMP/missing.tsv" "$MAP" 4.20 \
+    && bad "missing INDEX.tsv is not sidecar-only" || pass "missing INDEX.tsv is not sidecar-only"
+
 echo "# find-symlink-cycles.py — the thing that hung srpms-4.22.4 for 2h50m"
 CYC="$HERE/../opengrok/scripts/find-symlink-cycles.py"
 cycles_in() { python3 "$CYC" -q "$1" 2>/dev/null; }

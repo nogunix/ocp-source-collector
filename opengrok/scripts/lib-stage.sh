@@ -63,6 +63,33 @@ track_of() {
 # Strip a trailing "-<hex>" commit suffix (7-40 hex chars) from a dir name.
 strip_sha() { sed -E 's/-[0-9a-f]{7,40}$//'; }
 
+# payload_only <INDEX.tsv> <phase-a-map> <minor>
+#
+# Return 0 when a layered product's casket holds at least one tree and EVERY
+# tree is a repo the <minor> payload also ships (per <phase-a-map>, lines
+# "minor TAB repo TAB ocp-<ver>/<dir>"). That is the "sidecar only" shape:
+# the product's own operator resolved to no source, and all that was fetched
+# is its kube-rbac-proxy / oauth-proxy / oc / CSI sidecar builds. Staged at the
+# top of layered-<minor>/ these read as the product's source, which they are
+# not (cephcsi-operator/ose-kube-rbac-proxy, 25 such products in 4.20).
+#
+# Repo match only, deliberately not commit: none of those trees is the payload
+# commit (0/25 in 4.20, measured 2026-09-25) -- each is the build that product
+# actually ships -- so they are regrouped, never dropped.
+payload_only() {
+    local idx="$1" map="$2" minor="$3"
+    [ -r "$idx" ] || return 1
+    awk -F'\t' -v map="$map" -v minor="$minor" '
+        BEGIN {
+            while ((getline line < map) > 0) {
+                split(line, f, "\t")
+                if (f[1] == minor) payload[f[2]] = 1
+            }
+        }
+        FNR > 1 && $1 != "" { n++; if (!($2 != "" && $2 in payload)) other++ }
+        END { exit !(n > 0 && other == 0) }' "$idx"
+}
+
 # link_git_phase <gitdir> <projdir>
 #
 # Link every <name>-<sha> subdir of <gitdir> into <projdir> under a clean name.
