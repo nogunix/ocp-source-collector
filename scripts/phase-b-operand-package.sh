@@ -54,17 +54,27 @@ mkdir -p "$STAGE/meta" "$STAGE/git"
 log "staging bundle/"
 cp -al "$DISC/bundle/." "$STAGE/bundle/"
 
-# 2. git/ — extract github tarballs so source browses directly on the mount
+# 2. git/ — extract github tarballs so source browses directly on the mount.
+#    Only the tarballs this run's git.tsv names. 20-git/ keeps every tarball
+#    an earlier run left, and a tarball is named after whichever component
+#    claimed its (repo, ref) first -- which follows labels.tsv order, and that
+#    comes out of `xargs -P`, so it changes between runs. Globbing 20-git/
+#    therefore shipped the same source again under an old name. Measured
+#    2026-09-26: 45-60 such copies per minor (acm-prometheus-a96c78babc3d next
+#    to acm-prometheus-config-reloader-a96c78babc3d), none listed in INDEX.tsv.
 log "staging git/ (extracted)"
-shopt -s nullglob
-for t in "$GIT"/*.tar.gz; do
+while IFS= read -r tb; do
+    t="$GIT/$tb"
+    if [[ ! -s "$t" ]]; then
+        log "  $tb: not fetched — skipped"
+        continue
+    fi
     base=$(basename "$t" .tar.gz)
     dst="$STAGE/git/$base"
     [[ -d "$dst" ]] && continue
     mkdir -p "$dst"
     tar -xzf "$t" -C "$dst" --strip-components=1
-done
-shopt -u nullglob
+done < <(awk -F'\t' '$4 != "" && $4 != "NO_SOURCE" {print $4}' "$DISC/git.tsv" | sort -u)
 
 # 3. meta/
 cp "$DISC"/{images.tsv,labels.tsv,git.tsv,meta.tsv} "$STAGE/meta/" 2>/dev/null || true

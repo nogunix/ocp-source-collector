@@ -525,6 +525,30 @@ Structural limit (unchanged): per-minor non-github CSV repos
 remaining hard cases need version mapping: pipelines (product v1.22 ↔ tektoncd
 v0.79) and compliance (RH ahead of public tags).
 
+### Non-version `version` labels and duplicate trees (2026-09-26)
+
+Two separate faults showed up in the tree names on the OpenGrok layered listing.
+
+- **`-vrelease` / `-v.`**: some images set the `version` label to `release`
+  (machine-deletion-remediation, multicluster-globalhub-*, korrel8r) or to `.`
+  (web-terminal-tooling, 4.19 and later). `parse_version_tag` passed those
+  through. For `tag-csv` components the bad value also took precedence over the
+  CSV version. So machine-deletion-remediation got the tarball
+  `...-vrelease.tar.gz` and a fetch of the **main branch head**, although tag
+  `v0.5.0` (the CSV version) exists. A value with no digit is now treated as no
+  version. A re-fetch of 4.20 now gets `archive/refs/tags/v0.5.0`.
+- **The same source twice under two names**: a tarball is named after the first
+  component that claims its (repo, ref). The order comes from `labels.tsv`,
+  which `xargs -P` writes, so it changes between runs. `20-git/` keeps old
+  tarballs, and packaging extracted `20-git/*.tar.gz`. So every name a (repo, ref)
+  had in any earlier run was shipped. There were 45 to 60 such copies per minor
+  (4.20: 60 of 596 trees), all with the same ref as a listed tree and none in
+  `INDEX.tsv` — for example `acm-prometheus-a96c78babc3d` next to
+  `acm-prometheus-config-reloader-a96c78babc3d`. Packaging now extracts only the
+  tarballs that `git.tsv` names. Live caskets drop the copies at their next
+  rebuild. The names themselves can still change between runs; this fix stops
+  the duplication only.
+
 
 ## Upstream link check
 

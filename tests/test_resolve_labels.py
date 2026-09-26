@@ -58,6 +58,11 @@ def test_gh(url, expect):
     ("1.6.5-66-gcd86febb88", "1.6.5"),  # git-describe suffix dropped
     ("v0.13.0", "0.13.0"),
     ("", ""),
+    # No digit -> not a version (labels seen in the wild, 2026-09-26).
+    ("release", ""),          # machine-deletion-remediation, globalhub, korrel8r
+    ("release-1.5", ""),      # the describe-strip leaves "release"
+    (".", ""),                # web-terminal-tooling since 4.19
+    ("api/v0.18.3", "api/v0.18.3"),  # ssp-operator submodule tag: kept as-is
 ])
 def test_parse_version_tag(v, expect):
     assert rl.parse_version_tag(v) == expect
@@ -134,6 +139,17 @@ def test_tag_csv_uses_the_operator_csv_version():
     src, ref, ver, method = resolve({}, component="apicurio-registry-sql", csv_ver="2.6.13-r4")
     assert src == "https://github.com/Apicurio/apicurio-registry"
     assert (ref, ver, method) == ("", "2.6.13", "b:component-map")
+
+
+def test_tag_csv_ignores_a_non_version_label():
+    """machine-deletion-remediation labels `version: release`. That used to win
+    over the CSV version, naming the tarball '...-vrelease' and fetching the
+    main branch head instead of tag v0.5.0."""
+    src, ref, ver, method = resolve({"version": "release"},
+                                    component="machine-deletion-remediation-rhel9-operator",
+                                    csv_ver="0.5.0")
+    assert src == "https://github.com/medik8s/machine-deletion-remediation"
+    assert (ref, ver, method) == ("", "0.5.0", "b:component-map")
 
 
 def test_tag_csv_without_a_csv_version_is_still_z_none():

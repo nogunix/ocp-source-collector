@@ -225,6 +225,13 @@ def parse_version_tag(v: str) -> str:
 
     git-describe forms like '1.6.5-66-gcd86febb88' -> '1.6.5';
     'v1.16.0' -> '1.16.0'; '0.13.0' -> '0.13.0'.
+
+    A value with no digit at all is not a version and returns ''. Images
+    label `version` with 'release' (machine-deletion-remediation,
+    multicluster-globalhub-*, korrel8r) or '.' (web-terminal-tooling since
+    4.19). Passed through, those became the tarball names '...-vrelease' and
+    '...-v.', and for tag-csv components they masked the CSV version, so the
+    fetch fell back to the main branch head although the v0.5.0 tag exists.
     """
     if not v:
         return ""
@@ -233,6 +240,8 @@ def parse_version_tag(v: str) -> str:
         v = v[1:]
     # drop git-describe suffix (-<n>-g<sha>)
     v = v.split("-")[0]
+    if not any(ch.isdigit() for ch in v):
+        return ""
     return v
 
 
