@@ -419,6 +419,35 @@ The source stays fully searchable throughout — `full:telnet` still returned 34
 hits in `srpms-4.22.8-extensions` after the change; only the repository
 registration went away.
 
+### A successful per-project reindex can leave search serving the old index
+
+(2026-09-25) After the layered `_not-collected/` / `_sidecar-only/` regroup,
+the three `layered-*` projects were re-indexed one at a time with the same
+`opengrok-reindex-project ... -P <project>` command `start.py` runs (taken from
+`podman logs casket-ocp-grok`, with `$INDEXER_OPT` appended). All three logged
+`Indexer finished with success`, and xref showed the new layout at once. Search
+did not match for all three. `layered-4.18` returned the new paths, but
+`layered-4.20` and `layered-4.22` kept returning every stub at its old path
+(`/layered-4.20/amq-broker-rhel8/SOURCE-NOT-COLLECTED.txt`) and nothing under
+`_not-collected/`. The webapp log filled with
+`Couldn't read summary from ... SOURCE-NOT-COLLECTED.txt` for files that no
+longer exist. The index on disk was new (segment mtimes matched the run). The
+webapp's searcher simply had not reopened it. Why 4.18 did refresh was not
+established.
+
+Check this after any manual reindex. Browsing looks right because xref reads
+the files directly, so only a search exposes it. Fix with one call per project,
+with no reindex and no restart:
+
+    podman exec -u appuser casket-ocp-grok sh -c 'curl -s -o /dev/null -w "%{http_code}\n" -X PUT \
+      -H "Authorization: Bearer $(cat /opengrok/etc/webapp_api_token)" \
+      http://localhost:8080/api/v1/projects/layered-4.20/indexed'
+
+It returns `202`, and the next search serves the new paths. To verify, search
+for a phrase that only the moved files contain and check the returned paths, not
+just the count. The count was 29 before and after, because the same 29 stubs
+still matched under their old paths.
+
 
 ## B-operand source coverage
 
