@@ -419,34 +419,63 @@ The source stays fully searchable throughout — `full:telnet` still returned 34
 hits in `srpms-4.22.8-extensions` after the change; only the repository
 registration went away.
 
-### A successful per-project reindex can leave search serving the old index
+### Hand-run per-project reindexes: stale search, and a swapped casket stays invisible
 
-(2026-09-25) After the layered `_not-collected/` / `_sidecar-only/` regroup,
-the three `layered-*` projects were re-indexed one at a time with the same
-`opengrok-reindex-project ... -P <project>` command `start.py` runs (taken from
-`podman logs casket-ocp-grok`, with `$INDEXER_OPT` appended). All three logged
-`Indexer finished with success`, and xref showed the new layout at once. Search
-did not match for all three. `layered-4.18` returned the new paths, but
-`layered-4.20` and `layered-4.22` kept returning every stub at its old path
-(`/layered-4.20/amq-broker-rhel8/SOURCE-NOT-COLLECTED.txt`) and nothing under
-`_not-collected/`. The webapp log filled with
-`Couldn't read summary from ... SOURCE-NOT-COLLECTED.txt` for files that no
-longer exist. The index on disk was new (segment mtimes matched the run). The
-webapp's searcher simply had not reopened it. Why 4.18 did refresh was not
-established.
+Two lessons from re-indexing the `layered-*` projects in place with the same
+`opengrok-reindex-project ... -P <project>` command `start.py` runs, instead
+of re-running `run-opengrok.sh`. **After changing staging or swapping a casket,
+use the documented update: `SKIP_STAGE=1 INDEXER_JAVA_OPTS=-Xmx2g
+CATALINA_OPTS=-Xmx32g ./scripts/run-opengrok.sh` (opengrok/README.md).**
 
-Check this after any manual reindex. Browsing looks right because xref reads
-the files directly, so only a search exposes it. Fix with one call per project,
-with no reindex and no restart:
+**The container never sees a casket swapped after it started (2026-09-27).**
+`run-opengrok.sh` bind-mounts each `/srv/sources-*` into the container, and the
+propagation is `rprivate`. When `casket-swap.sh` unmounts the old squashfs and
+mounts the new one at the same path, the host sees the new casket. The
+container keeps the old one, and the old loop device stays busy. After all 9
+b-operand minors were rebuilt, an in-place reindex of `layered-4.18/4.20/4.22`
+"finished with success" in 20-25 min each. But it had indexed the **old**
+casket content. The 11-16 trees per minor whose names changed were dangling
+inside the container and were never indexed. For example, the container still
+listed `machine-deletion-remediation-rhel9-operator-vrelease` while the host
+had `-v0.5.0`. Check with `podman exec casket-ocp-grok ls <mount>/<product>/git/`
+against the host. Recreating the container is the only fix.
 
-    podman exec -u appuser casket-ocp-grok sh -c 'curl -s -o /dev/null -w "%{http_code}\n" -X PUT \
-      -H "Authorization: Bearer $(cat /opengrok/etc/webapp_api_token)" \
-      http://localhost:8080/api/v1/projects/layered-4.20/indexed'
+**The recommended `-Xmx2g` is too small for a layered project with heavy churn
+(2026-09-27).** That recreate's startup sync logged `Sync done`. But all three
+`layered-*` indexers had died with `OutOfMemoryError: Java heap space` in
+Lucene's `HitQueue`/merge threads (`Indexer command for project layered-4.18
+failed (return code 1)`). `Sync done` does not mean every project succeeded.
+The index stayed at its last commit: layered-4.18 still served the removed
+`-vrelease` tree and none of `-v0.5.0`, although xref for the new tree had
+already been written. Re-running those projects one at a time inside the
+container with `opengrok-reindex-project -J=-Xmx8g ... -P <project>` is what
+worked. Earlier single-project runs at the container's own `-Xmx8g` never hit
+this. Grep the sync output for `failed (return code` after every recreate.
+`layered-4.18` fails even a no-change sync at `-Xmx2g`: the restart after that
+reindex OOMed it again. Its index was left intact, but at that heap no startup
+sync will ever pick up a change to it. Raising `INDEXER_JAVA_OPTS` has to be
+weighed against `WORKERS` x heap + `CATALINA_OPTS` on 60G of RAM.
 
-It returns `202`, and the next search serves the new paths. To verify, search
-for a phrase that only the moved files contain and check the returned paths, not
-just the count. The count was 29 before and after, because the same 29 stubs
-still matched under their old paths.
+After a hand-run reindex, the webapp can still serve the previous index. That
+happened to layered-4.18 on 09-27 and to layered-4.20/4.22 on 09-25. Restart
+the unit with `systemctl --user restart opengrok.service`: the webapp reopens
+every index and the startup sync has nothing left to do.
+
+**Search kept the old paths after a staging-only change (2026-09-25).** After
+the `_not-collected/` / `_sidecar-only/` regroup (caskets unchanged), all three
+projects logged `Indexer finished with success` and xref showed the new layout.
+Search on `layered-4.20/4.22` still returned every stub at its old path, and
+`Couldn't read summary from ...` filled the webapp log. It was "fixed" with
+`PUT /api/v1/projects/<p>/indexed`. **Do not repeat that.** The README forbids
+it: the endpoint forces a full suggester rebuild, which has ended in
+`OutOfMemoryError` on this host. Five such calls on 09-25/27 happened to pass
+without incident. That is luck, not evidence it is safe.
+
+To verify either case, search for a phrase that only the moved or renamed files
+contain, and check the returned paths as well as the count. The count was 29
+before and after the regroup, because the same stubs matched under the old
+paths. Also compare the staged trees against `/srv/opengrok-data/xref/<project>/`:
+a tree without an xref directory was not indexed.
 
 
 ## B-operand source coverage
