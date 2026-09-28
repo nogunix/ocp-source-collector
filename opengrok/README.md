@@ -29,6 +29,9 @@ podman container casket-ocp-grok   :8080  OpenGrok Web UI  * rootless (regular u
 
 > Phase names reflect the 2026-07-11 rename (A-rpm = formerly B, B = formerly C, B-operand = formerly D).
 > layered (B-operand) projects expand into `layered-<minor>/<product>/<clean-name>`.
+> Wrapper repos listed in `config/opengrok-promote-submodules.txt` (ZTWIM, cert-manager,
+> external-secrets) have their filled submodules linked at the product level
+> (`promote-submodules.py`), and the wrapper is staged without its submodule dirs.
 > Only products with source of their own sit at the top of `layered-<minor>/`
 > (2026-09-25). A product with no tree gets `_not-collected/<product>.txt`
 > (the SOURCE-NOT-COLLECTED note). A product whose every tree is a repo the

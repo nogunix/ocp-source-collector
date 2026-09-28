@@ -127,6 +127,31 @@ other half of the trap — INDEX.tsv's repo/ref for a submodule path points at
 the wrapper, which does not contain the file; use the SUBMODULES.tsv row's own
 repo/ref. Neither the caskets nor OpenGrok changed, only the resolution.
 
+**OpenGrok staging lifts wrapper submodules (2026-09-28).** OpenGrok always
+indexed the filled submodules, but under the wrapper: ZTWIM's operator was at
+`layered-4.20/openshift-zero-trust-workload-identity-manager/zero-trust-workload-identity-manager/zero-trust-workload-identity-manager/`,
+and with two wrapper builds in the product every submodule was indexed twice.
+`opengrok/scripts/promote-submodules.py` (called from stage-sources.sh for the
+repos in `config/opengrok-promote-submodules.txt`) links each filled
+submodule at the product level once per (repo, ref). It stages the wrapper as a
+directory without its submodule dirs. When two builds pin different commits,
+the plain name goes to the build whose `INDEX.tsv` component list contains that
+name, and the other gets `-<ref>`. The tree's own name cannot decide this:
+cert-manager-operator's build sits in `jetstack-cert-manager-<sha>`. Only true
+wrappers are listed. A normal repo that happens to carry a submodule keeps it in
+place.
+
+**A hand-run build without a GitHub token ships branch-head submodules
+(2026-09-28).** `casket-auto-update.sh` has always borrowed `gh auth token`.
+The 09-26 manual `casket-build.sh --apply` of all b-operand minors did not, and
+it logged `WARNING: no GITHUB_TOKEN/GH_TOKEN` per product and carried on.
+4.16-4.22 went live with 32-51 `exact=0` submodules per minor. ZTWIM's operator
+was among them: `release-1.1` head instead of the pinned `d4b265f2`, which
+`gh api repos/openshift/zero-trust-workload-identity-manager-release/git/trees/612309a974bd`
+returns fine with a token. `ensure_github_token` in lib.sh is now shared by both
+entry points, and `casket-build.sh --apply` refuses a/b/b-operand without a token
+unless `--allow-no-token` is given.
+
 ### Certified/community catalogs were NOT backfilled (decision 2026-09-07)
 
 They are the 18 caskets built before submodule collection existed, and the

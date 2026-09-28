@@ -24,7 +24,7 @@ Three supplementary collection layers run on the STAGE tree (one implementation 
 - **Submodule expansion** (`scripts/collect-submodules.py`, `scripts/submodulelib.py`): fills empty submodule dirs left by `git archive`. See [operational pitfalls: submodule collection](docs/operational-pitfalls.md#submodule-collection) for API limits and backfill decisions.
 - **Source index** (`scripts/build-source-index.py`): `INDEX.tsv` + `by-component/` + `by-repo/` symlink trees for dedup-name discovery.
 
-Neither `deps/` nor submodule trees are indexed by OpenGrok (decisions 2026-07-29 / 2026-08-19). Search them via ripgrep or casket-mcp.
+`deps/` is not indexed by OpenGrok (decision 2026-07-29); search it via ripgrep or casket-mcp. Filled submodule trees live inside `git/` trees, so OpenGrok does index them, but `INDEX.tsv` / `by-component/` / `by-repo/` list only the top-level dir (casket-mcp reads `meta/SUBMODULES.tsv` to find them). For wrapper repos listed in `config/opengrok-promote-submodules.txt` (ZTWIM, cert-manager, external-secrets), OpenGrok staging lifts the submodules to the product level. Submodule pins come from the GitHub trees API: a build without a GitHub token degrades them to branch heads, so `casket-build.sh --apply` refuses to run without one (`--allow-no-token` to override).
 
 Rollout to already-built caskets: `scripts/repackage-add-deps.sh` / `repackage-add-submodules.sh` / `repackage-add-index.sh` (overlayfs onto read-only mount + mksquashfs).
 

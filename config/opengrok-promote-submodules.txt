@@ -1,0 +1,19 @@
+# Wrapper repos whose git submodules OpenGrok should show at the product level.
+#
+# A wrapper is a repo that is nothing but build glue (Containerfiles, a
+# Makefile) around git submodules holding the real code. Staged as-is, the code
+# sits two levels down under the wrapper's name, e.g. ZTWIM's operator at
+#   layered-4.20/openshift-zero-trust-workload-identity-manager/
+#     zero-trust-workload-identity-manager/zero-trust-workload-identity-manager/
+# and a product with two wrapper builds indexed every submodule twice.
+#
+# For a listed wrapper, stage-sources.sh (promote-submodules.py) links each
+# filled submodule at the product level under its repo name, once per
+# (repo, ref), and stages the wrapper itself without its submodule dirs.
+#
+# List only true wrappers. A normal repo that happens to carry a submodule
+# (most stolostron/* forks, stackrox/collector) must keep it in place, or the
+# repo's own tree loses a directory. One GitHub org/name per line.
+openshift/zero-trust-workload-identity-manager-release
+openshift/cert-manager-operator-release
+openshift/external-secrets-operator-release

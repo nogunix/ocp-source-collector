@@ -294,6 +294,7 @@ done
 #   _sidecar-only/<product>/      only payload-repo sidecar builds (payload_only);
 #                                 still symlinked and indexed, since none is the
 #                                 payload commit
+PROMOTE_LIST="$CONFIG_DIR/opengrok-promote-submodules.txt"
 for m in "$SRV_ROOT"/sources-layered-ocp[0-9]*; do
   [ -d "$m" ] || continue
   minor="$(basename "$m" | sed -E 's/^sources-layered-ocp//')"
@@ -310,7 +311,12 @@ for m in "$SRV_ROOT"/sources-layered-ocp[0-9]*; do
 "
     else
       log "Phase B-operand: layered-$minor/$prod"
-      if ! link_git_phase "$p/git" "$lay/$prod"; then
+      if link_git_phase "$p/git" "$lay/$prod"; then
+        # Wrapper repos (config/opengrok-promote-submodules.txt): show their
+        # submodules -- ZTWIM's operator -- at the product level.
+        python3 "$SCRIPT_DIR/promote-submodules.py" "${p%/}" "$lay/$prod" "$PROMOTE_LIST" \
+          || log "  WARNING: promote-submodules failed for $prod (wrapper left as-is)"
+      else
         EMPTY="${EMPTY}layered-$minor/_not-collected/$prod
 "
         write_source_note "${p%/}" "$lay/_not-collected/$prod.txt" "$minor" "$prod"
