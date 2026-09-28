@@ -44,6 +44,22 @@ require_cmd() {
 # The producer now records the path it actually wrote and the caller reads it
 # back, so the name is decided exactly once.
 
+# load_build_env — read host-local build settings (the store locations) from
+# ${CASKET_BUILD_ENV:-~/.config/casket/build.env}, the same file
+# casket-auto-update.service loads with EnvironmentFile=. KEY=VALUE lines
+# only; a variable already set in the environment is left alone. See
+# systemd/casket-build.env.example.
+load_build_env() {
+    local f="${CASKET_BUILD_ENV:-$HOME/.config/casket/build.env}" line key val
+    [[ -r "$f" ]] || return 0
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
+        key="${BASH_REMATCH[1]}" val="${BASH_REMATCH[2]}"
+        [[ "$val" =~ ^\"(.*)\"$ || "$val" =~ ^\'(.*)\'$ ]] && val="${BASH_REMATCH[1]}"
+        [[ -n "${!key+x}" ]] || export "$key=$val"
+    done < "$f"
+}
+
 # ensure_github_token — make a GitHub token available to child processes.
 # An exported GITHUB_TOKEN/GH_TOKEN wins; otherwise borrow the gh CLI's
 # credential live (no second copy on disk to go stale behind `gh auth login`).

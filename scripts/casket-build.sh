@@ -53,6 +53,20 @@ done
 case "$PHASE" in a|a-rpm|b|b-operand) ;; *) die "--phase required: a|a-rpm|b|b-operand" ;; esac
 [[ -n "$UNIT" ]] || die "--unit required"
 
+# Host-local settings (the dep/submodule stores) come from the same file the
+# auto-update unit loads, so a hand run builds exactly like the unattended one.
+# The scripts' fallback for an unset store is a directory inside the repo on the
+# root fs: the 2026-09-26 hand run wrote 181G there and re-downloaded
+# everything /mnt/hdd/casket-dep-store already held.
+load_build_env
+if (( APPLY )) && [[ "$PHASE" != a-rpm ]]; then
+    missing=""
+    for v in CASKET_DEP_STORE CASKET_SUBMODULE_STORE; do
+        [[ -n "${!v:-}" ]] || missing="$missing $v"
+    done
+    [[ -z "$missing" ]] || die "unset:$missing -- set them in ${CASKET_BUILD_ENV:-~/.config/casket/build.env} (see systemd/casket-build.env.example) or export them"
+fi
+
 # a-rpm fetches nothing from GitHub; every other phase collects submodules.
 if (( APPLY )) && [[ "$PHASE" != a-rpm ]] && ! ensure_github_token; then
     if (( ALLOW_NO_TOKEN )); then

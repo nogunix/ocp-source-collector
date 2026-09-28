@@ -264,12 +264,50 @@ chmod +x "$GH_SHIM/gh" "$GH_SHIM/nogh/gh"
   || bad  "ensure_github_token: fails when gh has no credential"
 
 # casket-build.sh --apply must refuse before doing anything when no token.
-out="$(env -u GITHUB_TOKEN -u GH_TOKEN PATH="$GH_SHIM/nogh:$PATH" \
+STORES="$GH_SHIM/build.env"
+printf 'CASKET_DEP_STORE=/x/dep\nCASKET_SUBMODULE_STORE=/x/sub\n' > "$STORES"
+out="$(env -u GITHUB_TOKEN -u GH_TOKEN CASKET_BUILD_ENV="$STORES" PATH="$GH_SHIM/nogh:$PATH" \
     bash "$HERE/../scripts/casket-build.sh" --phase b-operand --unit 4.20 --apply 2>&1)"
 rc=$?
 (( rc != 0 )) && [[ "$out" == *"no GitHub token"* ]] \
   && pass "casket-build.sh --apply refuses without a token" \
   || { bad "casket-build.sh --apply refuses without a token"; printf '         rc=%s out=%s\n' "$rc" "$out"; }
+
+# ---- load_build_env / store guard -------------------------------------------
+# The 2026-09-26 hand run had no CASKET_DEP_STORE and wrote 181G into the repo.
+ENVF="$GH_SHIM/env"
+cat > "$ENVF" <<'ENVEOF'
+# comment
+CASKET_DEP_STORE=/mnt/hdd/casket-dep-store
+CASKET_SUBMODULE_STORE="/home/u/sub store"
+  not a line
+EXTRA_ONE='quoted'
+ENVEOF
+(
+    unset CASKET_DEP_STORE CASKET_SUBMODULE_STORE EXTRA_ONE
+    CASKET_BUILD_ENV="$ENVF" load_build_env
+    [[ "$CASKET_DEP_STORE" == /mnt/hdd/casket-dep-store && "$CASKET_SUBMODULE_STORE" == "/home/u/sub store" \
+       && "$EXTRA_ONE" == quoted ]]
+) && pass "load_build_env: reads KEY=VALUE, strips quotes, skips junk" \
+  || bad  "load_build_env: reads KEY=VALUE, strips quotes, skips junk"
+(
+    export CASKET_DEP_STORE=/explicit
+    CASKET_BUILD_ENV="$ENVF" load_build_env
+    [[ "$CASKET_DEP_STORE" == /explicit ]]
+) && pass "load_build_env: an exported value wins over the file" \
+  || bad  "load_build_env: an exported value wins over the file"
+(
+    CASKET_BUILD_ENV="$GH_SHIM/missing" load_build_env
+) && pass "load_build_env: a missing file is not an error" \
+  || bad  "load_build_env: a missing file is not an error"
+
+EMPTYENV="$GH_SHIM/empty.env"; : > "$EMPTYENV"
+out="$(env -u CASKET_DEP_STORE -u CASKET_SUBMODULE_STORE GITHUB_TOKEN=t CASKET_BUILD_ENV="$EMPTYENV" \
+    bash "$HERE/../scripts/casket-build.sh" --phase b-operand --unit 4.20 --apply 2>&1)"
+rc=$?
+(( rc != 0 )) && [[ "$out" == *"unset: CASKET_DEP_STORE CASKET_SUBMODULE_STORE"* ]] \
+  && pass "casket-build.sh --apply refuses with the stores unset" \
+  || { bad "casket-build.sh --apply refuses with the stores unset"; printf '         rc=%s out=%s\n' "$rc" "$out"; }
 rm -rf "$GH_SHIM"
 
 # ---- done -------------------------------------------------------------------

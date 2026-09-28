@@ -22,18 +22,18 @@ Type=oneshot
 # don't inherit the login shell profile.
 Environment=PATH=%h/bin:/usr/local/bin:/usr/bin:/bin
 # Same reason as PATH: a user unit starts from a minimal environment, and
-# collect-deps.py falls back to $CASKET_WORK/dep-store when this is unset --
-# i.e. onto the root fs, inside the repo, ignoring the shared HDD cache. The
-# 2026-07-31 run did exactly that: 160G into the checkout (then named
-# ~/casket-work) and every archive
-# re-downloaded even though /mnt/hdd/casket-dep-store already had it. The
-# store and its -cache sibling are pure cache, which is why they belong on the
-# HDD while the stage stays on the SSD.
-Environment=CASKET_DEP_STORE=/mnt/hdd/casket-dep-store
-# Submodule expansion (2026-08-19) has both of the same problems. The store is
-# hardlinked into the stage, so it must be on the SAME filesystem as the work
-# tree -- unlike the dep store it does NOT belong on the HDD.
-Environment=CASKET_SUBMODULE_STORE=%h/ocp-source-collector/submodule-store
+# collect-deps.py / collect-submodules.py fall back to stores inside the repo on
+# the root fs when CASKET_DEP_STORE / CASKET_SUBMODULE_STORE are unset. The
+# 2026-07-31 run wrote 160G into the checkout that way. The dep store is pure
+# cache and belongs on the HDD; the submodule store is hardlinked into the stage,
+# so it must be on the SAME filesystem as the work tree.
+#
+# Both live in ~/.config/casket/build.env (template:
+# systemd/casket-build.env.example), which casket-build.sh also reads, so a
+# hand-run build gets the same stores. When they were set only here, the
+# 2026-09-26 hand run fell back to the repo and wrote 181G. No "-" prefix: a
+# missing file must stop the unit, not silently fall back.
+EnvironmentFile=%h/.config/casket/build.env
 # And the pinned submodule commit is only readable from the GitHub trees API,
 # which allows 60 requests/hour unauthenticated while one operators casket
 # needs ~70. Without a token the run does not fail -- it quietly falls back to

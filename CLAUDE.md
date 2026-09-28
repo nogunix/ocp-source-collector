@@ -80,7 +80,7 @@ See [operational pitfalls: build and storage](docs/operational-pitfalls.md#build
 - **Tarballs are deduped by `(repo, commit)`**, not by image name. ~27 of 191 images share repo+commit. Source index (`by-component/`, `by-repo/`) makes the many-to-one mapping discoverable.
 - **`.sqfs.xz` is internally-xz-compressed squashfs, NOT an outer xz wrap.** `mksquashfs -comp xz`; do not add an outer `xz` step.
 - **`lib.sh`** centralizes arg parsing (`parse_args_version_arch`), logging (`log`/`die`), `require_cmd`, and path resolution (`version_dir`). New scripts should source it.
-- **Env vars** (defaults in `lib.sh`): `CASKET_WORK` (work root, default: the checkout itself, derived in `lib.sh`), `AUTHFILE` (registry auth, default `~/.docker/config.json`), `RELEASE_REGISTRY` (default `quay.io/openshift-release-dev/ocp-release`).
+- **Env vars** (defaults in `lib.sh`): `CASKET_WORK` (work root, default: the checkout itself, derived in `lib.sh`), `AUTHFILE` (registry auth, default `~/.docker/config.json`), `RELEASE_REGISTRY` (default `quay.io/openshift-release-dev/ocp-release`). Host-local build settings (`CASKET_DEP_STORE`, `CASKET_SUBMODULE_STORE`) live in `~/.config/casket/build.env` (template `systemd/casket-build.env.example`), read by both `casket-auto-update.service` and `casket-build.sh`; `casket-build.sh --apply` refuses a/b/b-operand when either is unset or no GitHub token is available.
 
 ## Required tools
 

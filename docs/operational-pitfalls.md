@@ -152,6 +152,18 @@ returns fine with a token. `ensure_github_token` in lib.sh is now shared by both
 entry points, and `casket-build.sh --apply` refuses a/b/b-operand without a token
 unless `--allow-no-token` is given.
 
+**The same hand run also missed the unit's stores (2026-09-28).**
+`casket-auto-update.service` set `CASKET_DEP_STORE` and `CASKET_SUBMODULE_STORE`
+with `Environment=` lines, which only the unit sees. The 09-26 hand run fell back
+to `dep-store/` inside the repo and wrote 147G + 34G of cache to the root fs. It
+also re-downloaded everything `/mnt/hdd/casket-dep-store` held: the 07-31
+incident again, through a different entry point. The casket contents were
+unaffected (4.20 unique deps 30,771 vs 30,806). Both stores now live in
+`~/.config/casket/build.env`. The unit loads it with a required
+`EnvironmentFile=`, `casket-build.sh` loads it through `load_build_env`, and
+`--apply` stops while either is unset. The general lesson: anything the unit
+sets for the build belongs in that shared file, not in the unit.
+
 ### Certified/community catalogs were NOT backfilled (decision 2026-09-07)
 
 They are the 18 caskets built before submodule collection existed, and the
