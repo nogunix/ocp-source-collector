@@ -92,12 +92,13 @@ After adding/replacing sources, re-run `./scripts/run-opengrok.sh` (incremental 
 
 | env | Default | Role | Recommended |
 |-----|---------|------|-------------|
-| `INDEXER_JAVA_OPTS` | `-Xmx8g` | Heap for each reindex JVM. At startup, one JVM per project is launched **in parallel** | **`-Xmx2g`**. `-Xmx8g` x 25 parallel exceeds RAM and causes `pthread_create EAGAIN`, corrupting some project indexes |
-| `CATALINA_OPTS` | (empty = default ~ 25% RAM ~ 15G) | Webapp JVM heap. Used for loading full-text indexes, suggester rebuild, and search result sets | **`-Xmx24g` to `-Xmx32g`**. The default 15G causes heap exhaustion on suggester rebuild or large queries, leading to GC thrashing and webapp hangs |
-| `WORKERS` | `4` (set by `run-opengrok.sh`; the image's own default is `nproc`=16) | **Parallel project count** during startup sync. One JVM is spawned per project | Default `4` is low enough. Only raise it when the host is idle and you want faster completion (`WORKERS=8` etc.) |
+| `INDEXER_JAVA_OPTS` | `-Xmx8g` | Heap for each reindex JVM. At startup, one JVM per project is launched **in parallel** | **`-Xmx8g`** (since 2026-09-27). The old `-Xmx2g` advice dates from `WORKERS`=`nproc` (`-Xmx8g` x 16-25 parallel JVMs -> `pthread_create EAGAIN`). At `-Xmx2g` the `layered-*` indexers (47-48G indexes, twice the next project) die with `OutOfMemoryError` while the sync still ends `Sync done` |
+| `CATALINA_OPTS` | (empty = default ~ 25% RAM ~ 15G) | Webapp JVM heap. Used for loading full-text indexes, suggester rebuild, and search result sets | **`-Xmx24g`** (up to `-Xmx32g` if the webapp alone is short). The default 15G causes heap exhaustion on suggester rebuild or large queries, leading to GC thrashing and webapp hangs |
+| `WORKERS` | `4` (set by `run-opengrok.sh`; the image's own default is `nproc`=16) | **Parallel project count** during startup sync. One JVM is spawned per project | **`3`**. The budget is `WORKERS` x indexer heap + webapp heap: 3 x 8 + 24 = 48G of the host's 60G, leaving room for the OS, page cache and the other containers even when all three layered projects sync at once. Do not raise one factor without lowering another |
 
-Recommended update command: `SKIP_STAGE=1 INDEXER_JAVA_OPTS=-Xmx2g CATALINA_OPTS=-Xmx32g ./scripts/run-opengrok.sh`
-(`SKIP_STAGE=1` = reuse the existing symlink tree without regenerating. `WORKERS` defaults to `4` in `run-opengrok.sh`, so it normally needs no override).
+Recommended update command: `SKIP_STAGE=1 INDEXER_JAVA_OPTS=-Xmx8g WORKERS=3 CATALINA_OPTS=-Xmx24g ./scripts/run-opengrok.sh`
+(`SKIP_STAGE=1` = reuse the existing symlink tree without regenerating). After the sync, check the log for failed projects -- `Sync done` is printed either way:
+`podman logs casket-ocp-grok 2>&1 | grep -o "Indexer command for project [^ ]* failed" | sort -u` must print nothing.
 
 **Root cause of the load (found 2026-07-02)**: The container is recreated (`podman rm -f` + `run`) every time `run-opengrok.sh` runs (and after every host reboot), triggering a resync of all ~54 projects with up to `WORKERS` in parallel (one JVM per project). With the default `WORKERS`=`nproc` (16 on the reference host), 16 JVMs compete for CPU/IO simultaneously, making the host noticeably sluggish. `INDEXER_JAVA_OPTS`/`CATALINA_OPTS` address memory exhaustion (EAGAIN / GC thrashing), not this CPU contention. `run-opengrok.sh` defaults `WORKERS=4` to mitigate. Index data itself is persisted on volumes and only incremental, so lowering parallelism doesn't affect per-project time -- it just reduces concurrency and peak load at the cost of longer total time.
 
@@ -237,6 +238,6 @@ OUT_DIR=/mnt/hdd/casket-ocp/opengrok-airgap ./scripts/package-airgap.sh
 | Content under symlinks not indexed | Check `--canonicalRoot /srv/` and that the original `/srv/sources-*` are mounted in the container |
 | Production environment discards index and re-indexes | Image version mismatch. Use the image matching the MANIFEST digest |
 | Management API `/api/v1/projects` returns 401 | By design (token required after webapp start). Web UI and `/api/v1/search` are public and unaffected -- browsing and searching work fine |
-| Logs show `pthread_create failed (EAGAIN)`, some projects return 0 search results | RAM exhaustion from parallel reindex. Index data survives but webapp registration fails. Lower `INDEXER_JAVA_OPTS=-Xmx2g` and re-run, or use the single-JVM serial index command above |
+| Logs show `pthread_create failed (EAGAIN)`, some projects return 0 search results | RAM exhaustion from parallel reindex. Index data survives but webapp registration fails. Lower `WORKERS` (keep `WORKERS` x `INDEXER_JAVA_OPTS` + `CATALINA_OPTS` under RAM) and re-run, or use the single-JVM serial index command above |
 | Webapp unresponsive (HTTP 000), `java` at high CPU with RSS pinned at heap limit | Heap exhaustion from suggester rebuild or large query -> GC thrashing. Recreate with `CATALINA_OPTS=-Xmx32g` via `SKIP_STAGE=1 ./scripts/run-opengrok.sh`. Test with specific-term queries |
 | `run-opengrok.sh` tries to pull from docker.io and gets `toomanyrequests` | Running with `sudo`. The image is in rootless (user-side) podman storage and invisible to root. Run without sudo -- existing rootless containers are not broken by a sudo invocation |

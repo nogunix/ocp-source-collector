@@ -453,8 +453,12 @@ worked. Earlier single-project runs at the container's own `-Xmx8g` never hit
 this. Grep the sync output for `failed (return code` after every recreate.
 `layered-4.18` fails even a no-change sync at `-Xmx2g`: the restart after that
 reindex OOMed it again. Its index was left intact, but at that heap no startup
-sync will ever pick up a change to it. Raising `INDEXER_JAVA_OPTS` has to be
-weighed against `WORKERS` x heap + `CATALINA_OPTS` on 60G of RAM.
+sync will ever pick up a change to it. Resolved on 09-27 by moving to
+`INDEXER_JAVA_OPTS=-Xmx8g WORKERS=3 CATALINA_OPTS=-Xmx24g`: 3 x 8 + 24 = 48G
+of 60G, even when all three layered projects sync at once. These are now
+run-opengrok.sh's defaults and the README's recommended command. The first
+recreate with them synced all 21 projects in 51 min with no failed project, and
+host RAM peaked at 35G used.
 
 After a hand-run reindex, the webapp can still serve the previous index. That
 happened to layered-4.18 on 09-27 and to layered-4.20/4.22 on 09-25. Restart

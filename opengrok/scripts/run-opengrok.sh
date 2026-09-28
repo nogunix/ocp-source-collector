@@ -43,9 +43,11 @@
 #   SRV_ROOT           casket mount root        (default /srv)
 #   DATA_VOLUME        index location: bind dir or named volume
 #                      (default /srv/opengrok-data — SSD for performance)
-#   INDEXER_JAVA_OPTS  indexer JVM opts         (default -Xmx8g; use -Xmx2g on a
-#                      RAM-bound host — the indexer starts one JVM per project in
-#                      parallel and 8g x ~25 exhausts RAM -> pthread EAGAIN)
+#   INDEXER_JAVA_OPTS  indexer JVM opts         (default -Xmx8g). One JVM per
+#                      project, up to WORKERS at a time, so the RAM budget is
+#                      WORKERS x this + CATALINA_OPTS (3 x 8 + 24 = 48G of 60G).
+#                      Do not drop to -Xmx2g: the layered-* indexers OOM there
+#                      and the sync still prints "Sync done" (2026-09-27).
 #   CATALINA_OPTS      webapp JVM opts          (default -Xmx24g; the empty
 #                      default let the ~25%-of-RAM heap wedge the webapp in a GC
 #                      death-spiral — Tomcat alive but not listening on 8080 —
@@ -57,8 +59,10 @@
 #                      re-syncs all ~25 projects and runs up to WORKERS of them
 #                      concurrently, each spawning its own JVM — that's what
 #                      makes the host heavy right after (re)start. Lower this
-#                      (e.g. 4) to trade a longer total resync for a much lower
-#                      peak CPU/RAM footprint. This script defaults it to 4.
+#                      (e.g. 3) to trade a longer total resync for a much lower
+#                      peak CPU/RAM footprint. This script defaults it to 3, which
+#                      keeps three 8g indexers (the three layered-* projects at
+#                      once) plus the webapp inside RAM.
 #   SKIP_STAGE=1       reuse existing staging tree (don't rebuild)
 #
 set -euo pipefail
@@ -90,7 +94,7 @@ DATA_VOLUME="${DATA_VOLUME:-/srv/opengrok-data}"
 # Persist /opengrok/etc (configuration.xml) across container recreates.
 ETC_VOLUME="${ETC_VOLUME:-/srv/opengrok-etc}"
 INDEXER_JAVA_OPTS="${INDEXER_JAVA_OPTS:--Xmx8g}"
-WORKERS="${WORKERS:-4}"
+WORKERS="${WORKERS:-3}"
 
 mkdir -p "$DATA_VOLUME" "$ETC_VOLUME"
 
