@@ -14,6 +14,7 @@ import sys
 from mcp.server.fastmcp import FastMCP
 
 import backends as be
+import insight as ins
 
 mcp = FastMCP("casket")
 
@@ -158,6 +159,76 @@ def coverage_report(version: str) -> dict:
     to avoid searching for sources the casket does not carry (and hand those
     to github-trace instead)."""
     return be.coverage_report(version)
+
+
+# ---- release-aware tools (mcp/insight.py): answers GitHub cannot give, because
+# they depend on what each OpenShift release SHIPPED. They never call GitHub;
+# where GitHub can take a question further they return `github` args
+# ({owner, repo, sha | base, head}) for the GitHub MCP tools.
+
+@mcp.tool()
+def source_for_image(image: str, version: str = "") -> dict:
+    """Map a container image to the source it was built from. Pass a digest
+    ("sha256:…"), a full pull spec ("registry…/name@sha256:…"), or a repository
+    without digest (lists every mounted release that ships it). Returns, per
+    release/catalog: phase, product, component, repo, ref (the built commit),
+    the on-disk source tree, whether that tree is the exact commit, and
+    `github` args for get_commit. With a digest, also the SRPMs inside the
+    image from the a-rpm container inventory (read them with rpm_source).
+    Typical use: an image from `oc get pod -o yaml` or a must-gather."""
+    return ins.source_for_image(image, version)
+
+
+@mcp.tool()
+def find_dependency_users(name: str, version_constraint: str = "", version: str = "",
+                          ecosystem: str = "", selected_only: bool = False,
+                          max_results: int = 500) -> dict:
+    """Which SHIPPED components depend on a library, at which version — for CVE
+    impact. `name` is the exact module/package (golang.org/x/net, serde,
+    lodash, requests); `version_constraint` like "<0.33.0" or ">=1.2,<1.5";
+    `version` scopes to a release ("4.20", "4.20.35"); `ecosystem`
+    go|crates|npm|pypi. Go rows come from go.sum, which lists every version in
+    the module graph: `selected` says whether go.mod requires it, and
+    selected_only=True keeps only those. Each hit carries the vendored source
+    (`dep_source`) to read the vulnerable code as shipped."""
+    return ins.find_dependency_users(name, version_constraint, version, ecosystem,
+                                     selected_only, max_results)
+
+
+@mcp.tool()
+def release_diff(from_version: str, to_version: str, include_rpms: bool = True) -> dict:
+    """What changed between two OCP payload releases (Phase A patches, e.g.
+    "4.20.28" → "4.20.35"): per changed repo the shipped from/to commits and the
+    components built from it, plus added/removed components and (when a-rpm
+    carries both releases) RHCOS package NEVR changes. For the PRs and Jira keys
+    behind a change, call the GitHub MCP list_commits(owner, repo,
+    sha=to_commit) and read down to from_commit — merge commits read
+    "Merge pull request #N … OCPBUGS-…" — then pull_request_read."""
+    return ins.release_diff(from_version, to_version, include_rpms)
+
+
+@mcp.tool()
+def rpm_source(package: str, version: str) -> dict:
+    """Red Hat SRPM source for an RHCOS package in an OCP release — not on
+    GitHub. `package` is a source (kernel, cri-o) or binary (kernel-core) name;
+    `version` a patch ("4.20.38") or minor ("4.20" = newest carried). Returns
+    the NEVR, spec, patch list, the %prep-patched tree, and the NEVR in every
+    other carried release."""
+    return ins.rpm_source(package, version)
+
+
+@mcp.tool()
+def check_patch_shipped(patch: str, repo: str, version: str = "") -> dict:
+    """Is a fix in what each release SHIPPED? Give the fix's unified diff and
+    its repo; every mounted tree built from that repo (all phases, and filled
+    submodules) is checked for the patch content: applied / not_applied /
+    partial per release and per file, plus the first Phase A patch per minor
+    that carries it. Content-based, so a cherry-pick to a release branch (a
+    different SHA) and a non-public build commit both count.
+    Get the diff from GitHub MCP get_commit(detail="full_patch") or
+    pull_request_read; its per-file patches have no ---/+++ headers, so join
+    them as "diff --git a/<filename> b/<filename>\\n<patch>"."""
+    return ins.check_patch_shipped(patch, repo, version)
 
 
 def main() -> None:

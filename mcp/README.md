@@ -35,6 +35,26 @@ refused with guidance. OpenGrok indexes **all phases incl. b-operand** (projects
 | `read_file(path, start?, end?)` | Read a file / line range (read-only, capped) |
 | `list_dir(path)` | Directory listing |
 
+### Release-aware tools (`insight.py`) — what GitHub cannot answer
+
+GitHub knows repos, commits and PRs. It does not know which commit an OpenShift
+release shipped, which source an image digest came from, which Red Hat patches
+RHCOS carries, or what every shipped component vendors. The caskets do. These
+tools never call GitHub: where GitHub can go further they return
+`github: {owner, repo, sha | base, head}` for the **GitHub MCP** tools
+(`get_commit`, `list_commits`, `pull_request_read`), so they also work air-gapped.
+
+| Tool | What it does |
+|---|---|
+| `source_for_image(image, version?)` | Digest / pull spec / repository → every release/catalog shipping it: component, repo, built commit, source tree, exact-or-stand-in, plus the SRPMs inside the image (a-rpm container inventory) |
+| `find_dependency_users(name, version_constraint?, version?, ecosystem?, selected_only?)` | Which **shipped** components lock a library at which version (CVE impact). Go rows are go.sum; `selected` = go.mod really requires it |
+| `release_diff(from, to, include_rpms?)` | Two payload patches → changed repos with from/to commits (+ GitHub MCP args), added/removed components, RHCOS NEVR changes |
+| `rpm_source(package, version)` | RHCOS source or binary package → NEVR, spec, Red Hat patches, `%prep`-patched tree, NEVR in every carried release |
+| `check_patch_shipped(patch, repo, version?)` | A fix's unified diff → applied / not_applied / partial in each release's **shipped** tree, and the first Phase A patch per minor carrying it. Content-based: cherry-picks and non-public build commits count |
+
+`version` scoping for these: `""` all, `"4.20"` every 4.20 mount, `"4.20.35"`
+that payload patch plus the minor-scoped B / b-operand mounts.
+
 All read-only; paths are confined to `/srv/sources-*` (`backends.safe_path`).
 OpenGrok endpoint via `OPENGROK_URL` (default `http://localhost:8080`); start it
 with `../opengrok/scripts/run-opengrok.sh`. Project names: `ocp-<patch>` (A),
@@ -141,6 +161,22 @@ claude mcp list      # casket ... ✓ Connected
 resolve_repo("kubevirt/kubevirt", "4.20")   -> path to the real kubevirt tree
 grep("DefaultAMD64MachineType", <that path>, glob="*.go")
 read_file(<hit path>, <line>, <line>)
+```
+
+With GitHub MCP alongside:
+
+```
+# "Is the fix for OCPBUGS-95577 in 4.20.33?"
+github: get_commit(owner="openshift", repo="machine-config-operator",
+                   sha="1fdcfe98…", detail="full_patch")
+casket: check_patch_shipped("diff --git a/<f> b/<f>\n<patch>…",
+                            "openshift/machine-config-operator", "4.20")
+        -> first_applied_phase_a_patch {"4.20": "4.20.34"}
+
+# "What went into machine-config-operator between 4.20.28 and 4.20.35?"
+casket: release_diff("4.20.28", "4.20.35")      -> github {owner, repo, base, head}
+github: list_commits(owner, repo, sha=head)     -> read down to base; merge commits
+                                                   name the PR and the OCPBUGS key
 ```
 
 ## Roadmap

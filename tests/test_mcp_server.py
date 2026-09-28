@@ -83,6 +83,8 @@ EXPECTED_TOOLS = [
     "search_text", "search_symbol", "search_refs", "grep", "read_file",
     "diff_file", "list_dir", "resolve_dependency", "permalink",
     "coverage_report",
+    "source_for_image", "find_dependency_users", "release_diff", "rpm_source",
+    "check_patch_shipped",
 ]
 
 
@@ -329,3 +331,19 @@ def test_main_http_disables_dns_rebinding_protection(monkeypatch):
     runner = _run_main(monkeypatch, ["casket_mcp.py", "http"])
     assert runner.settings.transport_security.kw == {
         "enable_dns_rebinding_protection": False}
+
+
+# ---- release-aware tools forward to insight.py ------------------------------
+@pytest.mark.parametrize("tool, args, expect", [
+    ("source_for_image", ("sha256:ab", "4.20"), ("sha256:ab", "4.20")),
+    ("find_dependency_users", ("golang.org/x/net", "<0.33.0", "4.20", "go", True, 9),
+     ("golang.org/x/net", "<0.33.0", "4.20", "go", True, 9)),
+    ("release_diff", ("4.20.28", "4.20.35", False), ("4.20.28", "4.20.35", False)),
+    ("rpm_source", ("kernel", "4.20"), ("kernel", "4.20")),
+    ("check_patch_shipped", ("diff", "o/r", "4.20"), ("diff", "o/r", "4.20")),
+])
+def test_insight_tools_forward(monkeypatch, tool, args, expect):
+    r = _Recorder()
+    monkeypatch.setattr(_mod, "ins", r)
+    _tool(tool)(*args)
+    assert r.last == (tool, expect, {})
