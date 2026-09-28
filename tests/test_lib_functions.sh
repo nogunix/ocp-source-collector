@@ -225,6 +225,53 @@ else
 fi
 rm -rf "$TMP_SHIM"
 
+# ---- ensure_github_token ----------------------------------------------------
+# A hand-run casket-build.sh used to build without a token and ship branch-head
+# submodules (2026-09-26). gh is stubbed on PATH; nothing touches the network.
+
+GH_SHIM="$(mktemp -d)"
+printf '#!/bin/sh\n[ "$1 $2" = "auth token" ] && echo gho_from_gh\n' > "$GH_SHIM/gh"
+mkdir -p "$GH_SHIM/nogh"
+printf '#!/bin/sh\nexit 1\n' > "$GH_SHIM/nogh/gh"
+chmod +x "$GH_SHIM/gh" "$GH_SHIM/nogh/gh"
+
+(
+    unset GH_TOKEN; export GITHUB_TOKEN=exported
+    PATH="$GH_SHIM:$PATH"
+    ensure_github_token && [[ "$GITHUB_TOKEN" == exported ]]
+) && pass "ensure_github_token: an exported GITHUB_TOKEN wins over gh" \
+  || bad  "ensure_github_token: an exported GITHUB_TOKEN wins over gh"
+
+(
+    unset GITHUB_TOKEN; export GH_TOKEN=ghtok
+    PATH="$GH_SHIM:$PATH"
+    ensure_github_token && [[ -z "${GITHUB_TOKEN:-}" ]]
+) && pass "ensure_github_token: GH_TOKEN counts and gh is not consulted" \
+  || bad  "ensure_github_token: GH_TOKEN counts and gh is not consulted"
+
+(
+    unset GITHUB_TOKEN GH_TOKEN
+    PATH="$GH_SHIM:$PATH"
+    ensure_github_token && [[ "$GITHUB_TOKEN" == gho_from_gh ]]
+) && pass "ensure_github_token: borrows gh auth token and exports it" \
+  || bad  "ensure_github_token: borrows gh auth token and exports it"
+
+(
+    unset GITHUB_TOKEN GH_TOKEN
+    PATH="$GH_SHIM/nogh:$PATH"
+    ! ensure_github_token && [[ -z "${GITHUB_TOKEN:-}" ]]
+) && pass "ensure_github_token: fails when gh has no credential" \
+  || bad  "ensure_github_token: fails when gh has no credential"
+
+# casket-build.sh --apply must refuse before doing anything when no token.
+out="$(env -u GITHUB_TOKEN -u GH_TOKEN PATH="$GH_SHIM/nogh:$PATH" \
+    bash "$HERE/../scripts/casket-build.sh" --phase b-operand --unit 4.20 --apply 2>&1)"
+rc=$?
+(( rc != 0 )) && [[ "$out" == *"no GitHub token"* ]] \
+  && pass "casket-build.sh --apply refuses without a token" \
+  || { bad "casket-build.sh --apply refuses without a token"; printf '         rc=%s out=%s\n' "$rc" "$out"; }
+rm -rf "$GH_SHIM"
+
 # ---- done -------------------------------------------------------------------
 
 if (( fail )); then

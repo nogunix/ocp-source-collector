@@ -44,6 +44,26 @@ require_cmd() {
 # The producer now records the path it actually wrote and the caller reads it
 # back, so the name is decided exactly once.
 
+# ensure_github_token — make a GitHub token available to child processes.
+# An exported GITHUB_TOKEN/GH_TOKEN wins; otherwise borrow the gh CLI's
+# credential live (no second copy on disk to go stale behind `gh auth login`).
+# Returns 0 when a token is available.
+#
+# collect-submodules.py reads pinned submodule commits from the git trees API,
+# which allows 60 requests/hour unauthenticated. Without a token a build does
+# not fail: it falls back to .gitmodules branch heads and records them exact=0.
+# casket-auto-update.sh always borrowed gh's token, but a hand-run
+# casket-build.sh did not, and the 2026-09-26 manual b-operand rebuild shipped
+# 32-51 branch-head submodules per minor (ZTWIM's operator among them).
+ensure_github_token() {
+    if [[ -z "${GITHUB_TOKEN:-}" && -z "${GH_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
+        local t
+        t="$(gh auth token 2>/dev/null)" || t=""
+        [[ -n "$t" ]] && export GITHUB_TOKEN="$t"
+    fi
+    [[ -n "${GITHUB_TOKEN:-}" || -n "${GH_TOKEN:-}" ]]
+}
+
 # record_artifact <path> [file] — called by a packaging script after its
 # mksquashfs succeeded. No file requested (the usual manual invocation) is not
 # an error, it just does nothing.

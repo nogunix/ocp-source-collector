@@ -49,18 +49,14 @@ require_cmd curl awk jq oc sha256sum python3 flock
 # .gitmodules branch heads and records every row exact=0 (APPROX), which is
 # worse than failing because it looks like success.
 #
-# Prefer an explicitly exported token (CI, or the unit's EnvironmentFile);
-# otherwise borrow the gh CLI's credential. Taking it live rather than
-# copying it into a file means there is no second copy on disk to go stale
-# behind a `gh auth login`. A user unit runs as the invoking user, so
-# ~/.config/gh is readable and gh is on the unit's PATH.
-if [[ -z "${GITHUB_TOKEN:-}" && -z "${GH_TOKEN:-}" ]] && command -v gh >/dev/null 2>&1; then
-    GITHUB_TOKEN="$(gh auth token 2>/dev/null)"
-    [[ -n "$GITHUB_TOKEN" ]] && export GITHUB_TOKEN
-fi
-if [[ -z "${GITHUB_TOKEN:-}" && -z "${GH_TOKEN:-}" ]]; then
+# ensure_github_token (lib.sh) prefers an exported token and otherwise borrows
+# the gh CLI's credential; a user unit runs as the invoking user, so
+# ~/.config/gh is readable and gh is on the unit's PATH. casket-build.sh
+# refuses --apply without a token, so a lost credential now fails the builds
+# instead of staging branch-head submodules.
+if ! ensure_github_token; then
     log "WARNING: no GITHUB_TOKEN/GH_TOKEN and no usable gh credential —"
-    log "WARNING:   submodule pins will fall back to branch heads (exact=0)"
+    log "WARNING:   casket-build.sh will refuse a/b/b-operand builds (gh auth login to fix)"
 fi
 
 DRY=1

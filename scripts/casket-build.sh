@@ -6,7 +6,7 @@
 # (the exact same logic casket-check.sh uses, so a build always matches what
 # the next check will compare against).
 #
-# Usage: casket-build.sh --phase a|a-rpm|b|b-operand --unit UNIT [--arch x86_64] [--jobs N] [--outdir DIR] [--apply] [--keep-stage]
+# Usage: casket-build.sh --phase a|a-rpm|b|b-operand --unit UNIT [--arch x86_64] [--jobs N] [--outdir DIR] [--apply] [--keep-stage] [--allow-no-token]
 #   UNIT is a minor (a/b/b-operand, e.g. 4.20) or "all" (a-rpm, the only unit it has).
 #
 # On success it also deletes the unit's 50-out staging trees, which are pure
@@ -19,6 +19,11 @@
 # phase-a-rpm-package.sh over whatever phase-a-rpm/srpms/ already holds. That
 # manual step is out of scope for automation on purpose (needs a login +
 # subscription).
+#
+# --apply for a/b/b-operand needs a GitHub token (GITHUB_TOKEN/GH_TOKEN, or the
+# gh CLI's credential via ensure_github_token): without one, submodule pins
+# silently degrade to branch heads. It refuses to build instead;
+# --allow-no-token builds anyway, knowingly.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
@@ -28,7 +33,7 @@ source "$SCRIPT_DIR/lib-fingerprint.sh"
 # shellcheck source=lib-reclaim.sh
 source "$SCRIPT_DIR/lib-reclaim.sh"
 
-PHASE=""; UNIT=""; ARCH="x86_64"; JOBS=6; OUT_DIR="${CASKET_OUT}"; APPLY=0
+PHASE=""; UNIT=""; ARCH="x86_64"; JOBS=6; OUT_DIR="${CASKET_OUT}"; APPLY=0; ALLOW_NO_TOKEN=0
 while (( $# )); do
     case "$1" in
         --phase)  PHASE="$2"; shift 2 ;;
@@ -38,14 +43,24 @@ while (( $# )); do
         --outdir) OUT_DIR="$2"; shift 2 ;;
         --apply)  APPLY=1;    shift ;;
         --keep-stage) export CASKET_KEEP_STAGE=1; shift ;;
+        --allow-no-token) ALLOW_NO_TOKEN=1; shift ;;
         -h|--help)
-            echo "casket-build.sh --phase a|a-rpm|b|b-operand --unit UNIT [--arch x86_64] [--jobs N] [--outdir DIR] [--apply] [--keep-stage]"
+            echo "casket-build.sh --phase a|a-rpm|b|b-operand --unit UNIT [--arch x86_64] [--jobs N] [--outdir DIR] [--apply] [--keep-stage] [--allow-no-token]"
             exit 0 ;;
         *) die "unknown arg: $1" ;;
     esac
 done
 case "$PHASE" in a|a-rpm|b|b-operand) ;; *) die "--phase required: a|a-rpm|b|b-operand" ;; esac
 [[ -n "$UNIT" ]] || die "--unit required"
+
+# a-rpm fetches nothing from GitHub; every other phase collects submodules.
+if (( APPLY )) && [[ "$PHASE" != a-rpm ]] && ! ensure_github_token; then
+    if (( ALLOW_NO_TOKEN )); then
+        log "WARNING: no GitHub token — submodule pins will fall back to branch heads (exact=0); continuing because of --allow-no-token"
+    else
+        die "no GitHub token (GITHUB_TOKEN/GH_TOKEN unset and \`gh auth token\` gave none): submodule pins would silently fall back to branch heads. Run \`gh auth login\`, export GITHUB_TOKEN, or pass --allow-no-token"
+    fi
+fi
 
 # Where the packaging script reports the path it actually wrote. casket-build
 # must NOT re-derive that name: both sides used `date -u`, but evaluated hours
