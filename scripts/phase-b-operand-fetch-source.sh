@@ -146,21 +146,16 @@ awk -F'\t' 'BEGIN{OFS="\t"} $4!="NO_SOURCE"{
 }' "$GIT_TSV" | sort -u > "$DL"
 
 # Classify a winning candidate URL: the exact-commit archive is the only one
-# that is the source the image was actually built from.
-url_kind() {
-    case "$1" in
-        */archive/refs/tags/*)  printf 'tag' ;;
-        */archive/refs/heads/*) printf 'branch' ;;
-        */archive/HEAD.tar.gz)  printf 'branch' ;;   # default branch, not a sha
-        *)                      printf 'sha' ;;
-    esac
-}
+# that is the source the image was actually built from. archive_url_kind lives
+# in lib-resolve.sh (tests/test_resolve.sh).
+url_kind() { archive_url_kind "$1"; }
 
 # A tarball left by an earlier run is not re-fetched, so it would contribute no
 # fetched.tsv row and get counted as a fetch failure. Its provenance is
 # recoverable offline: a GitHub archive holds exactly one top-level directory,
-# named "<repo>-<the ref that was asked for>", so a full sha there means the
-# exact commit was fetched and anything else means a tag/branch was. Read via
+# named "<repo>-<the ref that was asked for>", so a full sha there that the
+# labelled sha prefixes means the exact commit was fetched, and anything else
+# (including a branch-name "ref" like ubi9) a tag/branch. Read via
 # python tarfile (one header, one process) rather than `tar -tzf | head`, which
 # both decompresses the whole archive and trips the pipefail/SIGPIPE trap.
 record_existing() {
@@ -168,7 +163,7 @@ record_existing() {
     top=$(python3 -c 'import sys,tarfile
 t=tarfile.open(sys.argv[1]); m=t.next()
 print(m.name.split("/")[0] if m else "")' "$dst" 2>/dev/null) || top=""
-    if [[ -n "$ref" && -n "$top" && "$top" == *"$ref" ]]; then
+    if [[ -n "$top" ]] && archive_top_is_exact "$top" "$ref"; then
         printf '%s\tpre-existing:%s\t%s\t%s\n' "$fname" "$top" sha 1 >> "$FETCHED"
     else
         printf '%s\tpre-existing:%s\t%s\t%s\n' "$fname" "${top:-unknown}" preexisting 0 >> "$FETCHED"
@@ -207,7 +202,8 @@ dl_one() {
 # candidate_source_urls comes from lib-resolve.sh and must be exported too --
 # dl_one runs in a fresh `bash -c` under xargs, which inherits only exported
 # functions, not the sourcing shell's definitions.
-export -f dl_one url_kind record_existing candidate_source_urls
+export -f dl_one url_kind record_existing candidate_source_urls \
+    archive_url_kind archive_top_is_exact is_commit_ref
 export OUT LOG FETCHED MINOR
 
 if [[ -s "$DL" ]]; then

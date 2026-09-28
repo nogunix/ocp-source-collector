@@ -9,8 +9,10 @@ HEAD -- but only log "OK <name> <kind>" and nothing at all for a tarball left
 by an earlier run, so a casket could not say whether git/<name>/ is the commit
 the image was built from or a branch head standing in for it. The answer is
 recoverable offline: a GitHub archive holds one top-level directory named
-"<repo>-<the ref that was asked for>", so a full sha there means the exact
-commit and anything else a tag or branch.
+"<repo>-<the ref that was asked for>", so a full sha there that the labelled
+sha prefixes means the exact commit, and anything else a tag or branch --
+including a vcs-ref that is itself a branch name ("ubi9", "main"), which a
+plain suffix match used to call exact.
 
 Output matches phase-b-operand-fetch-source.sh's git-fetched.tsv
 (tarball | url | kind | exact, url = "pre-existing:<top dir>"), so
@@ -21,6 +23,7 @@ from __future__ import annotations
 
 import glob
 import os
+import re
 import sys
 import tarfile
 
@@ -34,6 +37,18 @@ def top_dir(path: str) -> str:
             return m.name.split("/", 1)[0] if m else ""
     except (OSError, tarfile.TarError):
         return ""
+
+
+_SHA = re.compile(r"[0-9a-f]{7,40}")
+_FULL_SHA = re.compile(r"[0-9a-f]{40}")
+
+
+def is_exact(top: str, ref: str) -> bool:
+    """True when an archive whose top dir is <top> is <ref>'s exact commit.
+    Same rule as archive_top_is_exact in lib-resolve.sh."""
+    ref, tail = ref.lower(), top.lower().rsplit("-", 1)[-1]
+    return bool(_SHA.fullmatch(ref) and _FULL_SHA.fullmatch(tail)
+                and tail.startswith(ref))
 
 
 def refs_by_tarball(git_tsv: str) -> dict[str, str]:
@@ -53,8 +68,7 @@ def provenance(tar_dir: str, git_tsv: str) -> list[str]:
         name = os.path.basename(path)
         top = top_dir(path)
         ref = refs.get(name, "")
-        # Same rule as record_existing in phase-b-operand-fetch-source.sh.
-        exact = bool(ref and top and top.endswith(ref))
+        exact = bool(top) and is_exact(top, ref)
         out.append(f"{name}\tpre-existing:{top or 'unknown'}\t"
                    f"{'sha' if exact else 'preexisting'}\t{int(exact)}")
     return out

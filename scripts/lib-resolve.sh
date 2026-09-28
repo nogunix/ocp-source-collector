@@ -109,3 +109,39 @@ candidate_source_urls() {
     # by the upstream link check, 2026-09-23 (30 rows across 13 repos).
     printf '%s\n' "$base/archive/HEAD.tar.gz"
 }
+
+# is_commit_ref <ref> -> 0 when <ref> is a commit sha (7-40 hex), not a name.
+# Images label vcs-ref with branch names too (rh-openjdk's "ubi9", coco's
+# "main"). archive/<ref>.tar.gz resolves those to a branch head, which must not
+# be recorded as the exact commit.
+is_commit_ref() {
+    local r="${1,,}"
+    [[ "$r" =~ ^[0-9a-f]{7,40}$ ]]
+}
+
+# archive_url_kind <archive-url> -> sha | tag | branch | ref
+# ref = archive/<name>.tar.gz with a non-sha name: GitHub serves a branch or a
+# tag of that name, and the URL cannot say which.
+archive_url_kind() {
+    local r
+    case "$1" in
+        */archive/refs/tags/*)  printf 'tag' ;;
+        */archive/refs/heads/*) printf 'branch' ;;
+        */archive/HEAD.tar.gz)  printf 'branch' ;;   # default branch, not a sha
+        *)
+            r="${1##*/archive/}"; r="${r%.tar.gz}"
+            if is_commit_ref "$r"; then printf 'sha'; else printf 'ref'; fi ;;
+    esac
+}
+
+# archive_top_is_exact <archive-top-dir> <ref> -> 0 when the archive is <ref>'s
+# exact commit. A GitHub archive's single top dir is "<repo>-<what was asked
+# for>", and asking by sha yields the full 40-hex sha, so the tail must be a
+# sha that starts with <ref>. A bare suffix match said "exact" for
+# "redhat-openjdk-containers-ubi9" against ref "ubi9", a branch head.
+archive_top_is_exact() {
+    local top="${1,,}" ref="${2,,}" tail
+    is_commit_ref "$ref" || return 1
+    tail="${top##*-}"
+    [[ "$tail" =~ ^[0-9a-f]{40}$ && "$tail" == "$ref"* ]]
+}

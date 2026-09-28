@@ -171,7 +171,7 @@ meta/git.tsv           component | source_url | ref | tarball | version | method
                        fetched by tag (v<version>); this is NOT NO_SOURCE. Several
                        such components dedup to one repo tarball, so the tarball/dir
                        name is just the first component seen (see git/INDEX.tsv).
-meta/git-fetched.tsv   tarball | url actually fetched | kind (sha/tag/branch) | exact
+meta/git-fetched.tsv   tarball | url actually fetched | kind (sha/tag/branch/ref) | exact
                        READ THIS BEFORE TRUSTING A TREE FOR CVE WORK. The commit in
                        the image labels is frequently an internal konflux SHA that
                        404s on public github; when that happens the fetch falls back

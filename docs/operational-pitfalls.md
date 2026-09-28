@@ -581,6 +581,19 @@ Two separate faults showed up in the tree names on the OpenGrok layered listing.
   tarballs that `git.tsv` names. Live caskets drop the copies at their next
   rebuild. The names themselves can still change between runs; this fix stops
   the duplication only.
+- **Branch heads recorded as `exact=1` (2026-09-28)**: some images put a branch
+  name in `vcs-ref`, such as rh-openjdk's `ubi9`, coco's `main`, and
+  hostpath-provisioner's `release-v0.x`. `archive/<ref>.tar.gz` then serves that
+  branch's head. Three places decided "exact" without checking that the ref is a
+  commit: `url_kind` treated every `archive/<x>` as `sha`, while
+  `record_existing` and `archive-provenance.py` only checked that the archive
+  top dir ends with the ref (`redhat-openjdk-containers-ubi9` ends with `ubi9`).
+  So `git-fetched.tsv` reported 13 to 14 branch-head trees per b-operand minor
+  as the exact commit, and casket-mcp's permalink presented them as
+  `exact: true`. All three places now share one rule
+  (`archive_top_is_exact` / `is_exact`): the ref must be 7 to 40 hex characters,
+  and the archive's top-dir tail must be a full sha starting with it. A
+  non-sha `archive/<name>` is now kind `ref`.
 
 
 ## Upstream link check

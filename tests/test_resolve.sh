@@ -103,5 +103,24 @@ eq "/tree/ stripped" "$(normalize_github 'https://github.com/a/b/tree/main')" "h
 eq "non-github ->''" "$(normalize_github 'https://www.redhat.com/x')"        ""
 eq "empty ->''"     "$(normalize_github '')"                                 ""
 
+echo "# exact-commit provenance — a branch-name vcs-ref is never exact"
+S=2d8faa383b34bd0c120bad4d23fc85a2b63fea47
+B=https://github.com/o/r/archive
+eq "archive/<sha> -> sha"          "$(archive_url_kind "$B/$S.tar.gz")"              "sha"
+eq "archive/<short sha> -> sha"    "$(archive_url_kind "$B/${S:0:12}.tar.gz")"       "sha"
+eq "archive/ubi9 -> ref (not sha)" "$(archive_url_kind "$B/ubi9.tar.gz")"            "ref"
+eq "archive/main -> ref"           "$(archive_url_kind "$B/main.tar.gz")"            "ref"
+eq "refs/tags -> tag"              "$(archive_url_kind "$B/refs/tags/v1.2.0.tar.gz")" "tag"
+eq "refs/heads -> branch"          "$(archive_url_kind "$B/refs/heads/release-1.2.tar.gz")" "branch"
+eq "HEAD -> branch"                "$(archive_url_kind "$B/HEAD.tar.gz")"            "branch"
+ex() { archive_top_is_exact "$1" "$2" && echo 1 || echo 0; }
+eq "top = full sha, ref = full sha -> exact"  "$(ex "r-$S" "$S")"             1
+eq "top = full sha, ref = short sha -> exact" "$(ex "r-$S" "${S:0:12}")"      1
+eq "jfr-datasource: top ...-ubi9, ref ubi9 -> NOT exact" \
+   "$(ex redhat-openjdk-containers-ubi9 ubi9)" 0
+eq "branch head top for a sha ref -> not exact" "$(ex r-main "$S")"           0
+eq "a different commit -> not exact"          "$(ex "r-$(printf '0%.0s' {1..40})" "${S:0:12}")" 0
+eq "empty ref -> not exact"                   "$(ex "r-$S" "")"               0
+
 echo
 if [[ $fail -eq 0 ]]; then echo "ALL PASS"; exit 0; else echo "$fail FAILED"; exit 1; fi
