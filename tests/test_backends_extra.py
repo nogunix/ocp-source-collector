@@ -7,12 +7,10 @@ Network-free: uses monkeypatched paths and tmp_path fixtures throughout.
 import json
 import os
 import subprocess
-import sys
 import types
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp"))
 import backends as be
 
 

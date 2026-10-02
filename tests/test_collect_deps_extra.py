@@ -18,11 +18,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-_SCRIPTS = str(pathlib.Path(__file__).resolve().parent.parent / "scripts")
-if _SCRIPTS not in sys.path:
-    sys.path.insert(0, _SCRIPTS)
 
-import deplib  # noqa: E402
+import deplib
 
 _SPEC = importlib.util.spec_from_file_location(
     "collect_deps",

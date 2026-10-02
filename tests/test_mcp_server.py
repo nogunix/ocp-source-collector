@@ -58,10 +58,6 @@ def _load_casket_mcp():
         sys.modules[name] = {"mcp": stub, "mcp.server": stub_server,
                              "mcp.server.fastmcp": stub_fastmcp}[name]
 
-    # Also need backends importable
-    if MCP_DIR not in sys.path:
-        sys.path.insert(0, MCP_DIR)
-
     spec = importlib.util.spec_from_file_location(
         "casket_mcp", os.path.join(MCP_DIR, "casket_mcp.py"))
     mod = importlib.util.module_from_spec(spec)

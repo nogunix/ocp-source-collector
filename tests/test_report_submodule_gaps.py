@@ -11,8 +11,6 @@ import sys
 
 import pytest
 
-# submodulelib must be importable (report-submodule-gaps imports it at load time)
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "scripts"))
 
 _spec = importlib.util.spec_from_file_location(
     "report_submodule_gaps",

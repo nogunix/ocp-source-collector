@@ -18,14 +18,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-_SCRIPTS = str(pathlib.Path(__file__).resolve().parent.parent / "scripts")
-if _SCRIPTS not in sys.path:
-    sys.path.insert(0, _SCRIPTS)
 
-import submodulelib as sml  # noqa: E402
+import submodulelib as sml
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "mcp"))
-import layout  # noqa: E402
+import layout
 
 _SPEC = importlib.util.spec_from_file_location(
     "collect_submodules",

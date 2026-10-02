@@ -4,10 +4,8 @@ INDEX.tsv-driven resolve/list operations.
 Network-free: uses monkeypatched paths and tmp_path fixtures.
 """
 import os
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp"))
-import backends as be  # noqa: E402
+import backends as be
 
 
 # --------------------------------------------------------------- _classify

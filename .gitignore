@@ -1,9 +1,6 @@
 mcp/.venv/
-mcp/__pycache__/
-scripts/__pycache__/
-tests/__pycache__/
-# containers/ holds python that gets imported during testing too
-containers/*/__pycache__/
+# python bytecode wherever tests import from (mcp/, scripts/, containers/, opengrok/)
+__pycache__/
 
 # disposable Phase pipeline work dirs (regenerable; final .sqfs.xz lives on /mnt/hdd)
 phase-a-rpm/

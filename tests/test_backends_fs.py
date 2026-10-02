@@ -5,12 +5,9 @@ _index_stats, coverage_report, and OpenGrok fallback paths.
 Network-free: uses monkeypatched paths and tmp_path fixtures.
 Run: pytest tests/test_backends_fs.py
 """
-import os
-import sys
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp"))
 import backends as be
 
 

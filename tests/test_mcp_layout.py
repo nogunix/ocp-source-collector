@@ -8,10 +8,8 @@ import importlib.util
 import json
 import os
 import pathlib
-import sys
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_ROOT / "mcp"))
 
 import layout
 

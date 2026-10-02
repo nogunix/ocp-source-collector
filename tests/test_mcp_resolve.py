@@ -7,10 +7,8 @@ meta/SUBMODULES.tsv. These cover the parsing/matching that makes those trees
 resolvable — no /srv mount required.
 """
 import os
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp"))
-import backends as be  # noqa: E402
+import backends as be
 
 HEADER = "component\tpath\trepo\tref\texact\tstatus\n"
 

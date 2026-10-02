@@ -4,13 +4,11 @@ check_patch_shipped). A fake /srv with every casket layout is built in
 tmp_path; no mount, network or GitHub needed (ripgrep is, as in CI)."""
 import os
 import subprocess
-import sys
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp"))
-import backends as be  # noqa: E402
-import insight as ins  # noqa: E402
+import backends as be
+import insight as ins
 
 D_A = "sha256:" + "a" * 64          # payload image, 4.20.28 and 4.20.35
 D_B = "sha256:" + "b" * 64          # operator image

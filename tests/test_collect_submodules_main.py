@@ -11,11 +11,8 @@ import pathlib
 import sys
 
 # submodulelib must be importable before collect-submodules.py loads
-_SCRIPTS = str(pathlib.Path(__file__).resolve().parent.parent / "scripts")
-if _SCRIPTS not in sys.path:
-    sys.path.insert(0, _SCRIPTS)
 
-import submodulelib as sml  # noqa: E402
+import submodulelib as sml
 
 _SPEC = importlib.util.spec_from_file_location(
     "collect_submodules",

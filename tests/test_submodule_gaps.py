@@ -5,9 +5,7 @@ does carry the code behind an empty submodule dir. Picking the wrong one sends
 them to a copy at the wrong version, which is worse than an empty answer.
 """
 import os
-import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 import importlib.util  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location(

@@ -69,7 +69,7 @@ def test_main_usage(capsys):
     assert "Usage" in capsys.readouterr().err
 
 
-import pytest  # noqa: E402
+import pytest
 
 
 @pytest.mark.parametrize("top, ref, want", [

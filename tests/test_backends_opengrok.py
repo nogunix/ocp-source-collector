@@ -7,13 +7,11 @@ Run: pytest tests/test_backends_opengrok.py
 """
 import json
 import os
-import sys
 import urllib.error
 from unittest.mock import patch, MagicMock
 
 import pytest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp"))
 import backends as be
 
 

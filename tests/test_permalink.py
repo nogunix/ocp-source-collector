@@ -11,12 +11,8 @@ import textwrap
 
 import pytest
 
-# Import backends — add mcp/ to sys.path so the module name is resolvable
-# (Python 3.14's dataclass processor needs sys.modules[cls.__module__]).
-import sys
-_MCP_DIR = str(pathlib.Path(__file__).resolve().parent.parent / "mcp")
-if _MCP_DIR not in sys.path:
-    sys.path.insert(0, _MCP_DIR)
+# A plain import (mcp/ is on sys.path via pytest.ini), not a file-spec load:
+# Python 3.14's dataclass processor needs sys.modules[cls.__module__].
 import backends as be
 
 
