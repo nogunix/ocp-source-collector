@@ -15,6 +15,10 @@
 # Requires: sudo (overlay + loop mount), mksquashfs, python3.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib.sh
+source "$SCRIPT_DIR/lib.sh"
+# shellcheck source=lib-overlay.sh
+source "$SCRIPT_DIR/lib-overlay.sh"
 
 MOUNT=""; OUT=""; FLAVOR="B"
 while [[ $# -gt 0 ]]; do
@@ -22,22 +26,16 @@ while [[ $# -gt 0 ]]; do
         -m) MOUNT="$2"; shift 2 ;;
         -o) OUT="$2";   shift 2 ;;
         -f) FLAVOR="$2"; shift 2 ;;
-        *) echo "unknown arg: $1" >&2; exit 1 ;;
+        *) die "unknown arg: $1" ;;
     esac
 done
-[[ -d "$MOUNT" && -n "$OUT" ]] || { echo "usage: $0 -m <mount> -o <out> [-f A|B]" >&2; exit 1; }
-
-UPPER=$(mktemp -d); WORKD=$(mktemp -d); MERGED=$(mktemp -d)
-cleanup() {
-    mountpoint -q "$MERGED" && sudo umount "$MERGED" || true
-    rm -rf "$UPPER" "$WORKD"; rmdir "$MERGED" 2>/dev/null || true
-}
-trap cleanup EXIT
+[[ -d "$MOUNT" && -n "$OUT" ]] || die "usage: $0 -m <mount> -o <out> [-f A|B]"
+overlay_check_flavor "$FLAVOR"
+overlay_init
 
 # Build index artifacts for one unit (dir with meta/MANIFEST.json + git/) into $2.
 build_unit() {
     local unit="$1" up="$2"
-    [[ -f "$unit/meta/MANIFEST.json" ]] || return 0
     local tmp; tmp=$(mktemp -d); mkdir -p "$tmp/meta" "$tmp/git"
     cp "$unit/meta/MANIFEST.json" "$tmp/meta/"
     local d
@@ -49,24 +47,5 @@ build_unit() {
     rm -rf "$tmp"
 }
 
-if [[ -f "$MOUNT/meta/MANIFEST.json" ]]; then       # single (A/C)
-    build_unit "$MOUNT" "$UPPER"
-else                                                # layered (D)
-    for p in "$MOUNT"/*/; do
-        build_unit "$p" "$UPPER/$(basename "${p%/}")"
-    done
-fi
-chmod -R a+rX "$UPPER"; chmod 755 "$UPPER"   # root must be world-traversable
-
-sudo mount -t overlay overlay \
-    -o lowerdir="$MOUNT",upperdir="$UPPER",workdir="$WORKD" "$MERGED"
-
-rm -f "$OUT"; mkdir -p "$(dirname "$OUT")"
-if [[ "$FLAVOR" == "A" ]]; then
-    mksquashfs "$MERGED" "$OUT" -comp xz -Xdict-size 100% \
-        -no-progress -noappend -all-root
-else
-    mksquashfs "$MERGED" "$OUT" -comp xz -Xbcj x86 \
-        -no-progress -all-root -no-xattrs -noappend
-fi
-echo "done: $OUT ($(du -h "$OUT" | cut -f1))"
+overlay_each_unit "$MOUNT" meta/MANIFEST.json build_unit
+overlay_repack "$MOUNT" "$OUT" "$FLAVOR" "no unit with meta/MANIFEST.json"

@@ -17,6 +17,10 @@
 # Requires: sudo (overlay mount), mksquashfs, python3.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib.sh
+source "$SCRIPT_DIR/lib.sh"
+# shellcheck source=lib-overlay.sh
+source "$SCRIPT_DIR/lib-overlay.sh"
 
 MOUNT=""; OUT=""; FLAVOR="B"; JOBS=12; ECO="go,crates,npm,pypi"
 while [[ $# -gt 0 ]]; do
@@ -26,56 +30,17 @@ while [[ $# -gt 0 ]]; do
         -f) FLAVOR="$2"; shift 2 ;;
         -j) JOBS="$2";  shift 2 ;;
         --eco) ECO="$2"; shift 2 ;;
-        *) echo "unknown arg: $1" >&2; exit 1 ;;
+        *) die "unknown arg: $1" ;;
     esac
 done
-[[ -d "$MOUNT" && -n "$OUT" ]] || { echo "usage: $0 -m <mount> -o <out> [-f A|B] [-j N]" >&2; exit 1; }
-
-# upper/work MUST sit on the same filesystem as the dep store: collect-deps
-# hardlinks the store into the upper dir, and a cross-device link silently
-# degrades to a full copy (GBs of deps into /tmp, which is tmpfs = RAM).
-# CASKET_WORK defaults to THIS checkout (parent of scripts/), never $HOME:
-# the repo directory is renameable, and under sudo $HOME is /root.
-_SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-: "${CASKET_WORK:=$(dirname "$_SELF_DIR")}"
-TMPBASE="${CASKET_REPACK_TMP:-$CASKET_WORK/.repack-tmp}"
-mkdir -p "$TMPBASE"
-UPPER=$(mktemp -d -p "$TMPBASE"); WORKD=$(mktemp -d -p "$TMPBASE"); MERGED=$(mktemp -d -p "$TMPBASE")
-cleanup() {
-    mountpoint -q "$MERGED" && sudo umount "$MERGED" || true
-    rm -rf "$UPPER" "$WORKD"; rmdir "$MERGED" 2>/dev/null || true
-}
-trap cleanup EXIT
+[[ -d "$MOUNT" && -n "$OUT" ]] || die "usage: $0 -m <mount> -o <out> [-f A|B] [-j N]"
+overlay_check_flavor "$FLAVOR"
+# CASKET_REPACK_TMP must be on the dep store's filesystem (see lib-overlay.sh).
+overlay_init
 
 collect() {  # $1 = unit dir on the mount, $2 = upper dir for that unit
-    [[ -d "$1/git" ]] || return 0
     python3 "$SCRIPT_DIR/collect-deps.py" "$1" --out "$2" --jobs "$JOBS" --eco "$ECO"
 }
 
-if [[ -d "$MOUNT/git" ]]; then                      # single (A / B / certified / community)
-    collect "$MOUNT" "$UPPER"
-else                                                # layered (B-operand)
-    for p in "$MOUNT"/*/; do
-        [[ -d "$p/git" ]] || continue
-        collect "${p%/}" "$UPPER/$(basename "${p%/}")"
-    done
-fi
-
-if [[ -z "$(ls -A "$UPPER" 2>/dev/null)" ]]; then
-    echo "nothing to add for $MOUNT (no unvendored manifests) — skipping repack" >&2
-    exit 0
-fi
-chmod -R a+rX "$UPPER"; chmod 755 "$UPPER"   # root must be world-traversable
-
-sudo mount -t overlay overlay \
-    -o lowerdir="$MOUNT",upperdir="$UPPER",workdir="$WORKD" "$MERGED"
-
-rm -f "$OUT"; mkdir -p "$(dirname "$OUT")"
-if [[ "$FLAVOR" == "A" ]]; then
-    mksquashfs "$MERGED" "$OUT" -comp xz -Xdict-size 100% \
-        -no-progress -noappend -all-root
-else
-    mksquashfs "$MERGED" "$OUT" -comp xz -Xbcj x86 \
-        -no-progress -all-root -no-xattrs -noappend
-fi
-echo "done: $OUT ($(du -h "$OUT" | cut -f1))"
+overlay_each_unit "$MOUNT" git collect
+overlay_repack "$MOUNT" "$OUT" "$FLAVOR" "no unvendored manifests"
