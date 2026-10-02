@@ -339,59 +339,6 @@ class TestGrep:
         assert "*.go" in captured_args["args"]
 
 
-# ============================================================= _parse_index
-class TestParseIndex:
-    def test_basic(self, tmp_path):
-        idx = tmp_path / "INDEX.tsv"
-        idx.write_text(
-            "dir\trepo\tref\tversion\tcomponents\n"
-            "cvo-abc\thttps://github.com/openshift/cvo\tabc123\t4.20\tcluster-version-operator\n"
-            "kv-def\thttps://github.com/kubevirt/kubevirt\tdef456\t4.20\tkubevirt\n"
-        )
-        rows = be._parse_index(str(idx))
-        assert len(rows) == 2
-        assert rows[0] == ("cvo-abc", "https://github.com/openshift/cvo", "abc123")
-        assert rows[1][0] == "kv-def"
-
-    def test_missing_file(self, tmp_path):
-        rows = be._parse_index(str(tmp_path / "nonexistent.tsv"))
-        assert rows == []
-
-    def test_short_lines_skipped(self, tmp_path):
-        idx = tmp_path / "INDEX.tsv"
-        idx.write_text("header\n" "onlytwocols\tval\n" "a\tb\tc\n")
-        rows = be._parse_index(str(idx))
-        assert len(rows) == 1
-
-
-# ======================================================= _parse_submodules
-class TestParseSubmodules:
-    def test_basic(self, tmp_path):
-        tsv = tmp_path / "SUBMODULES.tsv"
-        tsv.write_text(
-            "cvo-abc\tvendor/sub\torg/subrepo\taaa111\t1\tok\n"
-            "kv-def\tthemes/docsy\tgoogle/docsy\tbbb222\t0\tok\n"
-        )
-        rows = be._parse_submodules(str(tsv))
-        assert len(rows) == 2
-        assert rows[0]["component"] == "cvo-abc"
-        assert rows[0]["exact"] is True
-        assert rows[1]["exact"] is False
-
-    def test_comments_skipped(self, tmp_path):
-        tsv = tmp_path / "SUBMODULES.tsv"
-        tsv.write_text(
-            "# header comment\n"
-            "cvo-abc\tvendor/sub\torg/subrepo\taaa111\t1\tok\n"
-        )
-        rows = be._parse_submodules(str(tsv))
-        assert len(rows) == 1
-
-    def test_missing_file(self, tmp_path):
-        rows = be._parse_submodules(str(tmp_path / "nope.tsv"))
-        assert rows == []
-
-
 # ============================================================= _github_url
 class TestGithubUrl:
     def test_github_url(self):
@@ -845,17 +792,6 @@ class TestFindLockfiles:
         (tmp_path / "Cargo.lock").write_text("")
         assert be._find_lockfiles(str(tmp_path), {"Cargo.lock"}) == [
             str(tmp_path / "Cargo.lock")]
-
-
-class TestParseSubmodulesShortRows:
-    def test_truncated_row_skipped(self, tmp_path):
-        tsv = tmp_path / "SUBMODULES.tsv"
-        tsv.write_text(
-            "# component\tpath\trepo\tref\texact\tstatus\n"
-            "short\trow\n"
-            "wrapper\tspire\topenshift/spire\t" + "a" * 40 + "\t1\tok-filled\n")
-        rows = be._parse_submodules(str(tsv))
-        assert [r["path"] for r in rows] == ["spire"]
 
 
 class TestPermalinkMountAndUnitSelection:

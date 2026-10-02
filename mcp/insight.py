@@ -19,21 +19,13 @@ import re
 import subprocess
 
 import backends as be
+import layout
 
 _DIGEST_RE = re.compile(r"sha256:[0-9a-f]{64}")
 _HEX64_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 # ------------------------------------------------------------------ helpers
-def _read_tsv(path: str) -> list[list[str]]:
-    try:
-        with open(path, encoding="utf-8", errors="replace") as f:
-            return [ln.rstrip("\n").split("\t") for ln in f
-                    if ln.strip() and not ln.startswith("#")]
-    except OSError:
-        return []
-
-
 def _rg_fixed(needle: str, files: list[str], timeout: int = 120) -> list[tuple[str, str]]:
     """Lines containing `needle` (fixed string) in `files` -> [(path, line)].
     A prefilter only: callers re-check the column they care about."""
@@ -113,16 +105,6 @@ def _units(mounts: list[be.Mount]):
                 yield m, sub, d
 
 
-def _index(unit: str) -> list[dict]:
-    """git/INDEX.tsv rows: dir | repo | ref | version | components."""
-    rows = []
-    for c in _read_tsv(os.path.join(unit, "git", "INDEX.tsv")):
-        if len(c) >= 3 and c[0] != "dir":
-            rows.append({"dir": c[0], "repo": c[1], "ref": c[2],
-                         "components": c[4].split(",") if len(c) > 4 and c[4] else []})
-    return rows
-
-
 def _where(m: be.Mount, product: str | None) -> dict:
     return {"mount": m.name, "phase": m.phase, "version": m.version, "product": product}
 
@@ -189,12 +171,12 @@ def source_for_image(image: str, version: str = "") -> dict:
 def _image_source(mt: be.Mount, unit: str, kind: str, comp: str, cols: list[str]) -> dict:
     """repo / ref / tree for one image row. Phase A commits are the payload's
     own record (exact); B/b-operand trees may be a tag/branch stand-in."""
-    idx = _index(unit)
+    idx = layout.read_index(layout.index_path(unit))
     row = None
     if kind == "IMAGE_MAP.tsv" and len(cols) > 2:
         row = next((r for r in idx if r["dir"] == cols[2]), None)
     elif kind == "images.tsv" and mt.phase == "a":
-        commits = {c[0]: (c[1], c[2]) for c in _read_tsv(os.path.join(unit, "meta", "commits.tsv"))
+        commits = {c[0]: (c[1], c[2]) for c in layout.read_tsv(os.path.join(unit, "meta", "commits.tsv"))
                    if len(c) >= 3}
         repo, ref = commits.get(comp, ("", ""))
         row = next((r for r in idx if comp in r["components"]), None) or \
@@ -203,7 +185,7 @@ def _image_source(mt: be.Mount, unit: str, kind: str, comp: str, cols: list[str]
             return {"repo": repo, "ref": ref, "path": None, "exact": True,
                     "github": _github_args(repo, head=ref)}
     else:
-        git = {c[0]: c for c in _read_tsv(os.path.join(unit, "meta", "git.tsv")) if len(c) >= 4}
+        git = {c[0]: c for c in layout.read_tsv(os.path.join(unit, "meta", "git.tsv")) if len(c) >= 4}
         g = git.get(comp)
         if g:
             d = g[3].removesuffix(".tar.gz")
@@ -411,7 +393,7 @@ def release_diff(from_version: str, to_version: str, include_rpms: bool = True) 
         return {"error": f"not mounted as Phase A: {', '.join(missing)}", "mounted": mounted}
 
     def commits(m):
-        return {c[0]: (c[1], c[2]) for c in _read_tsv(os.path.join(m.path, "meta", "commits.tsv"))
+        return {c[0]: (c[1], c[2]) for c in layout.read_tsv(os.path.join(m.path, "meta", "commits.tsv"))
                 if len(c) >= 3}
     old, new = commits(a), commits(b)
     groups: dict[tuple, list[str]] = {}
@@ -471,7 +453,7 @@ def _resolve_ocp(ver: str) -> str | None:
 
 
 def _bin_to_src(binary: str, ver: str) -> str | None:
-    for c in _read_tsv(os.path.join(_srpm_root(), "meta", "bin-to-src.tsv")):
+    for c in layout.read_tsv(os.path.join(_srpm_root(), "meta", "bin-to-src.tsv")):
         if len(c) >= 3 and c[2].split("-")[0] == ver.split("-")[0] \
                 and c[0].rsplit("-", 2)[0] == binary:
             return c[1].rsplit("-", 2)[0]
@@ -648,7 +630,7 @@ def _shipped_trees(repo: str, version: str):
     want = _slug(repo)
     mounts = _mounts(version)
     for mt, product, unit in _units(mounts):
-        for r in _index(unit):
+        for r in layout.read_index(layout.index_path(unit)):
             if _slug(r["repo"]) == want:
                 yield mt, product, os.path.join(unit, "git", r["dir"]), r["ref"], None
         for s in be._submodule_rows(unit):

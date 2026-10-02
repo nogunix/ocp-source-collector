@@ -24,6 +24,9 @@ if _SCRIPTS not in sys.path:
 
 import submodulelib as sml  # noqa: E402
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "mcp"))
+import layout  # noqa: E402
+
 _SPEC = importlib.util.spec_from_file_location(
     "collect_submodules",
     pathlib.Path(__file__).resolve().parent.parent / "scripts" / "collect-submodules.py")
@@ -304,6 +307,10 @@ class TestMainFull:
         tsv = (stage / "meta" / "SUBMODULES.tsv").read_text()
         assert "my-comp" in tsv
         assert "child" in tsv
+        # casket-mcp reads the same file back through mcp/layout.py
+        rows = layout.read_submodules(layout.submodules_path(str(stage)))
+        assert [(r["component"], r["path"], r["repo"]) for r in rows] == [
+            ("my-comp", "child", "org/child")]
 
     def test_writes_uncovered(self, tmp_path, monkeypatch):
         gm = (

@@ -15,6 +15,8 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
+import layout
+
 # Mount roots we are willing to read. realpath of any requested path must live
 # under one of these prefixes.
 ROOT_PREFIX = "/srv/sources-"
@@ -141,25 +143,16 @@ def _submodule_rows(unit: str) -> list[dict]:
     are dropped, and a submodule reachable under several sibling wrappers is
     reported once."""
     raw: list[dict] = []
-    try:
-        f = open(os.path.join(unit, "meta", "SUBMODULES.tsv"))
-    except OSError:
-        return raw
-    with f:
-        next(f, None)  # header: component | path | repo | ref | exact | status
-        for line in f:
-            cols = line.rstrip("\n").split("\t")
-            if len(cols) < 5:
-                continue
-            parent, sub, slug, ref, exact = cols[0], cols[1], cols[2], cols[3], cols[4]
-            tree = os.path.join(unit, "git", parent, sub)
-            if not (parent and sub and os.path.isdir(tree)):
-                continue
-            raw.append({
-                "parent": parent, "sub": sub, "slug": slug,
-                "repo": _sub_repo_url(slug), "ref": ref,
-                "ref_exact": exact == "1", "path": tree,
-            })
+    for s in layout.read_submodules(layout.submodules_path(unit)):
+        parent, sub = s["component"], s["path"]
+        tree = os.path.join(unit, "git", parent, sub)
+        if not (parent and sub and os.path.isdir(tree)):
+            continue
+        raw.append({
+            "parent": parent, "sub": sub, "slug": s["repo"],
+            "repo": _sub_repo_url(s["repo"]), "ref": s["ref"],
+            "ref_exact": s["exact"], "path": tree,
+        })
     # Exact-ref trees first: a wrapper pinning the branch head (exact=0) is an
     # approximation of what was built, and must not outrank the pinned commit.
     raw.sort(key=lambda r: (not r["ref_exact"], r["parent"], r["sub"]))
@@ -250,20 +243,12 @@ def list_components(version: str, phase: str | None = None) -> list[dict]:
     out: list[dict] = []
     for m in _mounts_for_version(version, phase):
         for label, unit in _index_units(m):
-            idx = os.path.join(unit, "git", "INDEX.tsv")
-            try:
-                with open(idx) as f:
-                    next(f, None)  # header
-                    for line in f:
-                        cols = line.rstrip("\n").split("\t")
-                        if len(cols) >= 5:
-                            out.append({
-                                "mount": m.name, "phase": m.phase, "product": label or None,
-                                "dir": cols[0], "repo": cols[1], "version": cols[3],
-                                "components": cols[4].split(",") if cols[4] else [],
-                            })
-            except OSError:
-                pass
+            for r in layout.read_index(layout.index_path(unit)):
+                out.append({
+                    "mount": m.name, "phase": m.phase, "product": label or None,
+                    "dir": r["dir"], "repo": r["repo"], "version": r["version"],
+                    "components": r["components"],
+                })
             for row in _submodule_rows(unit):
                 out.append({
                     "mount": m.name, "phase": m.phase, "product": label or None,
@@ -644,41 +629,6 @@ def resolve_dependency(repo_path: str, name: str, kind: str = "auto",
 
 
 # ----------------------------------------------------------- permalink
-def _parse_index(idx_path: str) -> list[tuple[str, str, str]]:
-    """Read INDEX.tsv → [(dir, repo_url, ref), ...]."""
-    rows: list[tuple[str, str, str]] = []
-    try:
-        with open(idx_path) as f:
-            next(f, None)  # header
-            for line in f:
-                cols = line.rstrip("\n").split("\t")
-                if len(cols) >= 3:
-                    rows.append((cols[0], cols[1], cols[2]))
-    except OSError:
-        pass
-    return rows
-
-
-def _parse_submodules(tsv_path: str) -> list[dict]:
-    """Read meta/SUBMODULES.tsv → [{component, path, repo, ref, exact}, ...]."""
-    rows: list[dict] = []
-    try:
-        with open(tsv_path) as f:
-            for line in f:
-                if line.startswith("#"):
-                    continue
-                cols = line.rstrip("\n").split("\t")
-                if len(cols) >= 5:
-                    rows.append({
-                        "component": cols[0], "path": cols[1],
-                        "repo": cols[2], "ref": cols[3],
-                        "exact": cols[4] == "1",
-                    })
-    except OSError:
-        pass
-    return rows
-
-
 def _fetched_approx(unit_dir: str, src_dir: str, repo_url: str) -> tuple[bool, list[str]]:
     """Consult meta/git-fetched.tsv (B and B-operand caskets) for src_dir.
 
@@ -774,22 +724,16 @@ def permalink(path: str, line: int = 0) -> dict:
     file_in_tree = parts[1] if len(parts) > 1 else ""
 
     # 4. Look up in INDEX.tsv
-    idx_path = os.path.join(git_root, "INDEX.tsv")
-    idx_rows = _parse_index(idx_path)
-    idx_match = None
-    for d, repo_url, ref in idx_rows:
-        if d == src_dir:
-            idx_match = (d, repo_url, ref)
-            break
+    idx_path = layout.index_path(unit_dir)
+    idx_match = next((r for r in layout.read_index(idx_path) if r["dir"] == src_dir), None)
     if not idx_match:
         return {"error": f"dir '{src_dir}' not found in {idx_path}",
                 "path": rp, "mount": mount.name}
 
-    _, repo_url, ref = idx_match
+    repo_url, ref = idx_match["repo"], idx_match["ref"]
 
     # 5. Check submodules — is this file inside a filled submodule?
-    sub_tsv = os.path.join(unit_dir, "meta", "SUBMODULES.tsv")
-    subs = _parse_submodules(sub_tsv)
+    subs = layout.read_submodules(layout.submodules_path(unit_dir))
     sub_match = None
     for s in subs:
         if s["component"] != src_dir:
@@ -870,23 +814,13 @@ KNOWN_GAPS = {
 
 
 def _index_stats(unit_dir: str) -> dict | None:
-    idx = os.path.join(unit_dir, "git", "INDEX.tsv")
-    try:
-        comps, repos, dirs = set(), set(), 0
-        with open(idx) as f:
-            next(f, None)
-            for line in f:
-                cols = line.rstrip("\n").split("\t")
-                if len(cols) >= 5:
-                    dirs += 1
-                    if cols[1]:
-                        repos.add(cols[1])
-                    for c in (cols[4] or "").split(","):
-                        if c:
-                            comps.add(c)
-        return {"source_dirs": dirs, "repos": len(repos), "components": len(comps)}
-    except OSError:
+    idx = layout.index_path(unit_dir)
+    if not os.path.isfile(idx):
         return None
+    rows = layout.read_index(idx)
+    return {"source_dirs": len(rows),
+            "repos": len({r["repo"] for r in rows if r["repo"]}),
+            "components": len({c for r in rows for c in r["components"]})}
 
 
 def coverage_report(version: str) -> dict:
