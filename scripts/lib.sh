@@ -154,6 +154,59 @@ casket_mkfs() {
     esac
 }
 
+# stage_enrich <stage_dir> — the layers every source casket (a / b / b-operand)
+# gets on top of its git/ trees, in dependency order. Neither collector ever
+# fails the build; the index always runs.
+stage_enrich() {
+    local stage="$1"
+    # A GitHub codeload archive writes every gitlink as an EMPTY DIR, so a tree
+    # that uses submodules arrives as build glue with the code missing (the
+    # 2026-08-19 scan: 1052 trees, all 2543 submodule dirs empty; ZTWIM's
+    # release repo is nothing but Containerfiles + 5 empty submodules). Fill
+    # them before collect-deps runs, so the filled-in trees get their own deps
+    # collected too. Set CASKET_COLLECT_SUBMODULES=0 to skip.
+    if [[ "${CASKET_COLLECT_SUBMODULES:-1}" == "1" ]]; then
+        log "expanding git submodules"
+        python3 "$SCRIPT_DIR/collect-submodules.py" "$stage" \
+            --jobs "${CASKET_SUBMODULE_JOBS:-8}" \
+            || log "collect-submodules failed (continuing with empty submodule dirs)"
+    fi
+    # Language-level dependency sources: a collected tree carries its own code,
+    # but its deps only if that language vendors in-tree (Go usually, Rust/
+    # Node/Python never). Fetch the rest from the lockfiles so a dependency CVE
+    # is traceable offline. Set CASKET_COLLECT_DEPS=0 to skip.
+    if [[ "${CASKET_COLLECT_DEPS:-1}" == "1" ]]; then
+        log "collecting language-level dependency sources"
+        python3 "$SCRIPT_DIR/collect-deps.py" "$stage" --jobs "${CASKET_DEP_JOBS:-12}" \
+            || log "collect-deps failed (continuing without deps/)"
+    fi
+    log "building source index (INDEX.tsv + by-component/ + by-repo/)"
+    python3 "$SCRIPT_DIR/build-source-index.py" "$stage"
+}
+
+# stage_normalize <stage_dir> — `oc image extract` produces 0640 files, which
+# mksquashfs preserves verbatim (`-all-root` normalizes owner, not mode).
+# Without this the mounted casket is unreadable to non-root users.
+stage_normalize() {
+    log "chmod -R a+rX $1"
+    chmod -R a+rX "$1"
+}
+
+# casket_finalize <stage_dir> <output_path> <artifact_out> [squashfs flags...]
+# Normalize, build the image, refuse an empty result, and record its path for
+# casket-build.sh (an empty <artifact_out> records nothing).
+casket_finalize() {
+    local stage="$1" out="$2" artifact_out="$3"
+    shift 3
+    stage_normalize "$stage"
+    log "building casket image (${CASKET_FORMAT}) -> $out"
+    casket_mkfs "$stage" "$out" "$@" || die "casket_mkfs failed: $out"
+    [[ -s "$out" ]] || die "casket_mkfs produced no output: $out"
+    record_artifact "$out" "$artifact_out"
+    log "final: $out ($(numfmt --to=iec --suffix=B "$(stat -c%s "$out")"))"
+    file "$out"
+}
+
 version_dir() {
     local ver="$1"
     printf '%s/ocp%s' "$CASKET_WORK" "$ver"

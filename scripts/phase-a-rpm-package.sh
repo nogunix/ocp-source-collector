@@ -149,16 +149,5 @@ to browse directly. The original .src.rpm is NOT bundled — re-fetch from rhel-
 rpmdb if you need to rpmbuild from scratch.
 EOF
 
-# Normalize mode bits — see phase-b-package.sh for rationale.
-log "chmod -R a+rX $STAGE"
-chmod -R a+rX "$STAGE"
-
 # 5. Build casket image — same format selection as Phase A package.sh.
-log "building casket image (${CASKET_FORMAT}) → $OUT_PATH"
-
-casket_mkfs "$STAGE" "$OUT_PATH" -Xbcj x86 -no-xattrs
-
-record_artifact "$OUT_PATH" "$ARTIFACT_OUT"
-log "done"
-ls -lh "$OUT_PATH"
-file "$OUT_PATH"
+casket_finalize "$STAGE" "$OUT_PATH" "$ARTIFACT_OUT" -Xbcj x86 -no-xattrs

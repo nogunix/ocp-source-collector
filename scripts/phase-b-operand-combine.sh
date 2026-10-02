@@ -84,12 +84,5 @@ MANIFEST.json, README.txt).
 See repo docs/phase-b-operand-plan.md for resolution method and known structural limits.
 EOF
 
-chmod -R a+rX "$COMB"
-log "building casket image (${CASKET_FORMAT}) → $OUT_PATH"
-
-casket_mkfs "$COMB" "$OUT_PATH" -Xbcj x86 -no-xattrs
-
-record_artifact "$OUT_PATH" "$ARTIFACT_OUT"
+casket_finalize "$COMB" "$OUT_PATH" "$ARTIFACT_OUT" -Xbcj x86 -no-xattrs
 log "done: ${included[*]}"
-ls -lh "$OUT_PATH"
-file "$OUT_PATH"

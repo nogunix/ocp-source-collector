@@ -196,44 +196,6 @@ by-component/<operator>           -> ../git/<dir>  (every operator by name)
 by-repo/<repo-name>               -> ../git/<dir>  (find a tree by upstream repo name)
 EOF
 
-# A GitHub codeload archive writes every gitlink as an EMPTY DIR, so a tree
-# that uses submodules arrives as build glue with the code missing (the
-# 2026-08-19 scan: 1052 trees, all 2543 submodule dirs empty; ZTWIM's release
-# repo is nothing but Containerfiles + 5 empty submodules). Fill them before
-# collect-deps runs, so the filled-in trees get their own deps collected too.
-# Set CASKET_COLLECT_SUBMODULES=0 to skip; never fails the build.
-if [[ "${CASKET_COLLECT_SUBMODULES:-1}" == "1" ]]; then
-    log "expanding git submodules"
-    python3 "$SCRIPT_DIR/collect-submodules.py" "$STAGE" \
-        --jobs "${CASKET_SUBMODULE_JOBS:-8}" \
-        || log "collect-submodules failed (continuing with empty submodule dirs)"
-fi
+stage_enrich "$STAGE"
 
-log "building source index (INDEX.tsv + by-component/ + by-repo/)"
-# Language-level dependency sources: a collected tree carries its own code,
-# but its deps only if that language vendors in-tree (Go usually, Rust/Node/
-# Python never). Fetch the rest from the lockfiles so a dependency CVE is
-# traceable offline. Set CASKET_COLLECT_DEPS=0 to skip; never fails the build.
-if [[ "${CASKET_COLLECT_DEPS:-1}" == "1" ]]; then
-    log "collecting language-level dependency sources"
-    python3 "$SCRIPT_DIR/collect-deps.py" "$STAGE" --jobs "${CASKET_DEP_JOBS:-12}" \
-        || log "collect-deps failed (continuing without deps/)"
-fi
-
-python3 "$SCRIPT_DIR/build-source-index.py" "$STAGE"
-
-# 5. Normalize mode bits. `oc image extract` produces 0640 files which
-# mksquashfs preserves verbatim; `-all-root` only normalizes owner, not mode.
-# Without this step the mounted casket is unreadable to non-root users.
-log "chmod -R a+rX $STAGE"
-chmod -R a+rX "$STAGE"
-
-# 6. Build casket image.
-log "building casket image (${CASKET_FORMAT}) → $OUT_PATH"
-
-casket_mkfs "$STAGE" "$OUT_PATH" -Xbcj x86 -no-xattrs
-
-record_artifact "$OUT_PATH" "$ARTIFACT_OUT"
-log "done"
-ls -lh "$OUT_PATH"
-file "$OUT_PATH"
+casket_finalize "$STAGE" "$OUT_PATH" "$ARTIFACT_OUT" -Xbcj x86 -no-xattrs

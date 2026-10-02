@@ -310,6 +310,64 @@ rc=$?
   || { bad "casket-build.sh --apply refuses with the stores unset"; printf '         rc=%s out=%s\n' "$rc" "$out"; }
 rm -rf "$GH_SHIM"
 
+# ---- stage_enrich -----------------------------------------------------------
+
+# Stub collectors record the order they ran in. The order is the contract:
+# submodules before deps (filled trees get their deps collected), index last.
+ENR=$(mktemp -d)
+mkdir -p "$ENR/bin" "$ENR/stage"
+for s in collect-submodules collect-deps build-source-index; do
+    printf 'open("%s", "a").write("%s\\n")\n' "$ENR/order" "$s" > "$ENR/bin/$s.py"
+done
+(SCRIPT_DIR="$ENR/bin"; stage_enrich "$ENR/stage") 2>/dev/null
+eq "stage_enrich: submodules, then deps, then index" \
+    "collect-submodules collect-deps build-source-index" "$(paste -sd' ' "$ENR/order")"
+
+rm -f "$ENR/order"
+(SCRIPT_DIR="$ENR/bin" CASKET_COLLECT_SUBMODULES=0 CASKET_COLLECT_DEPS=0 stage_enrich "$ENR/stage") 2>/dev/null
+eq "stage_enrich: both collectors can be skipped, the index cannot" \
+    "build-source-index" "$(paste -sd' ' "$ENR/order")"
+
+rm -f "$ENR/order"
+printf 'import sys; sys.exit(1)\n' > "$ENR/bin/collect-deps.py"
+(SCRIPT_DIR="$ENR/bin"; set -e; stage_enrich "$ENR/stage") 2>/dev/null
+eq "stage_enrich: a failing collector does not fail the build" "0" "$?"
+grep -qx build-source-index "$ENR/order" && pass "stage_enrich: the index still runs after a collector fails" \
+    || bad "stage_enrich: the index still runs after a collector fails"
+rm -rf "$ENR"
+
+# ---- casket_finalize --------------------------------------------------------
+
+FIN=$(mktemp -d)
+mkdir -p "$FIN/stage"
+: > "$FIN/stage/f"; chmod 600 "$FIN/stage/f"
+(
+    casket_mkfs() { printf '%s\n' "$*" > "$FIN/args"; echo img > "$2"; }
+    casket_finalize "$FIN/stage" "$FIN/out.img" "$FIN/artifact" -Xbcj x86
+) >/dev/null 2>&1
+eq "casket_finalize: normalizes modes first" "644" "$(stat -c %a "$FIN/stage/f")"
+eq "casket_finalize: passes flags through to casket_mkfs" \
+    "$FIN/stage $FIN/out.img -Xbcj x86" "$(cat "$FIN/args")"
+eq "casket_finalize: records the artifact path" "$FIN/out.img" "$(cat "$FIN/artifact")"
+
+rm -f "$FIN/artifact"
+out="$(
+    casket_mkfs() { : > "$2"; }
+    casket_finalize "$FIN/stage" "$FIN/empty.img" "$FIN/artifact" 2>&1
+)"; rc=$?
+{ (( rc != 0 )) && [[ "$out" == *"produced no output"* && ! -e "$FIN/artifact" ]]; } \
+    && pass "casket_finalize: an empty image dies before it is recorded" \
+    || { bad "casket_finalize: an empty image dies before it is recorded"; printf '         rc=%s out=%s\n' "$rc" "$out"; }
+
+out="$(
+    casket_mkfs() { return 1; }
+    casket_finalize "$FIN/stage" "$FIN/fail.img" "$FIN/artifact" 2>&1
+)"; rc=$?
+{ (( rc != 0 )) && [[ "$out" == *"casket_mkfs failed"* && ! -e "$FIN/artifact" ]]; } \
+    && pass "casket_finalize: a failed mkfs dies before it is recorded" \
+    || { bad "casket_finalize: a failed mkfs dies before it is recorded"; printf '         rc=%s out=%s\n' "$rc" "$out"; }
+rm -rf "$FIN"
+
 # ---- done -------------------------------------------------------------------
 
 if (( fail )); then

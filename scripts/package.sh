@@ -109,31 +109,7 @@ by-component/<name>    -> ../git/<dir>  (every image component)
 by-repo/<repo-name>    -> ../git/<dir>  (find a tree by upstream repo name)
 EOF
 
-# A GitHub codeload archive writes every gitlink as an EMPTY DIR, so a tree
-# that uses submodules arrives as build glue with the code missing (the
-# 2026-08-19 scan: 1052 trees, all 2543 submodule dirs empty; ZTWIM's release
-# repo is nothing but Containerfiles + 5 empty submodules). Fill them before
-# collect-deps runs, so the filled-in trees get their own deps collected too.
-# Set CASKET_COLLECT_SUBMODULES=0 to skip; never fails the build.
-if [[ "${CASKET_COLLECT_SUBMODULES:-1}" == "1" ]]; then
-    log "expanding git submodules"
-    python3 "$SCRIPT_DIR/collect-submodules.py" "$STAGE" \
-        --jobs "${CASKET_SUBMODULE_JOBS:-8}" \
-        || log "collect-submodules failed (continuing with empty submodule dirs)"
-fi
-
-log "building source index (INDEX.tsv + by-component/ + by-repo/)"
-# Language-level dependency sources: a collected tree carries its own code,
-# but its deps only if that language vendors in-tree (Go usually, Rust/Node/
-# Python never). Fetch the rest from the lockfiles so a dependency CVE is
-# traceable offline. Set CASKET_COLLECT_DEPS=0 to skip; never fails the build.
-if [[ "${CASKET_COLLECT_DEPS:-1}" == "1" ]]; then
-    log "collecting language-level dependency sources"
-    python3 "$SCRIPT_DIR/collect-deps.py" "$STAGE" --jobs "${CASKET_DEP_JOBS:-12}" \
-        || log "collect-deps failed (continuing without deps/)"
-fi
-
-python3 "$SCRIPT_DIR/build-source-index.py" "$STAGE"
+stage_enrich "$STAGE"
 
 mkdir -p "$OUTROOT"
 # UTC date, matching casket-build.sh's expected-artifact check (a local-time date
@@ -141,20 +117,5 @@ mkdir -p "$OUTROOT"
 # registration failed with "expected artifact not found").
 OUT="$OUTROOT/casket-$(date -u +%Y%m%d)-ocp${VERSION}.$(casket_ext)"
 
-# Normalize mode bits — see phase-b-package.sh for rationale.
-log "chmod -R a+rX $STAGE"
-chmod -R a+rX "$STAGE"
-
-log "building casket image (${CASKET_FORMAT}) -> $OUT"
-
-casket_mkfs "$STAGE" "$OUT" -Xdict-size 100%
-
-if [[ -s "$OUT" ]]; then
-    record_artifact "$OUT" "$ARTIFACT_OUT"
-    log "final: $OUT ($(numfmt --to=iec --suffix=B "$(stat -c%s "$OUT")"))"
-    log "verify: file '$OUT'"
-    file "$OUT"
-else
-    die "casket_mkfs produced no output"
-fi
+casket_finalize "$STAGE" "$OUT" "$ARTIFACT_OUT" -Xdict-size 100%
 
