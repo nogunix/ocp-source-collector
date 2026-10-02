@@ -491,6 +491,19 @@ def test_image_duplicate_rows_and_foreign_inventory_repo(srv):
     assert r["rpms"]["same_repository_inventoried"] == [{"digest": D_OLD, "srpm_count": 2}]
 
 
+def test_dependency_versions_are_capped_to_the_newest(srv, monkeypatch):
+    """x/net shows 41 versions in one minor; only the newest _MAX_VERSIONS are listed."""
+    monkeypatch.setattr(ins, "_MAX_VERSIONS", 2)
+    r = ins.find_dependency_users("golang.org/x/net", "", "4.20.35", ecosystem="go")
+    assert list(r["versions_found"]) == ["v0.20.0", "v0.30.0"]   # v0.10.0 dropped
+    assert r["versions_total"] == 3 and r["versions_truncated"] is True
+    capped_count = r["count"]
+    monkeypatch.setattr(ins, "_MAX_VERSIONS", 30)
+    ok = ins.find_dependency_users("golang.org/x/net", "", "4.20.35", ecosystem="go")
+    assert ok["versions_total"] == 3 and ok["versions_truncated"] is False
+    assert capped_count == ok["count"]       # hits are not affected by the cap
+
+
 def test_dependency_constraint_excludes(srv):
     r = ins.find_dependency_users("golang.org/x/net", ">=0.25", "4.20.28", ecosystem="go")
     assert r["versions_found"] == {"v0.30.0": 1}

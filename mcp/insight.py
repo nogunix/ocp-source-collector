@@ -281,6 +281,7 @@ def _satisfies(version: str, constraint: str) -> bool:
     return True
 
 
+_MAX_VERSIONS = 30
 _GOMOD_CACHE: dict[str, dict[str, str]] = {}
 _REQ_LINE = re.compile(r"^\s*(?:require\s+)?([^\s()]+)\s+(v[^\s]+)")
 
@@ -363,10 +364,17 @@ def find_dependency_users(name: str, version_constraint: str = "", version: str 
     for h in hits:
         by_release.setdefault(f'{h["phase"]} {h["version"]}', set()).add(
             (h["product"] or "") + "/" + h["component"])
+    # A widely vendored library shows hundreds of versions (x/net: 41 in one
+    # minor, most of them go.sum pseudo-versions). Keep the newest _MAX_VERSIONS,
+    # which are the ones nearest a fix; the total says how many were dropped.
+    by_version = sorted(versions.items(), key=lambda kv: _vkey(kv[0]))
+    shown = by_version[-_MAX_VERSIONS:]
     return {
         "dependency": name, "constraint": version_constraint or None,
         "count": len(hits), "truncated": len(hits) > max_results,
-        "versions_found": dict(sorted(versions.items(), key=lambda kv: _vkey(kv[0]))),
+        "versions_found": dict(shown),
+        "versions_total": len(by_version),
+        "versions_truncated": len(by_version) > len(shown),
         "components_per_release": {k: len(v) for k, v in sorted(by_release.items())},
         "hits": hits[:max_results],
         "note": ("rows come from meta/DEPS.tsv: the lockfiles of the SHIPPED source. Go rows "

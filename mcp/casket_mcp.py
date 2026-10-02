@@ -190,7 +190,9 @@ def find_dependency_users(name: str, version_constraint: str = "", version: str 
     go|crates|npm|pypi. Go rows come from go.sum, which lists every version in
     the module graph: `selected` says whether go.mod requires it, and
     selected_only=True keeps only those. Each hit carries the vendored source
-    (`dep_source`) to read the vulnerable code as shipped."""
+    (`dep_source`) to read the vulnerable code as shipped. `versions_found`
+    lists at most the newest 30 versions (`versions_total` / `versions_truncated`
+    say how many exist); narrow with version_constraint to see the rest."""
     return ins.find_dependency_users(name, version_constraint, version, ecosystem,
                                      selected_only, max_results)
 
