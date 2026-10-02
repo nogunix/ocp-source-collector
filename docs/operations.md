@@ -92,6 +92,8 @@ List artifacts awaiting swap with `cat state/auto-update.status` or `python3 scr
 
 **Phase A's swap is additive; A-rpm/B/B-operand swaps are replacements**: Phase A creates a separate mount per patch version (`/srv/sources-ocp<patch>`), so a patch bump adds a new mount while old patch mounts remain (the benefit is that old version source references keep working). `casket-swap.sh` detects this and does not retire the old `live` registry entry for Phase A (so `cleanup.sh` won't delete it). A-rpm/B/B-operand have stable mount targets (per-minor or single path), so old entries are transitioned to retired and become candidates for `cleanup.sh`.
 
+**A replacement swap refuses a staged build older than live** (since 2026-09-25). The staged entry chosen is always the highest `entry_id`, so a staged build left over from an earlier run would otherwise be swapped in as a silent downgrade. When staged and live share a mount path and staged `built_at` is older, `casket-swap.sh` stops, in dry-run too, and names the entry to retire. Pass `--allow-older` for a deliberate rollback. The dry-run output also shows both build times and lists any other staged entries for the unit, which are never swapped and should be retired. Phase A is exempt because its swap is additive.
+
 ## Upstream link-health check (upstream-link-check)
 
 A weekly early warning for sources that could no longer be **re-fetched** from upstream (deleted, renamed or private repo; removed tag). Content that is already collected stays safe inside the caskets. Runs on casket-host since 2026-09-23. Before that it was a GitHub Actions job, but `state/` is not in the public repo, so the job never had a manifest to read.
