@@ -73,7 +73,7 @@ jobs:
           # asserts they resolve, so a bare ansible-core would fail the build.
           # ansible-lint is not packaged for Fedora, hence pip.
           dnf install -y --setopt=install_weak_deps=False \
-            python3 python3-pip findutils git-core ripgrep ansible
+            python3 python3-pip findutils git-core ripgrep ansible jq
           dnf clean all
           python3 -m pip install --quiet pytest pytest-cov ansible-lint
           echo "--- versions ---"
