@@ -202,8 +202,8 @@ repackage-add-deps.sh). Overlayfs **merges** a plain upper dir with its lower
 counterpart, which is exactly why the files land inside the existing empty
 dirs with no whiteout needed.
 
-`scripts/backfill-submodules-operators.sh` is the driver used for the first
-rollout. **Backfilled 2026-08-19**: the five Phase B operators caskets
+A one-off driver (`scripts/backfill-submodules-operators.sh`, removed
+2026-10-02; see git history) did the first rollout. **Backfilled 2026-08-19**: the five Phase B operators caskets
 (`b-4.18`-`b-4.22`) as `casket-20260819-ocp<minor>-operators.sqfs.xz`.
 Those artifacts have since been superseded — submodule collection now runs in
 the normal pipeline, so the 2026-08-28/29 auto-update built it in from the
@@ -839,8 +839,8 @@ not early-exit).
 
 Bash's `${var//#/repl}` does **not** treat a bare `#` as a literal in the
 pattern position — even in the `//` (global) form, `#` is parsed as the
-start-anchor operator, so `${cur//#/\\#}` (the escaping idiom in the older
-`swap-*.sh` scripts, meant to escape `#` for sed's `#`-delimited pattern)
+start-anchor operator, so `${cur//#/\\#}` (the escaping idiom in the fstab-era
+`swap-*.sh` scripts, removed 2026-10-02, meant to escape `#` for sed's `#`-delimited pattern)
 silently no-ops instead of escaping anything. `casket-swap.sh` avoids the whole
 problem by rewriting the fstab line with an `awk` exact-field match instead
 of a sed regex substitution.

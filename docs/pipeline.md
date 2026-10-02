@@ -27,11 +27,7 @@ Script structure and execution steps for each phase. For artifact contents see [
 | `phase-b-operand-package.sh`      | B-operand: Stage and package a single product's operand source into `.sqfs.xz` (`--stage-only` for integration). Includes `30-vendor/` as `vendor/` if present |
 | `phase-b-operand-combine.sh`      | B-operand: Consolidate 7 product stages for one minor via `cp -al`, then mksquashfs into an integrated casket (one subdir per product) |
 | `build-source-index.py`   | All phases: Generate `git/INDEX.tsv` + `by-component/` + `by-repo/` reverse-lookup index from staged `meta/MANIFEST.json` (auto-run by package scripts after staging). Addresses the problem of deduped directory names hiding the actual repos |
-| `swap-operators-v2.sh`             | (ops) Rewrite fstab + restart .mount for new operator caskets (sudo, one-time) |
-| `swap-operators-v2-remount-only.sh`| (ops) Remount only, when fstab is already updated |
-| `fix-perms-rebuild.sh`             | (ops) Fix permissions on old operator caskets (chmod a+rX then repack) |
 | `repackage-add-index.sh`          | (ops) Retrofit index layer onto existing caskets: overlay `INDEX.tsv`/`by-component/`/`by-repo/` onto read-only mount via overlayfs, then re-mksquashfs (handles both single A/B and per-product layered B-operand layouts) |
-| `swap-source-index.sh`            | (ops) Swap fstab to indexed caskets + restart mounts (dry-run by default, `--apply` to execute). All 24 caskets deployed as `casket-20260608-*` on 2026-06-08 |
 
 A-rpm legacy VM files under `$CASKET_WORK/phase-a-rpm/vm/` (superseded by `scripts/phase-a-rpm-collect.sh` + `containers/srpm-collect/`, see [a-rpm-collection.md](a-rpm-collection.md)):
 
@@ -156,11 +152,7 @@ CATALOG=certified ./scripts/phase-b-discover.sh -v 4.20   # pass CATALOG to subs
 
 #### Swapping to production mounts (when new operator caskets are rebuilt)
 
-```bash
-sudo "$CASKET_WORK"/scripts/swap-operators-v2.sh   # fstab rewrite + daemon-reload + restart
-```
-
-If `systemctl restart` fails due to a busy mount, follow up with `umount -l` on that mount followed by `systemctl start` (occurred with 4.20 in practice). Edit the `VERS=` and date glob in the script to match the target filenames.
+Registry-tracked operator caskets swap like any other unit (`sudo ./scripts/casket-swap.sh --phase b --unit <minor> --apply`, see [operations.md](operations.md)). Certified/community caskets live in `config/static-mounts.tsv`: point the row at the new artifact and run `sudo ./scripts/casket-mounts.sh --apply`.
 
 ### Work directory layout
 
