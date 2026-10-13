@@ -63,22 +63,13 @@ INDEX="registry.redhat.io/redhat/redhat-operator-index:v${MINOR}"
 #    and newer konflux-built entries ship catalog.yaml (multi-doc YAML)
 #    instead of JSON (50/153 packages in the 4.20 index as of 2026-07).
 #    Combine everything into one NDJSON stream for jq.
-if [[ -z "$(find "$CONFIG" \( -name '*.json' -o -name '*.yaml' -o -name '*.yml' \) -type f 2>/dev/null)" ]]; then
-    # Prefer the whole-catalog extraction Phase B already made for this minor
-    # (one oc-extract per minor) over re-pulling index layers per package —
-    # with the full-catalog products.tsv that's ~191 extracts/minor otherwise.
-    PHASE_B_CFG="${CASKET_WORK}/phase-b/${MINOR}/00-discover/configs/${PKG}"
-    if [[ -n "$(find "$PHASE_B_CFG" \( -name '*.json' -o -name '*.yaml' -o -name '*.yml' \) -type f 2>/dev/null)" ]]; then
-        log "reusing phase-b configs extraction for $PKG"
-        cp -a "$PHASE_B_CFG/." "$CONFIG/"
-    else
-        log "extracting /configs/$PKG from $INDEX"
-        oc image extract --registry-config="$AUTHFILE" --filter-by-os="$ARCH_FILTER" \
-            --path "/configs/$PKG/:$CONFIG/" "$INDEX"
-    fi
-else
-    log "config/ present, skipping index extract"
-fi
+#    Re-extracted whenever the index digest moves (index_extract in lib.sh).
+#    Seeded from the whole-catalog extraction Phase B already made for this
+#    minor when that one is of the same digest (one oc-extract per minor) —
+#    with the full-catalog products.tsv that's ~191 extracts/minor otherwise.
+PHASE_B_CFG="${CASKET_WORK}/phase-b/${MINOR}/00-discover/configs"
+index_extract "$INDEX" "/configs/$PKG/" "$CONFIG" "$ARCH_FILTER" \
+    "$PHASE_B_CFG/$PKG" "$PHASE_B_CFG.digest"
 
 CAT="$OUT/.catalog.ndjson"
 find "$CONFIG" -name '*.json' -type f -exec cat {} + > "$CAT"
@@ -117,13 +108,19 @@ head_image=$(jq -r --arg n "$head_bundle" \
 log "head bundle: $head_bundle"
 log "head image:  $head_image"
 
-# 3. Pull the head bundle and extract /manifests (holds the CSV). Idempotent.
-if [[ -z "$(ls -A "$BUNDLE/manifests" 2>/dev/null)" ]]; then
+# 3. Pull the head bundle and extract /manifests (holds the CSV). Keyed on the
+#    head image (recorded in bundle.image): a refreshed catalog with a new
+#    head must not keep reading the previous head's CSV.
+if [[ -n "$(ls -A "$BUNDLE/manifests" 2>/dev/null)" \
+      && "$(cat "$BUNDLE.image" 2>/dev/null)" == "$head_image" ]]; then
+    log "bundle/manifests present for this head, skipping"
+else
     log "extracting bundle manifests"
+    rm -rf "$BUNDLE/manifests" "$BUNDLE.image"
+    mkdir -p "$BUNDLE/manifests"
     oc image extract --registry-config="$AUTHFILE" --filter-by-os="$ARCH_FILTER" \
         --path "/manifests/:$BUNDLE/manifests/" "$head_image"
-else
-    log "bundle/manifests present, skipping"
+    printf '%s\n' "$head_image" > "$BUNDLE.image"
 fi
 
 csv=$(find "$BUNDLE/manifests" -maxdepth 1 -name "*.clusterserviceversion.yaml" | head -1)

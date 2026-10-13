@@ -258,6 +258,55 @@ catalog_setup() {
     CATALOG_INDEX="registry.redhat.io/redhat/${CATALOG}-operator-index"
 }
 
+# Extract <path> (e.g. /configs/) of an operator index image into <dest>,
+# keyed on the index's manifest digest, which is recorded next to it in
+# <dest>.digest. A populated <dest> is reused only while that digest still
+# matches the tag; otherwise it is wiped and re-extracted from the pinned
+# digest. Sets INDEX_DIGEST.
+#
+# The old test was "is <dest> non-empty?", and nothing ever emptied it: every
+# phase b / b-operand rebuild from 2026-07-23 to 2026-10 re-packaged that
+# day's catalog while the registry recorded the fresh digest (RHOAI 3.5 GA'd
+# in that window and never appeared in any casket).
+#
+# <seed> <seed_stamp> (optional): a dir another stage already extracted from
+# the same index, and the digest stamp that extraction wrote. It is copied
+# instead of pulling again when the stamp matches -- b-operand seeds each
+# package from phase b's whole-/configs extraction (configs/<pkg>, stamped
+# at configs.digest).
+#
+# Usage: index_extract <index> <path> <dest> <os/arch> [<seed> <seed_stamp>]
+index_extract() {
+    local index="$1" path="$2" dest="${3%/}" arch_filter="$4"
+    local seed="${5:-}" seed_stamp="${6:-}"
+    local stamp="$dest.digest" digest
+    digest=$(oc image info --registry-config="$AUTHFILE" --filter-by-os="$arch_filter" \
+        -o json "$index" 2>/dev/null | jq -r '.digest // empty')
+    if [[ -z "$digest" ]]; then
+        [[ -n "$(ls -A "$dest" 2>/dev/null)" ]] || die "could not resolve digest of $index"
+        log "WARNING: could not resolve digest of $index; reusing existing $dest ($(cat "$stamp" 2>/dev/null || echo 'digest unknown'))"
+        INDEX_DIGEST="$(cat "$stamp" 2>/dev/null || true)"
+        return 0
+    fi
+    INDEX_DIGEST="$digest"
+    if [[ -n "$(ls -A "$dest" 2>/dev/null)" && "$(cat "$stamp" 2>/dev/null)" == "$digest" ]]; then
+        log "$dest is current ($digest), skipping extract"
+        return 0
+    fi
+    rm -rf "$dest" "$stamp"
+    mkdir -p "$dest"
+    if [[ -n "$seed" && -n "$(ls -A "$seed" 2>/dev/null)" \
+          && "$(cat "$seed_stamp" 2>/dev/null)" == "$digest" ]]; then
+        log "copying $seed (same index digest $digest)"
+        cp -a "$seed/." "$dest/"
+    else
+        log "extracting $path from $index@$digest"
+        oc image extract --registry-config="$AUTHFILE" --filter-by-os="$arch_filter" \
+            --path "$path:$dest/" "${index}@${digest}"
+    fi
+    printf '%s\n' "$digest" > "$stamp"
+}
+
 parse_args_version_arch() {
     VERSION=""
     ARCH="x86_64"

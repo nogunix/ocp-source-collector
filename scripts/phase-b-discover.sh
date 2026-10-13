@@ -45,14 +45,9 @@ mkdir -p "$CONFIGS"
 
 INDEX="${CATALOG_INDEX}:v${MINOR}"
 
-# 1. Extract /configs from the index (FBC). Idempotent.
-if [[ -z "$(ls -A "$CONFIGS" 2>/dev/null)" ]]; then
-    log "extracting catalog /configs from $INDEX"
-    oc image extract --registry-config="$AUTHFILE" --filter-by-os="$ARCH_FILTER" \
-        --path "/configs/:$CONFIGS/" "$INDEX"
-else
-    log "configs/ already populated, skipping extract"
-fi
+# 1. Extract /configs from the index (FBC). Re-extracted whenever the index
+#    digest moves (see index_extract in lib.sh).
+index_extract "$INDEX" /configs/ "$CONFIGS" "$ARCH_FILTER"
 
 n_operators=$(find "$CONFIGS" -maxdepth 1 -mindepth 1 -type d | wc -l)
 log "operators in catalog: $n_operators"

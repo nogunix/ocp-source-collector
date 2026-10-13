@@ -828,6 +828,25 @@ cadence moved to **3 weeks on 2026-09-12** it is 28: a healthy cycle leaves
 the live artifact at most 21d + the build itself (~3d) old, a missed run
 reaches ~42d.
 
+### Rebuilds silently re-packaged a frozen catalog
+
+(2026-10-13) The registry's b/b-operand fingerprint is the digest
+`casket-build.sh` *queries*, not the catalog the discover stages actually
+*read*. `phase-b-discover.sh` and `phase-b-operand-discover.sh` skipped
+`oc image extract` whenever their `configs/` dir was non-empty, and reclaim
+never empties `00-discover/`, so every b/b-operand rebuild from 2026-07-23 on
+re-packaged that day's catalog while recording a fresh digest. Found because
+RHOAI 3.5 GA'd (`stable-3.x` head 3.5.1) and no casket ever showed anything
+past 3.4.2. `phase-b-operand-discover.sh` had the same flaw one level down:
+`bundle/manifests` was kept even when the head bundle changed.
+
+Fix: `index_extract` in `lib.sh` stamps each extraction with the index digest
+(`configs.digest` / `config.digest`) and re-extracts from the pinned digest
+when the tag has moved; b-operand discover keys `bundle/manifests` on the head
+image (`bundle.image`). Tests: `tests/test_index_extract.sh`. A dir without a
+stamp counts as stale, so the first build after the fix re-extracts every
+minor once.
+
 ### Shell gotchas
 
 `awk '{print $2; exit}'` piped from `curl` breaks under `set -o pipefail` —
