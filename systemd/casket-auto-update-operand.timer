@@ -1,0 +1,17 @@
+# Weekly wake for the b-operand auto-update; the 3-week cadence lives in the
+# .service (--min-interval-days 21), as for casket-auto-update.timer.
+#
+# 23:50 = the main timer's 23:30 plus its 15 min RandomizedDelaySec plus
+# slack, so the a + b run is already active and this one waits behind it
+# (After= in the .service). No randomized delay here, to keep that order.
+# A Persistent=true catch-up at boot can fire both at once and run this one
+# first; the main unit then waits instead. Either order is safe.
+[Unit]
+Description=casket-ocp auto-update, b-operand (3-weekly; weekly wake, guarded by --min-interval-days)
+
+[Timer]
+OnCalendar=Fri *-*-* 23:50:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

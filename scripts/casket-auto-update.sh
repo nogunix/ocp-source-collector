@@ -17,6 +17,15 @@
 # stamp and is retried at the next weekly wake instead of waiting 3 more weeks.
 # --force bypasses the guard for a manual `systemctl --user start`.
 #
+# Split runs (--phases LIST --state NAME): since 2026-10, b-operand runs from
+# its own unit (casket-auto-update-operand.service) so it gets its own
+# TimeoutStartSec. b-operand alone takes 5-8.5h/minor, 60h+ for 9 minors, and
+# A+B on top no longer fit one 72h budget. --phases narrows the run to those
+# phases (still only ones enabled in config/auto-update-phases.txt), and
+# --state NAME gives it its own state/NAME.{last-run,status} so each split
+# run keeps its own cadence. The lock stays shared: registry.py has no locking
+# of its own, so two runs must never interleave registry writes.
+#
 # Skip logic (why we don't rebuild in a loop while waiting for the swap):
 #   current == live fingerprint    -> fresh, nothing to do
 #   current == staged fingerprint  -> already built, awaiting human swap
@@ -62,24 +71,36 @@ fi
 DRY=1
 MIN_INTERVAL_DAYS=0
 FORCE=0
+ONLY_PHASES=""
+STATE_NAME=auto-update
 while (( $# )); do
     case "$1" in
         --apply) DRY=0; shift ;;
         --min-interval-days) MIN_INTERVAL_DAYS="${2:-}"; shift 2 ;;
         --force) FORCE=1; shift ;;
+        --phases) ONLY_PHASES="${2:-}"; shift 2 ;;
+        --state) STATE_NAME="${2:-}"; shift 2 ;;
         -h|--help)
-            echo "casket-auto-update.sh [--apply] [--min-interval-days N] [--force]"
+            echo "casket-auto-update.sh [--apply] [--min-interval-days N] [--force] [--phases LIST] [--state NAME]"
             echo "  default: dry-run, report only"
             echo "  --min-interval-days N  skip unless N days since the last completed apply run"
             echo "  --force                ignore --min-interval-days"
+            echo "  --phases LIST          comma-separated subset of config/auto-update-phases.txt"
+            echo "  --state NAME           state/NAME.{last-run,status} (default: auto-update)"
             exit 0 ;;
         *) die "unknown argument: $1" ;;
     esac
 done
 
 PHASES_FILE="$CONFIG_DIR/auto-update-phases.txt"
-STATUS_FILE="$CASKET_WORK/state/auto-update.status"
-STAMP_FILE="$CASKET_WORK/state/auto-update.last-run"
+[[ "$STATE_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || die "bad --state name: $STATE_NAME"
+# A misspelt --phases entry would otherwise match nothing and "succeed".
+IFS=, read -ra _sel <<< "$ONLY_PHASES"
+for p in "${_sel[@]}"; do
+    case "$p" in a|b|b-operand|a-rpm) ;; *) die "unknown phase in --phases: $p" ;; esac
+done
+STATUS_FILE="$CASKET_WORK/state/$STATE_NAME.status"
+STAMP_FILE="$CASKET_WORK/state/$STATE_NAME.last-run"
 LOCK_FILE="$CASKET_WORK/state/auto-update.lock"
 [[ -f "$PHASES_FILE" ]] || die "missing $PHASES_FILE"
 
@@ -142,7 +163,12 @@ process_unit() {
     fi
 }
 
+phase_selected() {
+    [[ -z "$ONLY_PHASES" ]] || [[ ",$ONLY_PHASES," == *",$1,"* ]]
+}
+
 while IFS= read -r phase; do
+    phase_selected "$phase" || continue
     case "$phase" in
         a)
             while IFS= read -r minor; do

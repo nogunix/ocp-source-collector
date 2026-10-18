@@ -47,7 +47,7 @@ Generated per build and **bundled inside the casket** (= self-describing archive
 ## 4. Freshness and updates (when to re-collect)
 
 - Freshness signal: `scripts/lib-fingerprint.sh` (a = stable channel patch string / b, b-operand = index digest / a-rpm = sha256 of patch strings bundled). check and build share the same implementation.
-- **Automatic staging every 3 weeks** (changed from weekly on 2026-09-12): `casket-auto-update.timer` (wakes up Friday 23:30 JST, runs once every 3 weeks → completes staged build in 2.5-3 days → manual swap). swap/cleanup always require human action (`docs/operations.md`).
+- **Automatic staging every 3 weeks** (changed from weekly on 2026-09-12): `casket-auto-update.timer` for a + b (wakes up Friday 23:30 JST, ~17h) and `casket-auto-update-operand.timer` for b-operand (Friday 23:50, queues behind a + b, ~60h+), each running once every 3 weeks → manual swap. swap/cleanup always require human action (`docs/operations.md`).
 - Catalog digests rotate daily (treadmill). "STALE immediately after swap" is normal behavior.
 
 ## 5. Completeness invariants (machine-verifiable collection coverage)

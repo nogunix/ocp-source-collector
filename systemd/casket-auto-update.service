@@ -53,7 +53,10 @@ EnvironmentFile=-%h/.config/casket/auto-update.env
 # timer only wakes weekly (systemd OnCalendar cannot say "every 3rd week").
 # The guard reads state/auto-update.last-run, which is stamped only when a run
 # COMPLETES, so a killed run is retried at the next weekly wake.
-ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-interval-days 21
+#
+# b-operand is NOT run here since 2026-10: it has its own unit,
+# casket-auto-update-operand.service (see the timeout note below).
+ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-interval-days 21 --phases a,b,a-rpm
 # Builds can take a while when several minors moved at once. This limit has
 # now been raised FOUR times (4h -> 12h -> 24h -> 48h -> 72h) and every bump
 # so far was spent by the *next* growth in b-operand, so re-measure before
@@ -80,6 +83,17 @@ ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-in
 #
 # A raise applies to an ALREADY-RUNNING unit after `systemctl --user
 # daemon-reload`, which is how this one was applied mid-run on 08-22.
+#
+# 2026-10-02 run: killed again at 72h (10-05 23:40, status=15/TERM) during
+# the b-operand 4.21 mksquashfs; 4.21 / 4.22 were built by hand on 10-07..08.
+# Measured per minor:
+#   a          30-60 min (6 minors moved: 5h)
+#   b          75-95 min (9 minors: 12h)
+#   b-operand  5h-8h30 (4.14 4h50, 4.19 / 4.20 ~8h, hand-run 4.21 8h30),
+#              60h+ for 9 minors
+# Instead of a fifth raise, b-operand moved to casket-auto-update-operand.service
+# with its own budget. What is left here (a + b) is ~17h, so 72h stays
+# with a wide margin and is no longer chasing b-operand growth.
 TimeoutStartSec=72h
 Nice=10
 IOSchedulingClass=idle

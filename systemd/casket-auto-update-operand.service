@@ -1,0 +1,44 @@
+# b-operand half of the casket auto-update, split out of
+# casket-auto-update.service on 2026-10 so it has a timeout budget of its own.
+# Same script, same guards; see that unit for PATH / EnvironmentFile / token
+# reasoning, which applies here unchanged.
+#
+# Why split: the 2026-10-02 run was killed at the 72h TimeoutStartSec during
+# b-operand 4.21. b-operand alone measured 5h-8h30 per minor (60h+ for 9
+# minors) on top of ~17h for a + b, and every earlier raise (4h -> 72h) was
+# spent by the next b-operand growth. Here it only has to fit itself.
+#
+# Ordering: After=casket-auto-update.service makes this unit's start job
+# wait while the a + b run is active, so the two never overlap (registry.py
+# has no locking; the script's shared flock is the second line of defence and
+# would make the later run exit, not wait). The companion timer fires 20 min
+# after the main one, past its 15 min RandomizedDelaySec, so on a normal
+# Friday a + b goes first and this one queues behind it.
+#
+# Own cadence stamp: state/auto-update-operand.last-run. On install, seed it
+# from the main stamp, or the first wake builds immediately (missing stamp
+# fails open):
+#   touch -r $CASKET_WORK/state/auto-update.last-run $CASKET_WORK/state/auto-update-operand.last-run
+#
+# Install (user unit, no root):
+#   ln -s $CASKET_WORK/systemd/casket-auto-update-operand.service ~/.config/systemd/user/
+#   ln -s $CASKET_WORK/systemd/casket-auto-update-operand.timer   ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now casket-auto-update-operand.timer
+[Unit]
+Description=casket-ocp auto-update, b-operand (check + build staged caskets)
+After=casket-auto-update.service
+
+[Service]
+Type=oneshot
+Environment=PATH=%h/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=%h/.config/casket/build.env
+EnvironmentFile=-%h/.config/casket/auto-update.env
+ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-interval-days 21 --phases b-operand --state auto-update-operand
+# 9 minors x 8h30 (the slowest minor measured, 2026-10) = 76h30. 120h leaves
+# ~40% headroom and still ends well before the run 3 weeks later. Re-measure
+# when it grows rather than bumping blindly: the per-product loop runs
+# serially, and making it parallel is the next lever.
+TimeoutStartSec=120h
+Nice=10
+IOSchedulingClass=idle

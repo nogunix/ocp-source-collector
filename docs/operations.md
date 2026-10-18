@@ -40,12 +40,17 @@ sudo ./scripts/casket-swap.sh --phase a --unit 4.20 --apply    # remount in-plac
 Combines new-release detection through staged build in one flow. **Staging runs automatically every 3 weeks** (timer enabled 2026-07-16, changed from weekly to 3-weekly 2026-09-12), **swap is never automated** (human gate).
 
 ```
-systemd/casket-auto-update.service      → scripts/casket-auto-update.sh --apply --min-interval-days 21
+systemd/casket-auto-update.service      → scripts/casket-auto-update.sh --apply --min-interval-days 21 --phases a,b,a-rpm
 systemd/casket-auto-update.timer        Wakes up every Friday 23:30 (enabled on casket-host, 2026-07-16)
+systemd/casket-auto-update-operand.service → … --phases b-operand --state auto-update-operand (split out 2026-10)
+systemd/casket-auto-update-operand.timer   Wakes up every Friday 23:50; After= makes it queue behind the a + b run
 config/auto-update-phases.txt           Phases to auto-build (default: a only. b/b-operand commented out)
 state/auto-update.status                Per-unit summary of latest run (.gitignore, registry.json tracked as before)
 state/auto-update.last-run              Cadence stamp. mtime = last **completed** apply run (.gitignore)
+state/auto-update-operand.{status,last-run}  Same, for the b-operand unit
 ```
+
+> **Why b-operand has its own unit (2026-10).** The 2026-10-02 run was killed at the 72h `TimeoutStartSec` during b-operand 4.21. Measured: a 30-60 min/minor, b 75-95 min/minor (~17h together), b-operand **5h-8h30/minor** (60h+ for 9 minors). The limit had already been raised four times (4h→72h), and each raise was used up by the next growth in b-operand. Now a + b keep 72h with a wide margin, and b-operand has 120h to itself. The two never overlap: `After=` orders the start jobs, and the shared `state/auto-update.lock` is the backstop, because `registry.py` has no locking of its own. `--phases` only narrows the phases enabled in `config/auto-update-phases.txt`, and does not enable any phase. Each unit keeps its own cadence stamp, so a killed b-operand run retries the next Friday without re-running a + b.
 
 > Why 3 weeks: a full run takes **2.5-3 days** end to end (08-28 23:38→08-31 15:53, 09-04 23:40→09-07 14:50). Weekly means the host spends nearly half its uptime rebuilding caskets whose contents barely changed. The reason for not running daily is the same as before: operator catalog digests rotate almost daily, so at any cadence the check reports "STALE" shortly after a swap.
 
@@ -84,6 +89,14 @@ systemctl --user daemon-reload
 loginctl enable-linger $USER     # keep timer/jobs running even when logged out
 systemctl --user enable --now casket-auto-update.timer
 systemctl --user list-timers casket-auto-update.timer   # verify next fire time
+
+# b-operand unit (added 2026-10). Seed its stamp from the main one first, or
+# its first wake builds immediately (a missing stamp fails open).
+touch -r $CASKET_WORK/state/auto-update.last-run $CASKET_WORK/state/auto-update-operand.last-run
+ln -s $CASKET_WORK/systemd/casket-auto-update-operand.service ~/.config/systemd/user/
+ln -s $CASKET_WORK/systemd/casket-auto-update-operand.timer   ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now casket-auto-update-operand.timer
 ```
 
 `Persistent=true` means if the host is down at fire time, it catches up on next boot. To stop the timer: `systemctl --user disable --now casket-auto-update.timer` (manual start remains possible).
