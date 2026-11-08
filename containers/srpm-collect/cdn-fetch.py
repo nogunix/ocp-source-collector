@@ -24,7 +24,7 @@ the product certificate -- so this stays correct as entitlements change.
 
 Usage:
   cdn-fetch.py --missing missing.txt --destdir DIR [--repo-file FILE]
-               [--jobs N] [--dry-run]
+               [--unresolved-out FILE] [--jobs N] [--dry-run]
 
 Exit status is 0 even when packages are unresolvable: "not on the CDN" is a
 real answer for an aged-out micro-release, and the caller records it.
@@ -54,13 +54,33 @@ def log(msg):
 
 
 def releasever_for(release):
-    """`4.el9_2` -> "9.2";  `4.el9` -> "" (plain repos, no pin needed)."""
+    """`4.el9_2` -> "9.2";  `4.el9` -> "9";  `1.el10` -> "10".
+
+    A plain dist tag still needs a value for $releasever: the plain repos
+    template it too, and on the RHEL CDN it is the bare major. This used to
+    return "" and leave index_repo to substitute a hardcoded "9", which sent
+    every unpinned el10 package to the RHEL 9 path of its repo.
+    """
     m = DIST_RE.search(release)
     if not m:
         return None
     if m.group("minor") is None:
-        return ""
+        return m.group("major")
     return f'{m.group("major")}.{m.group("minor")}'
+
+
+REPO_MAJOR_RE = re.compile(r"rhel-(\d+)")
+
+
+def repo_major(repo_id):
+    """`rhel-10-for-x86_64-baseos-source-rpms` -> "10"; None if unnamed."""
+    m = REPO_MAJOR_RE.search(repo_id)
+    return m.group(1) if m else None
+
+
+def major_of(releasever):
+    """"9.2" -> "9",  "10" -> "10"."""
+    return releasever.split(".", 1)[0]
 
 
 def parse_nvrs(path):
@@ -135,9 +155,7 @@ def fetch(op, url, timeout=180):
 
 def index_repo(repo, releasever):
     """(name, version, release) -> absolute URL, for one repo at one releasever."""
-    base = repo["baseurl"].replace("$releasever", releasever) if releasever else repo["baseurl"]
-    if "$releasever" in base:          # plain repos still template it
-        base = base.replace("$releasever", "9")
+    base = repo["baseurl"].replace("$releasever", releasever)
     op = opener_for(repo)
     repomd = ET.fromstring(fetch(op, f"{base}/repodata/repomd.xml"))
     href = None
@@ -186,6 +204,9 @@ def main():
     ap.add_argument("--missing", required=True)
     ap.add_argument("--destdir", required=True)
     ap.add_argument("--repo-file", default="/etc/yum.repos.d/redhat.repo")
+    ap.add_argument("--unresolved-out",
+                    help="where to list what no repo has (default "
+                         "<destdir>/../cdn-unresolved.txt)")
     ap.add_argument("--jobs", type=int, default=8)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--all-repos", action="store_true",
@@ -219,7 +240,7 @@ def main():
             f"(majors seen: {','.join(sorted(majors)) or 'none'})")
         return 1
     log(f"{len(nvrs)} packages, releasevers needed: "
-        + ", ".join(f'{k or "(none)"}={len(v)}' for k, v in sorted(wanted.items())))
+        + ", ".join(f"{k}={len(v)}" for k, v in sorted(wanted.items())))
     log(f"{len(repos)} source repos selected (majors {','.join(sorted(majors))})")
 
     # Index only the (repo, releasever) combinations that are needed. This is
@@ -237,9 +258,15 @@ def main():
     for rv in sorted(wanted):
         outstanding = {nvr for nvr in wanted[rv] if nvr not in index}
         for rid, repo in sorted(repos.items()):
+            # An el9_6 package is never in a rhel-10 repo, and the other
+            # major's repos do not exist at this releasever anyway: skipping
+            # them saves a failed metadata fetch per repo per releasever.
+            rmaj = repo_major(rid)
+            if rmaj is not None and rmaj != major_of(rv):
+                continue
             # A repo whose baseurl has no $releasever resolves to the same URL
             # for every releasever; index it once.
-            resolved = repo["baseurl"].replace("$releasever", rv or "9")
+            resolved = repo["baseurl"].replace("$releasever", rv)
             if resolved in seen_urls:
                 continue
             seen_urls.add(resolved)
@@ -247,7 +274,7 @@ def main():
                 got = index_repo(repo, rv)
             except Exception as e:             # noqa: BLE001
                 # A repo that does not exist at this releasever is normal.
-                log(f"  skip {rid} @ {rv or 'default'}: {type(e).__name__}")
+                log(f"  skip {rid} @ {rv}: {type(e).__name__}")
                 continue
             new = 0
             for k, url in got.items():
@@ -255,10 +282,10 @@ def main():
                     index[k] = (url, repo)
                     new += 1
             outstanding -= got.keys()
-            log(f"  {rid} @ {rv or 'default'}: {len(got)} pkgs "
+            log(f"  {rid} @ {rv}: {len(got)} pkgs "
                 f"(+{new} new, {len(outstanding)} still wanted)")
         if outstanding:
-            log(f"  {rv or 'default'}: {len(outstanding)} not found in any repo")
+            log(f"  {rv}: {len(outstanding)} not found in any repo")
     log(f"index holds {len(index)} source packages")
 
     os.makedirs(args.destdir, exist_ok=True)
@@ -291,7 +318,7 @@ def main():
                     ok += 1
     log(f"downloaded {ok}, failed {failed}, unresolved {len(unresolved)}")
     if unresolved:
-        p = os.path.join(args.destdir, "..", "cdn-unresolved.txt")
+        p = args.unresolved_out or os.path.join(args.destdir, "..", "cdn-unresolved.txt")
         with open(os.path.abspath(p), "w") as f:
             f.write("# not present in any entitled source repo at the releasever\n")
             f.write("# their own dist tag implies (aged-out micro-releases, mostly)\n")

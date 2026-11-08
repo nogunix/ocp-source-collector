@@ -576,7 +576,37 @@ class TestCoverageReportExtra:
 
         result = be.coverage_report("4.20")
         assert result["phases"]["a-rpm"] == {
-            "mount": "sources-ocp-srpms", "ocp_version": "4.20.22", "srpms": 5}
+            "mount": "sources-ocp-srpms", "ocp_version": "4.20.22", "srpms": 5,
+            "views": {"4.20.22": 5}}
+
+    def test_a_rpm_variant_views_do_not_replace_base(self, tmp_path, monkeypatch):
+        """-extensions / -el10 views sort after the base; the base still names
+        the release, and every view is counted."""
+        srv = _setup_srv(tmp_path, monkeypatch)
+        by = srv / "sources-ocp-srpms" / "by-ocp"
+        for pv, n in (("5.0.1", 3), ("5.0.1-extensions", 1), ("5.0.1-el10", 4),
+                      ("5.0.1-el10-extensions", 2)):
+            (by / pv).mkdir(parents=True)
+            for i in range(n):
+                (by / pv / f"pkg-{i}").write_text("")
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+
+        a = be.coverage_report("5.0")["phases"]["a-rpm"]
+        assert a["ocp_version"] == "5.0.1" and a["srpms"] == 3
+        assert a["views"] == {"5.0.1": 3, "5.0.1-extensions": 1, "5.0.1-el10": 4,
+                              "5.0.1-el10-extensions": 2}
+        assert be.coverage_report("5.0.1")["phases"]["a-rpm"]["srpms"] == 3
+
+    def test_a_rpm_only_variant_views(self, tmp_path, monkeypatch):
+        """No base tree (should not happen, but must not crash): first view wins."""
+        srv = _setup_srv(tmp_path, monkeypatch)
+        by = srv / "sources-ocp-srpms" / "by-ocp"
+        (by / "5.0.1-el10").mkdir(parents=True)
+        (by / "5.0.1-el10" / "kernel").write_text("")
+        monkeypatch.setattr(be, "CASKET_WORK", str(tmp_path / "nonexistent"))
+
+        a = be.coverage_report("5.0")["phases"]["a-rpm"]
+        assert a["ocp_version"] == "5.0.1-el10" and a["srpms"] == 1
 
     def test_a_rpm_exact_patch_match(self, tmp_path, monkeypatch):
         srv = _setup_srv(tmp_path, monkeypatch)

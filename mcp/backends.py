@@ -839,17 +839,28 @@ def coverage_report(version: str) -> dict:
             units = list(_index_units(m))
             if units:
                 phases[m.phase] = {"mount": m.name, **(_index_stats(units[0][1]) or {})}
-    # a-rpm: by-ocp/<patch>/ carries the per-release SRPM view
+    # a-rpm: by-ocp/<patch>/ carries the per-release SRPM view, next to its
+    # variant views (<patch>-extensions, and <patch>-el10[-extensions] for the
+    # RHCOS 10 stream). The base patch names the release; every view is
+    # counted under "views". (Variants used to sort after the base and
+    # overwrite it, so 4.20.22-extensions was reported as the release.)
     srpms_root = os.path.join(SRV, "sources-ocp-srpms", "by-ocp")
     if os.path.isdir(srpms_root):
+        views: dict[str, int] = {}
+        base = None
         for pv in sorted(os.listdir(srpms_root)):
-            if pv == version or pv.startswith(version.rstrip(".") + "."):
+            core = pv.split("-", 1)[0]
+            if core == version or core.startswith(version.rstrip(".") + "."):
                 try:
-                    n = len(os.listdir(os.path.join(srpms_root, pv)))
+                    views[pv] = len(os.listdir(os.path.join(srpms_root, pv)))
                 except OSError:
                     continue
-                phases["a-rpm"] = {"mount": "sources-ocp-srpms",
-                                   "ocp_version": pv, "srpms": n}
+                if pv == core:
+                    base = pv
+        if views:
+            pv = base or min(views)
+            phases["a-rpm"] = {"mount": "sources-ocp-srpms",
+                               "ocp_version": pv, "srpms": views[pv], "views": views}
     # expected b-operand products from the repo config (absence = gap)
     expected = []
     cfg = os.path.join(CASKET_WORK, "config", "phase-b-operand-products.tsv")

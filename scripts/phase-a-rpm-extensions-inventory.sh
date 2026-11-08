@@ -18,18 +18,22 @@
 # (sandboxed-containers-operator controllers/daemonset_reconcile.go:34) -- but
 # it also covers kernel-rt, usbguard, libreswan, pacemaker/pcs, crun-wasm.
 #
-# SCOPE: el9 ONLY, on purpose (2026-08-12).
-# 4.21/4.22 additionally ship rhel-coreos-10-extensions (RHCOS on RHEL 10.2 --
-# com.coreos.osname=rhcos, a real node OS, not a side artifact) and a
-# rhel-coreos-10 base image that 01 does not read either. Both are real gaps
-# and both are deferred. They are NEVER silently skipped: every el10 tag seen
-# is written to extensions-deferred.txt so the gap stays named and countable.
+# SCOPE: both RHCOS streams (el9 since 2026-08-12, el10 since 2026-11-09).
+# 4.21+ also ship rhel-coreos-10-extensions (RHCOS on RHEL 10.2 --
+# com.coreos.osname=rhcos, a real node OS, not a side artifact), and from OCP
+# 5.0 on that stream is the default for fresh installs. Its packages go to
+# <patch>-el10-extensions.tsv, which the el10 collect pass picks up (the base
+# rhel-coreos-10 rpmdb is read by collect.sh -M 10, not here). Any other
+# rhel-coreos* tag -- a future rhel-coreos-11, a rename -- is NEVER silently
+# skipped: it is written to extensions-deferred.txt so the gap stays named.
 # See docs/a-rpm-collection.md.
 #
 # Outputs under $CASKET_WORK/phase-a-rpm/rpmdb-extensions-<date>/:
 #   <patch>-extensions.tsv    name|epoch|version|release|arch  (== 01's format)
+#   <patch>-el10-extensions.tsv   the same, for rhel-coreos-10-extensions
 #   meta/extensions-map.tsv   patch|extension|package  (from extensions.json)
-#   meta/extensions-deferred.txt  payload tags deliberately not collected yet
+#   meta/extensions-deferred.txt  rhel-coreos* tags nothing here or in
+#                                 collect.sh reads (empty when all is known)
 #   meta/extensions-missing.txt   SRPM NEVRs absent from the pool = to fetch
 #   cache/<digest>/           extracted RPMs, so re-runs cost nothing
 #
@@ -58,11 +62,17 @@ OUT_DIR="${OUT_DIR:-${CASKET_WORK}/phase-a-rpm/rpmdb-extensions-${STAMP}}"
 VERSIONS=()
 EXT_PATH="/usr/share/rpm-ostree/extensions/"
 
-# el9 only for now; el10 tags are recorded, not collected. Keep these two
-# patterns adjacent -- a tag matching neither is an unknown shape and must be
-# reported rather than dropped.
-TAG_COLLECT='^rhel-coreos-extensions$'
-TAG_DEFER='^(rhel-coreos-10|rhel-coreos-10-extensions)$'
+# Extension image tag -> tsv suffix. el9 keeps the historical unsuffixed name
+# so by-ocp/<patch>-extensions/ means what it always meant.
+declare -A EXT_TAGS=(
+    [rhel-coreos-extensions]="-extensions"
+    [rhel-coreos-10-extensions]="-el10-extensions"
+)
+# Every rhel-coreos* tag something reads: the two bases (collect.sh -M 9 /
+# -M 10) and the two extension images above. Keep this next to EXT_TAGS -- a
+# rhel-coreos* tag it does not match is an unknown shape and must be reported
+# rather than dropped.
+TAG_KNOWN='^rhel-coreos(-10)?(-extensions)?$'
 
 usage() {
     cat >&2 <<EOF
@@ -109,7 +119,6 @@ DEFERRED="$META/extensions-deferred.txt"
 : > "$DEFERRED"
 
 for V in "${VERSIONS[@]}"; do
-    out_tsv="$OUT_DIR/${V}-extensions.tsv"
     rel_json="$CACHE/release-${V}.json"
 
     if [[ ! -s "$rel_json" ]]; then
@@ -119,54 +128,67 @@ for V in "${VERSIONS[@]}"; do
             || { rm -f "$rel_json"; die "$V: oc adm release info failed"; }
     fi
 
-    # Record every coreos-ish tag we are NOT collecting, so the el10 gap (and
-    # any future rename) is named in a file rather than lost in a regex.
-    jq -r --arg d "$TAG_DEFER" \
-        '.references.spec.tags[].name | select(test($d))' "$rel_json" \
-        | sed "s/^/${V}\t/" >> "$DEFERRED"
+    # Record every rhel-coreos* tag that neither this script nor collect.sh
+    # reads, so a new stream (or a rename) is named in a file rather than lost.
+    jq -r --arg k "$TAG_KNOWN" \
+        '.references.spec.tags[].name | select(startswith("rhel-coreos") and (test($k) | not))' \
+        "$rel_json" | sed "s/^/${V}\t/" >> "$DEFERRED"
 
-    if [[ -s "$out_tsv" ]]; then
-        log "$V: $(wc -l < "$out_tsv") pkgs already inventoried, skipping"
-        continue
-    fi
+    for tag in rhel-coreos-extensions rhel-coreos-10-extensions; do
+        out_tsv="$OUT_DIR/${V}${EXT_TAGS[$tag]}.tsv"
+        if [[ -s "$out_tsv" ]]; then
+            log "$V: $tag: $(wc -l < "$out_tsv") pkgs already inventoried, skipping"
+            continue
+        fi
 
-    digest="$(jq -r --arg c "$TAG_COLLECT" \
-        '.references.spec.tags[] | select(.name|test($c)) | .from.name' "$rel_json")"
-    [[ -n "$digest" && "$digest" != "null" ]] \
-        || { log "warn: $V has no rhel-coreos-extensions tag -- skipping"; continue; }
+        digest="$(jq -r --arg t "$tag" \
+            '.references.spec.tags[] | select(.name == $t) | .from.name' "$rel_json")"
+        if [[ -z "$digest" || "$digest" == "null" ]]; then
+            # el9 extensions are in every tracked payload; el10 only from 4.21.
+            if [[ "$tag" == rhel-coreos-extensions ]]; then
+                log "warn: $V has no $tag tag -- skipping"
+            else
+                log "$V: no $tag (expected before 4.21)"
+            fi
+            continue
+        fi
 
-    ext_dir="$CACHE/${digest##*:}"
-    if [[ ! -d "$ext_dir" ]]; then
-        log "$V: extracting $EXT_PATH from ${digest##*@}"
-        tmp="${ext_dir}.partial"
-        rm -rf "$tmp"; mkdir -p "$tmp"
-        oc image extract "$digest" -a "$AUTHFILE" --filter-by-os "$OCARCH" \
-            --path "${EXT_PATH}:${tmp}/" --confirm >/dev/null \
-            || { rm -rf "$tmp"; die "$V: extract failed"; }
-        mv "$tmp" "$ext_dir"
-    else
-        log "$V: extensions already extracted (cache hit)"
-    fi
+        ext_dir="$CACHE/${digest##*:}"
+        if [[ ! -d "$ext_dir" ]]; then
+            log "$V: extracting $EXT_PATH from $tag ${digest##*@}"
+            tmp="${ext_dir}.partial"
+            rm -rf "$tmp"; mkdir -p "$tmp"
+            oc image extract "$digest" -a "$AUTHFILE" --filter-by-os "$OCARCH" \
+                --path "${EXT_PATH}:${tmp}/" --confirm >/dev/null \
+                || { rm -rf "$tmp"; die "$V: $tag extract failed"; }
+            mv "$tmp" "$ext_dir"
+        else
+            log "$V: $tag already extracted (cache hit)"
+        fi
 
-    shopt -s nullglob
-    rpms=("$ext_dir"/*.rpm)
-    shopt -u nullglob
-    (( ${#rpms[@]} )) || die "$V: no .rpm under $EXT_PATH in the extensions image"
+        shopt -s nullglob
+        rpms=("$ext_dir"/*.rpm)
+        shopt -u nullglob
+        (( ${#rpms[@]} )) || die "$V: no .rpm under $EXT_PATH in $tag"
 
-    # Same 5 columns 01-extract-rpmdb.sh emits from the rpmdb JSON. EPOCHNUM
-    # gives 0 (not "(none)") when the package has no epoch, which is what the
-    # by-ocp reader treats as absent.
-    rpm -qp --qf '%{NAME}\t%{EPOCHNUM}\t%{VERSION}\t%{RELEASE}\t%{ARCH}\n' \
-        "${rpms[@]}" 2>/dev/null | sort -u > "$out_tsv"
-    log "$V: ${#rpms[@]} RPMs -> $(wc -l < "$out_tsv") rows -> $out_tsv"
+        # Same 5 columns 01-extract-rpmdb.sh emits from the rpmdb JSON. EPOCHNUM
+        # gives 0 (not "(none)") when the package has no epoch, which is what the
+        # by-ocp reader treats as absent.
+        rpm -qp --qf '%{NAME}\t%{EPOCHNUM}\t%{VERSION}\t%{RELEASE}\t%{ARCH}\n' \
+            "${rpms[@]}" 2>/dev/null | sort -u > "$out_tsv"
+        log "$V: $tag: ${#rpms[@]} RPMs -> $(wc -l < "$out_tsv") rows -> $out_tsv"
 
-    if [[ -s "$ext_dir/extensions.json" ]]; then
-        jq -r --arg v "$V" \
-            '.extensions | to_entries[] | .key as $e | .value.packages[]
-             | [$v, $e, .] | @tsv' "$ext_dir/extensions.json" >> "$MAP"
-    else
-        log "warn: $V: no extensions.json -- extension->package map incomplete"
-    fi
+        # The map's patch column carries the stream suffix minus "-extensions"
+        # (4.22.22 / 4.22.22-el10), so the two streams' rows stay apart.
+        pv="${V}${EXT_TAGS[$tag]%-extensions}"
+        if [[ -s "$ext_dir/extensions.json" ]]; then
+            jq -r --arg v "$pv" \
+                '.extensions | to_entries[] | .key as $e | .value.packages[]
+                 | [$v, $e, .] | @tsv' "$ext_dir/extensions.json" >> "$MAP"
+        else
+            log "warn: $pv: no extensions.json -- extension->package map incomplete"
+        fi
+    done
 done
 
 # --- coverage against the existing pool ------------------------------------
@@ -191,5 +213,5 @@ else
     log "warn: pool $POOL not found -- skipping coverage diff"
 fi
 
-log "deferred (el10, not collected): $(grep -c . "$DEFERRED" || true) tags -- see $DEFERRED"
-log "done. Copy $OUT_DIR/*-extensions.tsv into the VM's \$TSV_DIR and run 02/03."
+log "unknown rhel-coreos* tags (not collected): $(grep -c . "$DEFERRED" || true) -- see $DEFERRED"
+log "done. Copy $OUT_DIR/*-extensions.tsv into rpmdb-<date>/ and run phase-a-rpm-collect.sh."
