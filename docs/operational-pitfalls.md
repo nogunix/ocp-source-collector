@@ -798,6 +798,29 @@ without the flag behaves as before. Both helpers are in `lib.sh`, tests in
 non-zero at EOF without a trailing newline **but has already filled the
 variable**, so `|| p=""` there re-creates the very bug the helper prevents.
 
+### Phase A patch source: the update graph, not the mirror pointer
+
+(2026-11-08) `fetch_patch` (`scripts/lib-fingerprint.sh`) used to read the
+mirror's `clients/ocp/stable-<minor>/release.txt`. That file is a pointer
+*derived* from the channel, and it went stale without any error: on
+2026-11-08 `stable-4.22/release.txt` still said 4.22.18 (created 2026-10-08)
+while the `stable-4.22` channel already carried 4.22.19-4.22.22 with upgrade
+edges, and 4.20 / 4.21 lagged the same way (4.20.42 vs 4.20.46, 4.21.37 vs
+4.21.42). OCP 5.0 had no `stable-5.0/` directory at all (404 under both
+`openshift-v4/` and `openshift-v5/`), so it would never have been seen. The
+`exact` freshness mode trusted that value, so `a` reported `fresh` and
+auto-update built patches that were already old.
+
+`fetch_patch` now asks the update graph
+(`api.openshift.com/api/upgrades_info/v1/graph?channel=stable-<minor>`) and
+takes the highest GA `<minor>.z` node, falling back to the mirror only when
+the graph returns nothing. Two traps in the graph read, both covered by
+`tests/test_fingerprint.sh`: a `stable-<minor>` channel also lists the
+previous minor's patches (they are upgrade sources), so filter by the
+`<minor>.` prefix; and compare numerically (4.22.22 > 4.22.9). The first check
+after the switch flagged 4.17-4.22 STALE at once. That is a backlog the stale
+pointer had hidden, not noise.
+
 ### Freshness check: exact vs drifting modes
 
 (2026-08-11) `b`/`b-operand` are fingerprinted by the redhat-operator-index

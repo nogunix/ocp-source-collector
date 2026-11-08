@@ -64,10 +64,11 @@ Example: process the latest patch version from each stable-N channel sequentiall
 ```bash
 cd "$CASKET_WORK"
 
-# Get the latest patch version for each stable-N
+# Get the latest patch version for each stable-N (from the update graph; the
+# mirror's stable-N/release.txt pointer can lag -- see operational-pitfalls.md)
+source scripts/lib.sh; source scripts/lib-fingerprint.sh
 for v in 4.20 4.19 4.18 4.17 4.16 4.15 4.14; do
-  curl -sSL "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${v}/release.txt" \
-    | awk '/^ *Version:/ {print $2; exit}'
+  fetch_patch "$v"
 done
 
 # Run the pipeline sequentially for the versions obtained above
