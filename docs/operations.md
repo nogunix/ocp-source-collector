@@ -5,8 +5,8 @@
 `a-rpm` and `b-operand` are sub-phases that look one level deeper into the same origin as A/B, not independent phases — the phase identifiers reflect this naming (see the "What gets collected" section in [README](../README.md)).
 
 ```
-config/minors.txt                Target OCP minors for A/B/B-operand (8: 4.14-4.21)
-config/phase-a-rpm-minors.txt    Target minors for A-rpm (7: 4.21 collection PAUSED)
+config/minors.txt                Target OCP minors for A/B/B-operand (10: 4.14-4.22, 5.0)
+config/phase-a-rpm-minors.txt    Target minors for A-rpm (9: 4.14-4.22; 5.0 waits for el10 collection)
 config/phase-b-operand-products.tsv  Target products for B-operand (package<TAB>infix, 7 rows)
 state/registry.json              Artifact lifecycle (managed by build/registry.py, never hand-edited)
 ```
