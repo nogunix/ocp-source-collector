@@ -11,3 +11,8 @@
 4.20
 4.21
 4.22
+# 5.0 is deliberately absent (2026-11-09): its default node OS for new installs
+# is RHCOS 10 (MCO GetBuiltinDefaultStreamName: Major()==4 -> rhel-9, else
+# rhel-10; keyed on the *install* version), and a-rpm collects el9 only.
+# Add 5.0 together with el10 collection -- docs/a-rpm-collection.md
+# "Remaining work" 2.
