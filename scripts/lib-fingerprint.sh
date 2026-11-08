@@ -8,13 +8,42 @@
 
 declare -A CATALOG_DIGEST_CACHE=()   # minor -> digest; shared by phase b and b-operand
 
+: "${UPGRADE_GRAPH_URL:=https://api.openshift.com/api/upgrades_info/v1/graph}"
+
+latest_patch_in_graph() {
+    # stdin: update-graph JSON for one channel. Prints the highest GA patch of
+    # minor $1, or nothing. A stable-<minor> channel also lists the previous
+    # minor's patches (they are upgrade sources), hence the prefix filter;
+    # pre-releases (5.0.0-rc.1) never count. Versions compare numerically, so
+    # 4.22.22 beats 4.22.9.
+    jq -r --arg p "$1." '
+        [.nodes[]?.version | strings | select(startswith($p) and (test("^[0-9]+\\.[0-9]+\\.[0-9]+$")))]
+        | max_by(split(".") | map(tonumber)) // empty' 2>/dev/null
+}
+
 fetch_patch() {
-    # current latest patch for a minor's stable channel, or empty on failure.
+    # current latest patch for a minor's stable channel; prints nothing and
+    # returns non-zero when no source answers.
+    #
+    # The update graph (the channel itself) is the source of truth. The mirror's
+    # stable-<minor>/release.txt is only a fallback: it is a pointer derived
+    # from the channel and has gone stale before -- on 2026-11-08 it still read
+    # 4.22.18 (dated 2026-10-08) while stable-4.22 already carried 4.22.22, and
+    # it has no stable-5.0 at all, so a mirror-only check silently stopped
+    # seeing new 4.20+ patches and never saw OCP 5.
+    #
     # NB: no `exit` in the awk script -- release.txt has exactly one Version
     # line, and awk exiting early would close the pipe while curl is still
     # writing, making curl exit 23 (SIGPIPE) and take the whole pipeline down
     # under `set -o pipefail` even though the value was captured correctly.
-    local minor="$1"
+    local minor="$1" v
+    v=$(curl -fsSL --max-time 10 -H 'Accept: application/json' \
+            "${UPGRADE_GRAPH_URL}?channel=stable-${minor}&arch=amd64" 2>/dev/null \
+        | latest_patch_in_graph "$minor") || v=""
+    if [[ -n "$v" ]]; then
+        printf '%s\n' "$v"
+        return 0
+    fi
     curl -fsSL --max-time 10 "https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable-${minor}/release.txt" 2>/dev/null \
         | awk '/^ *Version:/ {print $2}'
 }
