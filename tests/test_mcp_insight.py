@@ -397,6 +397,43 @@ def test_rpm_source_binary_extensions_and_errors(srv):
     assert "error" in miss and "4.20.38" in miss["mounted"]
 
 
+def _add_el10(srv, ver="4.20.38", links=None):
+    """Give a release an RHCOS 10 view (by-ocp/<ver>-el10/) with its own SRPMs."""
+    r = srv / "sources-ocp-srpms"
+    links = links or {"kernel": "kernel-6.12.0-211.73.1.el10_2", "only10": "only10-1.0-1.el10"}
+    for nevr in links.values():
+        os.makedirs(r / "srpms" / nevr / "archives", exist_ok=True)
+    d = r / "by-ocp" / f"{ver}-el10"
+    os.makedirs(d)
+    for name, nevr in links.items():
+        os.symlink(f"../../srpms/{nevr}", d / name)
+
+
+def test_rpm_source_el10_stream(srv):
+    _add_el10(srv)
+    k = ins.rpm_source("kernel", "4.20.38")
+    assert k["view"] == "4.20.38"                      # el9 base first
+    assert k["streams"] == {"4.20.38": "kernel-5.14.0-600.1.el9_7",
+                            "4.20.38-el10": "kernel-6.12.0-211.73.1.el10_2"}
+    o = ins.rpm_source("only10", "4.20")
+    assert o["view"] == "4.20.38-el10" and o["nevr"] == "only10-1.0-1.el10"
+    assert o["streams"] == {"4.20.38-el10": "only10-1.0-1.el10"}
+
+
+def test_release_diff_rpms_el10(srv):
+    by = srv / "sources-ocp-srpms/by-ocp"
+    os.rename(by / "4.20.30", by / "4.20.28")
+    os.rename(by / "4.20.38", by / "4.20.35")
+    assert "rpms_el10" not in ins.release_diff("4.20.28", "4.20.35")
+    _add_el10(srv, "4.20.35")
+    r = ins.release_diff("4.20.28", "4.20.35")
+    # compared within the el10 stream only: the el9 delta is unchanged
+    assert r["rpms"]["changed"] == [("kernel", "kernel-5.14.0-570.1.el9_6", "kernel-5.14.0-600.1.el9_7")]
+    assert r["rpms_el10"]["added"] == [("kernel", "kernel-6.12.0-211.73.1.el10_2"),
+                                       ("only10", "only10-1.0-1.el10")]
+    assert r["rpms_el10"]["changed"] == [] and r["rpms_el10"]["removed"] == []
+
+
 def test_rpm_source_without_srpm_mount(srv):
     import shutil
     shutil.rmtree(srv / "sources-ocp-srpms")

@@ -6,7 +6,7 @@
 
 ```
 config/minors.txt                Target OCP minors for A/B/B-operand (10: 4.14-4.22, 5.0)
-config/phase-a-rpm-minors.txt    Target minors for A-rpm (9: 4.14-4.22; 5.0 waits for el10 collection)
+config/phase-a-rpm-minors.txt    Target minors for A-rpm (10: 4.14-4.22, 5.0; RHCOS 9 + RHCOS 10 for 4.21+)
 config/phase-b-operand-products.tsv  Target products for B-operand (package<TAB>infix, 7 rows)
 state/registry.json              Artifact lifecycle (managed by build/registry.py, never hand-edited)
 ```

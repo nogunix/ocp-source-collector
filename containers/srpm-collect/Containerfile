@@ -4,26 +4,26 @@
 # 03-fetch-eus.sh. The container needs:
 #   - oc CLI (for `oc adm release info --rpmdb`)
 #   - dnf + subscription-manager (for `dnf download --source`)
-#   - RHEL 9 entitlements mounted at runtime
+#   - entitlement: the container registers itself (see collect.sh)
 #
-# Build:
+# ONE IMAGE PER RHEL MAJOR. subscription-manager generates redhat.repo only
+# for the content sets the installed product certificate is tagged for: UBI9's
+# /etc/pki/product-default/479.pem yields rhel-9-* and rhocp-*-for-rhel-9-*
+# repos and nothing for RHEL 10, and UBI10's yields the rhel-10-* set
+# (verified 2026-11-09: 101 rhel-10 source repos incl. rhocp-5.0-for-rhel-10).
+# RHCOS 10 (OCP 4.21+ opt-in, the 5.0 default for fresh installs) therefore
+# needs its own image, built from the same file:
+#
 #   podman build -f containers/srpm-collect/Containerfile \
 #     -t casket-srpm-collect:el9 containers/srpm-collect
+#   podman build -f containers/srpm-collect/Containerfile \
+#     --build-arg BASE=registry.access.redhat.com/ubi10/ubi:latest \
+#     -t casket-srpm-collect:el10 containers/srpm-collect
 #
-# Run (entitlements + pull secret mounted):
-#   podman run --rm \
-#     -v /etc/pki/entitlement:/etc/pki/entitlement:ro \
-#     -v /etc/rhsm:/etc/rhsm:ro \
-#     -v /etc/yum.repos.d/redhat.repo:/etc/yum.repos.d/redhat.repo:ro \
-#     -v ~/.docker/config.json:/run/pull-secret.json:ro \
-#     -v $PWD/out:/out:z \
-#     casket-srpm-collect:el9 \
-#     /work/collect.sh -o /out
-#
-# The host must be registered with subscription-manager so that
-# /etc/pki/entitlement and /etc/rhsm exist. The container itself
-# does not need to be registered.
-FROM registry.access.redhat.com/ubi9/ubi:latest
+# scripts/phase-a-rpm-collect.sh builds whichever is missing and runs
+# collect.sh -M <major> in the matching one.
+ARG BASE=registry.access.redhat.com/ubi9/ubi:latest
+FROM ${BASE}
 
 RUN dnf install -y --setopt=install_weak_deps=False \
         dnf-plugins-core \
@@ -41,7 +41,9 @@ RUN dnf install -y --setopt=install_weak_deps=False \
 # and has it. Do not pin below the newest minor in
 # config/phase-a-rpm-minors.txt: --rpmdb reads the machine-os image of every
 # release queried, and the newest payload is the one most likely to need a
-# matching client.
+# matching client. Exception: 5.0 has no stable-5.0/ on the mirror (404 as of
+# 2026-11-09), and a 4.22.8 client reads 5.0.1's rhel-coreos-10 rpmdb fine
+# (489 packages), so 4.22 stays until the mirror publishes a 5.x client.
 ARG OC_VERSION=4.22
 RUN OC_ARCH=$(uname -m) \
     && case "$OC_ARCH" in x86_64) OC_SUFFIX="linux" ;; aarch64) OC_SUFFIX="linux-arm64" ;; *) echo "unsupported arch: $OC_ARCH" >&2; exit 1 ;; esac \

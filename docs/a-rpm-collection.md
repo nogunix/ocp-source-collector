@@ -20,14 +20,25 @@ The contents of `casket-*-ocp-srpms.sqfs.xz` are **the confluence of several ind
 
 | Stream | What | Tooling (2026-09) |
 |---|---|---|
-| A. Node OS base | `rhel-coreos` rpmdb of each tracked patch | `scripts/phase-a-rpm-collect.sh` (container) |
-| A2. Node OS extensions | `rhel-coreos-extensions` RPMs (kata, kernel-rt, usbguard, …) | `scripts/phase-a-rpm-extensions-inventory.sh`, then fed to the same container run |
+| A. Node OS base | `rhel-coreos` (el9) and `rhel-coreos-10` (el10, 4.21+) rpmdb of each tracked patch | `scripts/phase-a-rpm-collect.sh` (one container pass per RHEL major) |
+| A2. Node OS extensions | `rhel-coreos-extensions` and `rhel-coreos-10-extensions` RPMs (kata, kernel-rt, usbguard, …) | `scripts/phase-a-rpm-extensions-inventory.sh`, then fed to the same container run |
 | B. EUS/E4S/FDP backfill | micro-releases (`el9_N`, `el9fdp`) that the plain repos lack | inside the container run: pinned `dnf`, then `cdn-fetch.py` |
 | C. In-container RPM layer | RPMs inside product container images (qemu in virt-launcher, ceph in ODF, …) | inventory: `scripts/phase-a-rpm-image-inventory.py`. Fetching: see C |
 
 Live casket as of 2026-09-07: **3485 SRPMs / 18G**.
 
-**The node OS is not "1 image = 1 rpmdb".** The payload has `rhel-coreos-extensions` separate from `rhel-coreos` (base), and from 4.21 onward two more el10 images are added. Collecting only stream A drops kata and others entirely. See A2.
+**The node OS is not "1 image = 1 rpmdb".** The payload has `rhel-coreos-extensions` separate from `rhel-coreos` (base), and from 4.21 onward the RHCOS 10 pair `rhel-coreos-10` + `rhel-coreos-10-extensions` as well. Collecting only stream A drops kata and others entirely. See A2.
+
+**Two node-OS streams (RHEL 9 and RHEL 10).** In 4.21/4.22 RHCOS 10 is opt-in. From OCP 5.0 it is the default for fresh installs. MCO's `GetBuiltinDefaultStreamName` returns `rhel-9` only when the cluster's *install* version has major 4, so clusters upgraded from 4.x stay on el9. 5.0.1 ships both: `rhel-coreos` = 9.8, `rhel-coreos-10` = 10.2. Both are collected wherever the payload has them, and named so the streams never mix:
+
+| Payload tag | rpmdb tsv | by-ocp tree |
+|---|---|---|
+| `rhel-coreos` | `<patch>.tsv` | `by-ocp/<patch>/` |
+| `rhel-coreos-extensions` | `<patch>-extensions.tsv` | `by-ocp/<patch>-extensions/` |
+| `rhel-coreos-10` (4.21+) | `<patch>-el10.tsv` | `by-ocp/<patch>-el10/` |
+| `rhel-coreos-10-extensions` (4.21+) | `<patch>-el10-extensions.tsv` | `by-ocp/<patch>-el10-extensions/` |
+
+casket-mcp's `rpm_source` looks in all four views and reports the NEVR per view under `streams`. `release_diff` compares el10 only with el10 (`rpms_el10`).
 
 ---
 
@@ -60,13 +71,14 @@ cp phase-a-rpm/rpmdb-extensions-$STAMP/*-extensions.tsv phase-a-rpm/rpmdb-$STAMP
 
 # 3. A + B (and the A2 packages from step 2): rpmdb extraction + SRPM fetch
 CASKET_COLLECT_STAMP=$STAMP scripts/phase-a-rpm-collect.sh
-#   builds casket-srpm-collect:el9 on first use (--build-image to rebuild)
+#   two passes: casket-srpm-collect:el9 (UBI9), then :el10 (UBI10); --majors "9" for one
+#   each image is (re)built when missing or when its sources changed (--build-image forces it)
 #   versions come from config/phase-a-rpm-minors.txt (--versions "4.20.35 …" to override)
 ```
 
 Step 3 writes `phase-a-rpm/srpms-$STAMP/` and `phase-a-rpm/rpmdb-$STAMP/`. **It never writes to `srpms/`**, which is the merge point (see [From scratch](#from-scratch-full-rebuild)). Inside the container, `collect.sh` does the following:
 
-1. Extracts the `rhel-coreos` rpmdb for each patch into `rpmdb-<date>/<patch>.tsv`. A tsv that already exists is kept.
+1. Extracts the rpmdb for each patch: `rhel-coreos` into `rpmdb-<date>/<patch>.tsv` (el9 pass, `-M 9`), or `rhel-coreos-10` into `<patch>-el10.tsv` (el10 pass, `-M 10`; patches without the tag are skipped). A tsv that already exists is kept. Each pass reads only its own stream's tsvs from here on, and writes its own `wishlist`/`fetch`/`missing`/`cdn-unresolved` files (`-el10` suffixed for el10).
 2. Builds the wishlist from **every** `*.tsv` in that directory. That is why step 2 works: the `-extensions` tsvs are picked up. The rhocp repo minors come from both the filenames and the `rhaos<M>.<m>` dist tags, so `kata-containers-…rhaos4.19` in a 4.20 payload still resolves.
 3. Fetches the SRPMs with `dnf download --source` in batches.
 4. Retries the micro-releases with pinned `--releasever` against EUS/E4S/HA/RS/RT/CRB/FDP.
@@ -89,7 +101,8 @@ Step 5 expands only the NEVRs that are not already in the casket. `-r` **replace
 
 ```bash
 # 6. Verify, then register and swap
-ls /mnt/…/by-ocp/          # (mount the new .sqfs.xz) expect <patch> AND <patch>-extensions for every patch
+ls /mnt/…/by-ocp/          # (mount the new .sqfs.xz) expect <patch> AND <patch>-extensions for every patch,
+                           # plus <patch>-el10 AND <patch>-el10-extensions for 4.21+
 CASKET_WORK=$PWD bash -c 'source scripts/lib.sh; source scripts/lib-fingerprint.sh
   python3 "$REGISTRY_PY" add --phase a-rpm --unit all \
     --fingerprint "$(phase_a_rpm_fingerprint)" \
@@ -110,7 +123,11 @@ Measured on 2026-09-07 (9 patches, base only): 984 SRPMs fetched, about 4.5 hour
 - **Do not source `lib.sh` from zsh.** `${BASH_SOURCE[0]}` does not resolve, so `CASKET_WORK` becomes `$HOME`. `phase_a_rpm_fingerprint` then returns the sha256 of the empty string (`01ba4719…`), with only one `No such file` warning. Registering that value is a silent corruption. Always use `CASKET_WORK=$PWD bash -c '…'`.
 - **Keep every stream's output in dated directories.** `srpms/` is the merge point for a from-scratch build. Writing one stream straight into it leaves a partial corpus that `phase-a-rpm-package.sh` will happily package (3270 → 795).
 - **The rhsm.env mount needs SELinux relabelling (`,z`).** `~/.config` is `user_home_t`. Without the relabel the bind mount "works" but the file reads as absent, and the run reports "no entitlement" for a file that is right there. `phase-a-rpm-collect.sh` already does this; keep it if you edit the mount.
-- **`--rpmdb-image=rhel-coreos` is mandatory.** 4.14/4.15 still carry the old el8 `machine-os-content`, and the default picks that one. `collect.sh` passes it; keep it.
+- **`--rpmdb-image=rhel-coreos` is mandatory.** 4.14/4.15 still carry the old el8 `machine-os-content`, and the default picks that one. `collect.sh` passes it (`rhel-coreos-10` for `-M 10`); keep it.
+- **el10 needs its own image.** subscription-manager only generates repo definitions for the content sets the installed product certificate is tagged for. UBI9's certificate yields the `rhel-9-*` / `rhocp-*-for-rhel-9-*` repos and nothing for RHEL 10. UBI10's yields the RHEL 10 set: 101 `rhel-10` source repos, including `rhocp-5.0-for-rhel-10-x86_64-source-rpms`, checked on 2026-11-09. Running `-M 10` in the el9 image "succeeds" with no repos to fetch from. RHEL 10 has no ResilientStorage, so the two warnings about it in the el10 log are expected.
+- **One unreadable repo fails every dnf call.** The entitlement lists `rhocp-4.22-for-rhel-10-x86_64-source-rpms`, but its `repomd.xml` 404s, and `collect.sh` enables it because el10 extensions carry `rhaos4.22` dist tags. With dnf's default `skip_if_unavailable=False`, the first el10 run on 2026-11-09 failed all 706 calls and fetched 0 of 699 packages. el9 had quietly lost 2 batches the same way. Every dnf call in `collect.sh` now passes `--setopt=skip_if_unavailable=True`. `cdn-fetch.py` already skipped unreadable repos one at a time.
+- **The images bake in `collect.sh` and `cdn-fetch.py`.** Editing them without rebuilding the image once made the el10 pass die with `unknown arg: -M`. `phase-a-rpm-collect.sh` now labels each image with a hash of its sources and rebuilds on mismatch.
+- **A host RHEL entitlement covers its own major only.** Without `rhsm.env`, the wrapper runs only the pass for the host's own RHEL major. Each other pass is reported as not collected, and the run exits non-zero.
 - **Don't expose auxiliary files to `*.tsv` globs.** `collect.sh`, `phase-a-rpm-by-ocp.sh` and the legacy `02` read their input as a bare `"$DIR"/*.tsv`. That is why the extension inventory keeps its 3-column `extensions-map.tsv` under `meta/`. Copy only the `*-extensions.tsv` files into `rpmdb-<date>/`.
 - **rhaos dist tags don't match the payload's minor.** 4.20.32's extensions carry `kata-containers-3.31.0-4.rhaos4.19.el9`, whose SRPM lives in the `rhocp-4.19` source repo. `collect.sh` derives the rhocp minors from the content as well as the filenames, so this resolves. A tool that only looks at filenames misses these packages silently.
 - **The extension inventory and the collect run each resolve the current patches.** Run them back to back. If a z-stream lands in between, the base and the `-extensions` tsvs describe different patches. Pin both with `-v` / `--versions` if in doubt.
@@ -134,9 +151,10 @@ MachineConfig{Spec:{Extensions: ["sandboxed-containers"]}}
 | File | Contents |
 |---|---|
 | `<patch>-extensions.tsv` | name\|epoch\|version\|release\|arch (same format as the base tsvs) |
-| `meta/extensions-map.tsv` | patch\|extension\|package |
+| `<patch>-el10-extensions.tsv` | the same, for `rhel-coreos-10-extensions` (4.21+) |
+| `meta/extensions-map.tsv` | patch\|extension\|package (patch is `<patch>` or `<patch>-el10`; from the image's `extensions.json`, which **5.0 no longer ships**, so 5.0 rows are absent and the run warns. The tsvs are unaffected.) |
 | `meta/extensions-missing.txt` | SRPMs not in the pool = what the collect run must fetch |
-| `meta/extensions-deferred.txt` | payload tags intentionally not collected (el10, below) |
+| `meta/extensions-deferred.txt` | `rhel-coreos*` tags nothing reads (empty today; a future `rhel-coreos-11` would land here) |
 | `cache/<digest>/` | extracted RPMs (re-runs take seconds) |
 
 On the mount these appear as `by-ocp/<patch>-extensions/`, deliberately separate from the default-installed set.
@@ -211,7 +229,4 @@ Before `phase-a-rpm-collect.sh`, streams A and B ran on the libvirt VM `rhel9-sr
 ## Remaining work
 
 1. **C-2 (stream C fetching) has no verified script.** See C-2. It is not urgent while `image-rpms-missing.txt` stays empty, but a from-scratch rebuild still depends on the hand-collected `srpms-containers/`.
-2. **el10 node OS is uncollected (4.21/4.22/5.0). Required before 5.0 joins `config/phase-a-rpm-minors.txt`.** The payload has `rhel-coreos-10` and `rhel-coreos-10-extensions`, both real RHCOS on RHEL 10.2 (`com.coreos.osname=rhcos`). **Neither is the default:** MCO's `pkg/osimagestream/streams.go` (`GetBuiltinDefaultStreamName`) returns `rhel-9` whenever `releaseVersion.Major() == 4`, so el10 only matters for clusters that override `OSImageStream`'s `spec.default`. It becomes the default in OCP 5: in 5.0.1's MCO the same function returns `rhel-10` for any other major, keyed on the cluster's *install* version, so clusters upgraded from 4.x stay el9 while fresh 5.0 installs run el10 (5.0.1 ships `rhel-coreos` = 9.8 and `rhel-coreos-10` = 10.2). For 5.0 both streams therefore matter, and `by-ocp/<patch>/` needs to carry both. (`oc adm release info`'s `displayVersions.machine-os` reads 10.2 for 4.21/4.22, but that does not indicate the default stream.)
-   - Read side: `collect.sh` hardcodes `--rpmdb-image=rhel-coreos`, and the extension inventory's `TAG_COLLECT` matches el9 only. Deferred tags are written to `meta/extensions-deferred.txt` on every run, so the gap stays visible. The Fedora host's rpm reads the el10 rpmdb fine (489 packages measured).
-   - Fetch side: `cdn-fetch.py` already derives the major from the dist tag, but the container is registered as RHEL 9 and has no `rhel-10-*` repo definitions. Getting those is the real work.
-3. `phase-a-rpm-package.sh` requires a fixed `rpmdb/` name and has no equivalent of `-r`.
+2. `phase-a-rpm-package.sh` requires a fixed `rpmdb/` name and has no equivalent of `-r`.

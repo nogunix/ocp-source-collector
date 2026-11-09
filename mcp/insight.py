@@ -384,6 +384,14 @@ def _rpm_set(ver: str) -> dict[str, str]:
     return out
 
 
+def _rpm_delta(ro: dict[str, str], rn: dict[str, str]) -> dict:
+    return {
+        "changed": sorted((p, ro[p], rn[p]) for p in set(ro) & set(rn) if ro[p] != rn[p]),
+        "added": sorted((p, rn[p]) for p in set(rn) - set(ro)),
+        "removed": sorted((p, ro[p]) for p in set(ro) - set(rn)),
+    }
+
+
 def release_diff(from_version: str, to_version: str, include_rpms: bool = True) -> dict:
     """What changed between two OCP payload releases (Phase A patches)."""
     a, b = _phase_a_mount(from_version), _phase_a_mount(to_version)
@@ -419,11 +427,12 @@ def release_diff(from_version: str, to_version: str, include_rpms: bool = True) 
     if include_rpms:
         ro, rn = _rpm_set(from_version), _rpm_set(to_version)
         if ro or rn:
-            out["rpms"] = {
-                "changed": sorted((p, ro[p], rn[p]) for p in set(ro) & set(rn) if ro[p] != rn[p]),
-                "added": sorted((p, rn[p]) for p in set(rn) - set(ro)),
-                "removed": sorted((p, ro[p]) for p in set(ro) - set(rn)),
-            }
+            out["rpms"] = _rpm_delta(ro, rn)
+            # RHCOS 10 (4.21+) is its own stream: compare it only with itself,
+            # never against the el9 set (every package would "change" el9->el10).
+            eo, en = _rpm_set(from_version + "-el10"), _rpm_set(to_version + "-el10")
+            if eo or en:
+                out["rpms_el10"] = _rpm_delta(eo, en)
         else:
             byocp = os.path.join(be.SRV, "sources-ocp-srpms", "by-ocp")
             have = sorted(os.listdir(byocp), key=_vkey) if os.path.isdir(byocp) else []
@@ -437,6 +446,12 @@ def release_diff(from_version: str, to_version: str, include_rpms: bool = True) 
 # -------------------------------------------------------------- D: rpm_source
 def _srpm_root() -> str:
     return os.path.join(be.SRV, "sources-ocp-srpms")
+
+
+# by-ocp/ views of one release, in lookup order: RHCOS 9 base, its extensions
+# layer, then the RHCOS 10 stream (4.21+; the 5.0+ default for fresh installs,
+# while clusters upgraded from 4.x stay on 9).
+RPM_VIEWS = ("", "-extensions", "-el10", "-el10-extensions")
 
 
 def _resolve_ocp(ver: str) -> str | None:
@@ -469,7 +484,7 @@ def rpm_source(package: str, version: str) -> dict:
                 if os.path.isdir(os.path.join(_srpm_root(), "by-ocp")) else []}
     by = os.path.join(_srpm_root(), "by-ocp")
     src, via = package, None
-    variants = [ver, f"{ver}-extensions"]
+    variants = [ver + s for s in RPM_VIEWS]
     view = next((v for v in variants if os.path.exists(os.path.join(by, v, package))), None)
     if view is None:
         src = _bin_to_src(package, ver) or ""
@@ -477,10 +492,12 @@ def rpm_source(package: str, version: str) -> dict:
         view = next((v for v in variants if src and os.path.exists(os.path.join(by, v, src))), None)
     if view is None:
         return {"package": package, "ocp_version": ver,
-                "error": "not in this release's RHCOS SRPM set (base or -extensions)"}
+                "error": "not in this release's RHCOS SRPM set (el9 / el10, base or -extensions)"}
     tree = os.path.realpath(os.path.join(by, view, src))
     ls = lambda d: sorted(os.listdir(os.path.join(tree, d))) if os.path.isdir(os.path.join(tree, d)) else []
     archives = ls("archives")
+    streams = {v: os.path.basename(os.path.realpath(os.path.join(by, v, src)))
+               for v in variants if os.path.exists(os.path.join(by, v, src))}
     others = {}
     for v in sorted(os.listdir(by), key=_vkey):
         p = os.path.join(by, v, src)
@@ -495,9 +512,12 @@ def rpm_source(package: str, version: str) -> dict:
         "sources": [f for f in archives if not re.search(r"\.(patch|diff)$", f)],
         "patched_tree": [os.path.join(tree, "pre-build", d) for d in ls("pre-build")],
         "incomplete": os.path.exists(os.path.join(tree, "_incomplete")),
+        "streams": streams,
         "nevr_by_release": others,
         "note": ("RHEL SRPMs are not on GitHub: patches/ and the spec are the Red Hat "
-                 "delta; patched_tree is %prep output (empty when incomplete=true)"),
+                 "delta; patched_tree is %prep output (empty when incomplete=true). "
+                 "streams = every node-OS view of this release carrying the package: "
+                 "-el10 is RHCOS 10, the default for fresh 5.0+ installs"),
     }
 
 

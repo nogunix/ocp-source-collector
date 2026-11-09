@@ -2,9 +2,16 @@
 # Collect SRPMs for all tracked OCP versions using a container instead of a VM.
 #
 # Replaces the manual VM workflow (scp scripts, ssh, run 01/02/03, rsync back).
-# Runs the casket-srpm-collect:el9 container with host entitlements mounted.
+# One container pass per RHCOS stream, in order:
+#   el9   casket-srpm-collect:el9   (UBI9)   rhel-coreos     -> <patch>.tsv
+#   el10  casket-srpm-collect:el10  (UBI10)  rhel-coreos-10  -> <patch>-el10.tsv
+# Two images because each UBI's product certificate only unlocks its own
+# major's repos (containers/srpm-collect/Containerfile). el10 matters from
+# OCP 5.0 on, where fresh installs default to it; 4.21/4.22 ship it opt-in and
+# get it too. Patches without rhel-coreos-10 are skipped by the el10 pass.
 #
 # Usage: phase-a-rpm-collect.sh [--build-image] [--versions "4.20.32 4.22.8"]
+#                               [--majors "9 10"]
 #
 # Prerequisites:
 #   - Host registered with subscription-manager (for /etc/pki/entitlement)
@@ -19,15 +26,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 source "$SCRIPT_DIR/lib.sh"
 
-IMAGE="casket-srpm-collect:el9"
+IMAGE_REPO="casket-srpm-collect"
 BUILD_IMAGE=0
 VERSIONS_OVERRIDE=""
+MAJORS="9 10"
 
 while (( $# )); do
     case "$1" in
         --build-image) BUILD_IMAGE=1; shift ;;
         --versions)    VERSIONS_OVERRIDE="$2"; shift 2 ;;
-        -h|--help)     echo "phase-a-rpm-collect.sh [--build-image] [--versions 'ver1 ver2']"; exit 0 ;;
+        --majors)      MAJORS="$2"; shift 2 ;;
+        -h|--help)     echo "phase-a-rpm-collect.sh [--build-image] [--versions 'ver1 ver2'] [--majors '9 10']"; exit 0 ;;
         *)             die "unknown arg: $1" ;;
     esac
 done
@@ -37,12 +46,33 @@ require_cmd podman
 PHASE_A_RPM="${CASKET_WORK}/phase-a-rpm"
 AUTHFILE="${AUTHFILE:-$HOME/.docker/config.json}"
 
-# Build the container image if requested or if it doesn't exist
-if (( BUILD_IMAGE )) || ! podman image exists "$IMAGE" 2>/dev/null; then
-    log "building $IMAGE"
-    podman build -f "$SCRIPT_DIR/../containers/srpm-collect/Containerfile" \
-        -t "$IMAGE" "$SCRIPT_DIR/../containers/srpm-collect"
-fi
+read -ra MAJOR_LIST <<< "$MAJORS"
+(( ${#MAJOR_LIST[@]} )) || die "--majors is empty"
+for major in "${MAJOR_LIST[@]}"; do
+    [[ "$major" =~ ^[0-9]+$ ]] || die "--majors wants RHEL majors like '9 10', got: $major"
+done
+
+# Build each stream's image if requested, missing, or stale. Same
+# Containerfile, the UBI base is what differs.
+#
+# "Stale" = built from other sources than the checkout's. The image bakes in
+# collect.sh and cdn-fetch.py, so an image built before an edit keeps running
+# the old copy: on 2026-11-09 the el10 pass died with "unknown arg: -M"
+# because :el10 predated the -M option. Each build is labelled with a hash of
+# its build context and rebuilt when the label no longer matches.
+CTX="$SCRIPT_DIR/../containers/srpm-collect"
+src_hash=$(cat "$CTX/Containerfile" "$CTX/collect.sh" "$CTX/cdn-fetch.py" | sha256sum | cut -c1-16)
+for major in "${MAJOR_LIST[@]}"; do
+    image="$IMAGE_REPO:el$major"
+    have=$(podman image inspect --format '{{ index .Labels "casket.src-hash" }}' "$image" 2>/dev/null) || have=""
+    if (( BUILD_IMAGE )) || [[ "$have" != "$src_hash" ]]; then
+        log "building $image (sources ${have:-<none>} -> $src_hash)"
+        podman build -f "$CTX/Containerfile" \
+            --build-arg "BASE=registry.access.redhat.com/ubi${major}/ubi:latest" \
+            --label "casket.src-hash=$src_hash" \
+            -t "$image" "$CTX"
+    fi
+done
 
 # Resolve versions from config if not overridden
 if [[ -z "$VERSIONS_OVERRIDE" ]]; then
@@ -115,21 +145,49 @@ if [[ -d /etc/pki/entitlement ]]; then
 fi
 (( have_entitlement )) || die "no entitlement: create $RHSM_ENV (RHSM_ORG=, RHSM_ACTIVATION_KEY=, chmod 600) or register this host"
 
-log "running collect in container"
-# --log-driver=none: podman defaults to journald here, which records the
-# container output BOTH under the container name and again through
-# podman's own stdout that systemd captures -- every line appeared twice
-# in `journalctl --user -u ...`. Verified with a one-line echo container.
-podman run --rm --log-driver=none \
-    "${ENTITLEMENT_MOUNTS[@]}" \
-    -v "$AUTHFILE:/run/pull-secret.json:ro,z" \
-    -v "$OUT_DIR:/out:z" \
-    "$IMAGE" \
-    /work/collect.sh -o /out -V "$VERSIONS_OVERRIDE" \
-        -S "$SRPM_SUBDIR" -R "$RPMDB_SUBDIR"
+# A host RHEL's own entitlement (/etc/pki/entitlement + redhat.repo) is for
+# its own major only. Lending it to the other major's container would hand
+# collect.sh a redhat.repo with none of that major's repos -- an "entitled"
+# run that fetches nothing -- so with no rhsm.env, only the host's major runs.
+host_major=""
+if [[ -r /etc/os-release ]]; then
+    # `|| true`: on a non-RHEL host (this one is Fedora) the test fails, and
+    # under set -e a failing $(...) assignment ends the script with no message.
+    host_major=$(. /etc/os-release; [[ "${ID:-}" == rhel ]] && echo "${VERSION_ID%%.*}") || true
+fi
 
-n_srpms=$(ls "$OUT_DIR/$SRPM_SUBDIR/"*.src.rpm 2>/dev/null | wc -l)
-n_tsvs=$(ls "$OUT_DIR/$RPMDB_SUBDIR/"*.tsv 2>/dev/null | wc -l)
+failed=()
+for major in "${MAJOR_LIST[@]}"; do
+    if [[ ! -f "$RHSM_ENV" && "$major" != "$host_major" ]]; then
+        log "el$major: skipped -- no $RHSM_ENV, and the host's entitlement does not cover RHEL $major"
+        failed+=("el$major(no-entitlement)")
+        continue
+    fi
+    log "running collect in $IMAGE_REPO:el$major"
+    # --log-driver=none: podman defaults to journald here, which records the
+    # container output BOTH under the container name and again through
+    # podman's own stdout that systemd captures -- every line appeared twice
+    # in `journalctl --user -u ...`. Verified with a one-line echo container.
+    #
+    # A failed stream does not stop the next one: the passes write disjoint
+    # tsvs and log files, and an el10 hiccup should not cost the el9 refresh
+    # (or the other way round). The failure is reported and exits non-zero.
+    if ! podman run --rm --log-driver=none \
+        "${ENTITLEMENT_MOUNTS[@]}" \
+        -v "$AUTHFILE:/run/pull-secret.json:ro,z" \
+        -v "$OUT_DIR:/out:z" \
+        "$IMAGE_REPO:el$major" \
+        /work/collect.sh -o /out -V "$VERSIONS_OVERRIDE" -M "$major" \
+            -S "$SRPM_SUBDIR" -R "$RPMDB_SUBDIR"; then
+        log "el$major: collect FAILED"
+        failed+=("el$major")
+    fi
+done
+
+# find, not `ls glob | wc`: with nothing fetched the glob does not match, ls
+# fails, and pipefail ended the script here -- before the failure summary.
+n_srpms=$(find "$OUT_DIR/$SRPM_SUBDIR" -maxdepth 1 -name '*.src.rpm' | wc -l)
+n_tsvs=$(find "$OUT_DIR/$RPMDB_SUBDIR" -maxdepth 1 -name '*.tsv' | wc -l)
 log "done: $n_tsvs rpmdb tsvs, $n_srpms SRPMs"
 log "  $OUT_DIR/$SRPM_SUBDIR"
 log "  $OUT_DIR/$RPMDB_SUBDIR"
@@ -140,3 +198,4 @@ log "  scripts/repackage-srpms-refresh.sh -m /srv/sources-ocp-srpms \\"
 log "    -s $OUT_DIR/$SRPM_SUBDIR -r $OUT_DIR/$RPMDB_SUBDIR \\"
 log "    -o \$CASKET_OUT/casket-\$(date -u +%Y%m%d)-ocp-srpms.sqfs.xz"
 log "See docs/a-rpm-collection.md for the other streams and the merge."
+(( ${#failed[@]} == 0 )) || die "streams not collected: ${failed[*]}"

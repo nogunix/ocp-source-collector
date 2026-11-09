@@ -215,7 +215,10 @@ def rpm_source(package: str, version: str) -> dict:
     GitHub. `package` is a source (kernel, cri-o) or binary (kernel-core) name;
     `version` a patch ("4.20.38") or minor ("4.20" = newest carried). Returns
     the NEVR, spec, patch list, the %prep-patched tree, and the NEVR in every
-    other carried release."""
+    other carried release. RHCOS 10 (4.21+, the default for fresh 5.0+
+    installs; upgraded clusters stay on RHCOS 9) is a separate view:
+    `streams` gives the NEVR per node-OS view, `view` is RHCOS 9 when both
+    carry the package."""
     return ins.rpm_source(package, version)
 
 
