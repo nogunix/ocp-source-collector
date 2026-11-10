@@ -1,2 +1,5 @@
-mcp[cli]>=1.27
+# <2: mcp 2.0 renamed FastMCP to MCPServer (mcp.server.mcpserver) and changed
+# other APIs; casket_mcp.py is v1 code. Unpinned, the 2026-11-11 venv rebuild
+# pulled 2.3.0 and the server could not even import. Lift with the migration.
+mcp[cli]>=1.27,<2
 # ripgrep (rg) must be installed on the host (dnf install ripgrep).
