@@ -10,7 +10,10 @@
 # Build (one per el family — the caskets mix el8/el9/el10):
 #   podman build -f containers/srpm-expand/Containerfile \
 #     --build-arg BASE=registry.access.redhat.com/ubi9/ubi:latest \
+#     --secret id=rhsm,src=$HOME/.config/casket/rhsm.env \
 #     -t casket-srpm-expand:el9 containers/srpm-expand
+# --secret is optional; see entitled-extras.sh for what it adds (flex, bison,
+# gettext-devel -- kernels and autopoint users) and why it is a secret.
 #
 # The tool list is what %prep sections actually reach for. git is not
 # optional: systemd applies its 731 patches with `git init` + `git apply`,
@@ -19,8 +22,30 @@
 #   gnupg2                    - attr and bzip2 verify the upstream tarball
 #                               signature via %{gpgverify}, which shells out
 #                               to gpg2 and fails %prep outright without it
+#
+# PREP_EXTRAS: macro packages and tools that %prep reaches for. Without them
+# an undefined %macro reaches the shell as a literal "%name" (bash: "fg: no
+# job control"), or a helper is simply missing. Measured 2026-11-11 over the
+# casket's 158 _incomplete entries (69 genuinely failing %prep):
+#   rust-toolset       %cargo_prep -- 32 (bootc, aardvark-dns, nmstate,
+#                      rust-*, conmon-rs, ...); also rustc --version
+#   python3-devel      bare `pathfix.py` -- every el9 kernel since mid-2026
+#   python3-rpm-macros %py3_shebang_fix (el10 kernel 6.12), and
+#                      /usr/lib/rpm/redhat/pathfix.py (libevent)
+#   go-rpm-macros      %gomkdir (toolbox)
+#   gettext            grub2's ./bootstrap
+#   openssl            el10 kernel %prep (generates a signing key)
+#   perl-Devel-PPPort  perl-Unicode-Normalize writes ppport.h
+#   dos2unix, autoconf-archive  one package each
+# Installed only where the base's repos carry them (ubi8 lacks some), so one
+# Containerfile still serves el8/el9/el10. Not available from any UBI repo,
+# so they come from entitled-extras.sh below (needs the rhsm secret):
+# autopoint (gettext-devel; coreutils, pam, xz, quota, grub2) and flex/bison
+# (el9 kernels from 5.14.0-427.140 on, and el10 6.12, build kconfig in %prep).
 ARG BASE=registry.access.redhat.com/ubi9/ubi:latest
 FROM ${BASE}
+
+ARG PREP_EXTRAS="rust-toolset python3-devel python3-rpm-macros go-rpm-macros gettext openssl perl-Devel-PPPort dos2unix autoconf-archive"
 
 RUN dnf install -y --setopt=install_weak_deps=False \
         rpm-build git patch tar gzip xz bzip2 zstd \
@@ -28,10 +53,27 @@ RUN dnf install -y --setopt=install_weak_deps=False \
         make perl-interpreter python3 which file unzip cpio \
         autoconf automake libtool gnupg2 \
         zsh \
+    && avail=$(dnf -q repoquery --qf '%{name}\n' $PREP_EXTRAS 2>/dev/null | sort -u) \
+    && echo "PREP_EXTRAS available here: $avail" \
+    && { [ -z "$avail" ] || dnf install -y --setopt=install_weak_deps=False $avail; } \
     && dnf clean all \
     && rm -rf /var/cache/dnf
 
+COPY entitled-extras.sh /usr/local/libexec/entitled-extras.sh
+RUN --mount=type=secret,id=rhsm /usr/local/libexec/entitled-extras.sh \
+    && dnf clean all && rm -rf /var/cache/dnf
+
 COPY macros.rpmautospec /usr/lib/rpm/macros.d/macros.rpmautospec
+
+# %prep runs as root here, and under rootless podman "root" cannot chown to
+# the high uids some tarballs record (edk2's bundled openssl: uid 113492,
+# "Cannot change ownership ... Invalid argument"). Ownership is irrelevant
+# for a source tree.
+ENV TAR_OPTIONS=--no-same-owner
+# The BUILD bind mount is owned by a uid git considers foreign, so git's
+# safe.directory check fails %prep scripts that run git on the tree
+# (openssl-fips-provider's extract-src.sh: "fatal: not in a git directory").
+RUN git config --system --add safe.directory '*'
 
 # rpmbuild warns (harmlessly) about a missing mockbuild user on every run;
 # creating it keeps the logs readable.
