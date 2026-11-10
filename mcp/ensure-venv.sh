@@ -7,14 +7,23 @@
 # retries every few seconds forever, silently. Wired in as this service's
 # ExecStartPre so a missing venv self-heals instead of crash-looping.
 #
-# Idempotent: no-op when the venv already has a working python.
+# "Working" means the server's dependency imports, not merely that the
+# interpreter exists. The venv's python is a symlink to /usr/bin/python3, so
+# a distro Python upgrade (Fedora 45: 3.14 -> 3.15, 2026-11-04) leaves it
+# executable while every package sits in the old lib/python3.14/site-packages.
+# The old `-x` check passed, casket_mcp.py died with "No module named 'mcp'",
+# and the service crash-looped for a week (175k restarts) unnoticed.
+#
+# Idempotent: no-op when the venv's python can import mcp.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PY="$HERE/.venv/bin/python"
 
-[ -x "$HERE/.venv/bin/python" ] && exit 0
+"$PY" -c 'import mcp.server.fastmcp' >/dev/null 2>&1 && exit 0
 
-echo "[ensure-venv] $HERE/.venv missing or broken, rebuilding..." >&2
-python3 -m venv "$HERE/.venv"
+echo "[ensure-venv] $HERE/.venv missing or cannot import mcp, rebuilding..." >&2
+# --clear: an upgraded-away lib/python3.N/ must not linger beside the new one.
+python3 -m venv --clear "$HERE/.venv"
 "$HERE/.venv/bin/pip" install -q -r "$HERE/requirements.txt"
 echo "[ensure-venv] rebuild complete" >&2
