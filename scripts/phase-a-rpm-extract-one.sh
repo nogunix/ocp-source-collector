@@ -38,7 +38,9 @@ dest="$stage_root/$nevr"
 [[ -d "$dest" ]] && exit 0
 
 tmp=$(mktemp -d)
-trap "rm -rf '$tmp'" EXIT
+# Same rootless-uid issue as rm_dest below: container_extract's BUILD dir
+# holds files owned by the container's build user.
+trap "rm -rf '$tmp' 2>/dev/null || podman unshare rm -rf '$tmp'" EXIT
 
 # Detect dist tag from the release string: .el9_4.6 → el9, .el10 → el10
 detect_dist() {
@@ -193,6 +195,19 @@ builtin_extract() {
     return 0
 }
 
+# Remove a failed container attempt's output. A plain rm is not enough under
+# rootless podman: rpmbuild inside the container runs as a non-root user, so
+# its files land on the host as a subordinate uid (e.g. 545546), and %prep
+# trees often carry 0555 dirs (grub2's gnulib). The host user can then delete
+# neither. On 2026-11-10 grub2-2.06-127.el9_8 failed %prep in srpmix7
+# (no gettext in the image), this rm hit ~10k "Permission denied", and set -e
+# killed the whole repackage-srpms-refresh.sh run. podman unshare enters the
+# same user namespace, where those uids are ours.
+rm_dest() {
+    rm -rf "$dest" 2>/dev/null && return 0
+    podman unshare rm -rf "$dest"
+}
+
 # --- dispatch ---
 dist=$(detect_dist "$src")
 
@@ -200,13 +215,13 @@ dist=$(detect_dist "$src")
 if [[ -n "$dist" ]] && srpmix7_container_extract "$dist"; then
     exit 0
 fi
-[[ -n "$dist" ]] && rm -rf "$dest"
+[[ -n "$dist" ]] && rm_dest
 
 # 2. Container: rpmbuild -bp under the distro's rpm (no srpmix7 metadata)
 if [[ -n "$dist" ]] && container_extract "$dist"; then
     exit 0
 fi
-[[ -n "$dist" ]] && rm -rf "$dest"
+[[ -n "$dist" ]] && rm_dest
 
 # 3. srpmix7 on host
 if [[ -x "$SRPMIX7" ]] && command -v zsh >/dev/null 2>&1; then
