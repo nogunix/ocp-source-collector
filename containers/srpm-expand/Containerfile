@@ -10,7 +10,10 @@
 # Build (one per el family — the caskets mix el8/el9/el10):
 #   podman build -f containers/srpm-expand/Containerfile \
 #     --build-arg BASE=registry.access.redhat.com/ubi9/ubi:latest \
+#     --secret id=rhsm,src=$HOME/.config/casket/rhsm.env \
 #     -t casket-srpm-expand:el9 containers/srpm-expand
+# --secret is optional; see entitled-extras.sh for what it adds (flex, bison,
+# gettext-devel -- kernels and autopoint users) and why it is a secret.
 #
 # The tool list is what %prep sections actually reach for. git is not
 # optional: systemd applies its 731 patches with `git init` + `git apply`,
@@ -36,9 +39,9 @@
 #   dos2unix, autoconf-archive  one package each
 # Installed only where the base's repos carry them (ubi8 lacks some), so one
 # Containerfile still serves el8/el9/el10. Not available from any UBI repo,
-# so still failing: autopoint (gettext-devel; coreutils, pam, xz, quota,
-# grub2) and flex/bison (el9 kernels from 5.14.0-427.140 on build kconfig in
-# %prep). Those keep their archives + spec and the _incomplete marker.
+# so they come from entitled-extras.sh below (needs the rhsm secret):
+# autopoint (gettext-devel; coreutils, pam, xz, quota, grub2) and flex/bison
+# (el9 kernels from 5.14.0-427.140 on, and el10 6.12, build kconfig in %prep).
 ARG BASE=registry.access.redhat.com/ubi9/ubi:latest
 FROM ${BASE}
 
@@ -55,6 +58,10 @@ RUN dnf install -y --setopt=install_weak_deps=False \
     && { [ -z "$avail" ] || dnf install -y --setopt=install_weak_deps=False $avail; } \
     && dnf clean all \
     && rm -rf /var/cache/dnf
+
+COPY entitled-extras.sh /usr/local/libexec/entitled-extras.sh
+RUN --mount=type=secret,id=rhsm /usr/local/libexec/entitled-extras.sh \
+    && dnf clean all && rm -rf /var/cache/dnf
 
 COPY macros.rpmautospec /usr/lib/rpm/macros.d/macros.rpmautospec
 
