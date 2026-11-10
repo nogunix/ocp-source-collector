@@ -10,16 +10,21 @@
 # bulk source bytes are reused from the mount; only new sources + the regenerated
 # index land in the upper layer.
 #
-# Usage: repackage-srpms-refresh.sh -m <mount> -s <new-srpm-dir> -r <rpmdb-dir> -o <out.sqfs.xz>
+# Usage: repackage-srpms-refresh.sh -m <mount> -s <new-srpm-dir> -r <rpmdb-dir> -o <out.sqfs.xz> [-I]
 #   -m  read-only casket mount (e.g. /srv/sources-ocp-srpms)
-#   -s  dir of newly-collected *.src.rpm (already-present NEVRs are skipped)
+#   -s  dir of newly-collected *.src.rpm (already-present NEVRs are skipped,
+#       except _incomplete ones under -I)
+#   -I  re-expand NEVRs the mount has as _incomplete (archives + spec, no
+#       %prep tree), e.g. after casket-srpm-expand gained the tools their
+#       %prep needs. A re-expansion replaces the mounted entry only if it now
+#       completes; one that fails again leaves the old entry untouched.
 #   -r  per-OCP rpmdb tsv dir (defaults to <mount>/meta/rpmdb)
 #   -o  output .sqfs.xz path
 # Requires: sudo (overlay + loop already mounted), mksquashfs, rpm, python3.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-MOUNT=""; NEWSRPM=""; RPMDB=""; OUT=""; EXTRA_META=(); UPPER_PERSIST=""
+MOUNT=""; NEWSRPM=""; RPMDB=""; OUT=""; EXTRA_META=(); UPPER_PERSIST=""; REDO_INCOMPLETE=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -m) MOUNT="$2"; shift 2 ;;
@@ -28,6 +33,7 @@ while [[ $# -gt 0 ]]; do
         -o) OUT="$2"; shift 2 ;;
         -M) EXTRA_META+=("$2"); shift 2 ;;   # extra file(s) to place under meta/
         -u) UPPER_PERSIST="$2"; shift 2 ;;  # persistent upper dir: reused across runs, never deleted
+        -I) REDO_INCOMPLETE=1; shift ;;
         *) echo "unknown arg: $1" >&2; exit 1 ;;
     esac
 done
@@ -48,8 +54,10 @@ TMP_BASE="$CASKET_WORK/.refresh-tmp"
 mkdir -p "$TMP_BASE"
 if [[ -n "$UPPER_PERSIST" ]]; then mkdir -p "$UPPER_PERSIST"; UPPER="$UPPER_PERSIST"; else UPPER=$(mktemp -d -p "$TMP_BASE"); fi
 WORKD=$(mktemp -d -p "$TMP_BASE"); MERGED=$(mktemp -d -p "$TMP_BASE")
+REDO=$(mktemp -d -p "$TMP_BASE")   # -I re-expansions, staged outside the overlay
 cleanup() {
     mountpoint -q "$MERGED" && sudo umount "$MERGED" || true
+    sudo rm -rf "$REDO"
     # by-ocp regen runs under sudo, so upper/workd hold root-owned files.
     [[ -z "$UPPER_PERSIST" ]] && sudo rm -rf "$UPPER"
     sudo rm -rf "$WORKD"; rmdir "$MERGED" 2>/dev/null || true
@@ -57,22 +65,52 @@ cleanup() {
 trap cleanup EXIT
 
 # 1. Extract only NEW SRPMs (skip NEVRs already in the mounted pool).
+#    Under -I, an _incomplete one is re-expanded into $REDO instead and kept
+#    only if it now completes (no _incomplete / srpmix7 INCOMPLETE marker).
+#    It cannot go straight into the upper: a dir created in the upper over an
+#    existing lower dir MERGES with it, so the old _incomplete marker would
+#    show through. Step 2b replaces it through the merged view instead.
 mkdir -p "$UPPER/srpms" "$UPPER/meta"
-new=0; skip=0
+new=0; skip=0; redone=0; still=0
 for f in "$NEWSRPM"/*.src.rpm; do
     nevr=$(rpm -qp --qf '%{NAME}-%{VERSION}-%{RELEASE}' "$f" 2>/dev/null) || continue
-    if [[ -d "$MOUNT/srpms/$nevr" ]]; then skip=$((skip+1)); continue; fi
+    if [[ -d "$MOUNT/srpms/$nevr" ]]; then
+        if (( REDO_INCOMPLETE )) && [[ -e "$MOUNT/srpms/$nevr/_incomplete" ]]; then
+            "$SCRIPT_DIR/phase-a-rpm-extract-one.sh" "$f" "$REDO"
+            if [[ -e "$REDO/$nevr/_incomplete" || -e "$REDO/$nevr/INCOMPLETE" ]]; then
+                still=$((still+1)); sudo rm -rf "${REDO:?}/$nevr"
+            else
+                redone=$((redone+1))
+            fi
+            continue
+        fi
+        skip=$((skip+1)); continue
+    fi
     "$SCRIPT_DIR/phase-a-rpm-extract-one.sh" "$f" "$UPPER/srpms"
     new=$((new+1))
 done
 echo "[refresh] extracted $new new SRPMs into upper ($skip already in pool)"
-[[ "$new" -gt 0 ]] || echo "[refresh] WARNING: no new SRPMs — index will only reflect resolver changes"
+(( REDO_INCOMPLETE )) && echo "[refresh] -I: $redone _incomplete entries now complete, $still still incomplete (kept as is)"
+[[ "$new" -gt 0 || "$redone" -gt 0 ]] || echo "[refresh] WARNING: no new SRPMs — index will only reflect resolver changes"
 
 sudo chmod -R a+rX "$UPPER"; sudo chmod 755 "$UPPER"
 
 # 2. Overlay the upper (new sources) over the read-only mount.
 sudo mount -t overlay overlay \
     -o lowerdir="$MOUNT",upperdir="$UPPER",workdir="$WORKD" "$MERGED"
+
+# 2b. -I: swap each re-expanded entry in. rm through the merged view leaves a
+#     whiteout; the dir copied in after it is created opaque, so nothing of
+#     the old lower entry shows through. Under sudo: whiteouts need root,
+#     and the container-made trees carry subordinate uids.
+if (( redone )); then
+    for d in "$REDO"/*/; do
+        nevr=$(basename "$d")
+        sudo rm -rf "${MERGED:?}/srpms/$nevr"
+        sudo cp -a "$d" "$MERGED/srpms/$nevr"
+    done
+    echo "[refresh] -I: replaced $redone entries in the merged view"
+fi
 
 # 3. If the caller supplied an rpmdb set different from the casket's own
 #    (e.g. new OCP patches replacing old ones), replace meta/rpmdb/ in the
