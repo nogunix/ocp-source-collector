@@ -18,7 +18,6 @@
 # within one minor then has to go through ripgrep/casket-mcp rather than the
 # web UI; cross-*minor* comparison (the usual case) is unaffected.
 keep-patches: 1
-4.18
 4.20
 4.22
 5.0
