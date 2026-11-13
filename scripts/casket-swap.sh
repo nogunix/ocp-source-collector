@@ -69,7 +69,12 @@ if [[ -n "$LIVE_JSON" ]]; then
 fi
 
 # Other staged entries for this unit are never swapped (the highest entry_id
-# wins), so they only ever accumulate. Name them so they get retired.
+# wins), so they only ever accumulate. For the replace-in-place phases they are
+# superseded builds of the same mount and --apply retires them (2026-11-11: the
+# auto-update had left 8 such b-operand entries behind, each a 12-15G casket
+# that casket-cleanup.sh could not reclaim while it stayed "staged"). Phase a is
+# additive -- an older staged a build is a different PATCH with its own
+# mountpoint -- so there they are only named.
 OTHER_STAGED=$(python3 "$REGISTRY_PY" list --phase "$PHASE" --unit "$UNIT" --status staged 2>/dev/null \
     | awk -F'\t' -v keep="$STAGED_ENTRY_ID" 'NR>1 && $1!=keep {print $1}' | paste -sd' ')
 
@@ -84,7 +89,13 @@ echo "unit:     ${PHASE}-${UNIT}"
 echo "mount:    $STAGED_MOUNT"
 echo "current:  ${LIVE_ARTIFACT:-<none live yet>}${LIVE_BUILT:+  (built $LIVE_BUILT)}"
 echo "new:      $STAGED_ARTIFACT${STAGED_BUILT:+  (built $STAGED_BUILT)}"
-[[ -n "$OTHER_STAGED" ]] && echo "note:     other staged entries for this unit, never swapped: $OTHER_STAGED -- retire them (registry.py transition --entry-id N --to retired)"
+if [[ -n "$OTHER_STAGED" ]]; then
+    if [[ "$PHASE" == "a" ]]; then
+        echo "note:     other staged entries for this unit, never swapped: $OTHER_STAGED -- retire them (registry.py transition --entry-id N --to retired) if not wanted"
+    else
+        echo "superseded: older staged entries $OTHER_STAGED will be retired"
+    fi
+fi
 
 # ISO-8601 UTC strings compare correctly as strings.
 if [[ -n "$LIVE_BUILT" && -n "$STAGED_BUILT" && "$LIVE_MOUNT" == "$STAGED_MOUNT" \
@@ -114,7 +125,21 @@ if (( APPLY )); then
     RETIRE_FLAG=()
     [[ "$PHASE" != "a" ]] && RETIRE_FLAG=(--retire-previous)
     python3 "$REGISTRY_PY" transition --entry-id "$STAGED_ENTRY_ID" --to live --mount-path "$STAGED_MOUNT" "${RETIRE_FLAG[@]}"
-    log "registry: entry_id=$STAGED_ENTRY_ID -> live${RETIRE_FLAG:+ (previous live retired)}"
+    # Only claim a retirement that happened: a unit's first swap has no live
+    # entry, and printing "(previous live retired)" there sent the operator
+    # looking for an entry that never existed (b-5.0, 2026-11-11).
+    retired_note=""
+    [[ ${#RETIRE_FLAG[@]} -gt 0 && -n "$LIVE_ARTIFACT" ]] && retired_note=" (previous live retired)"
+    log "registry: entry_id=$STAGED_ENTRY_ID -> live$retired_note"
+    if [[ "$PHASE" != "a" && -n "$OTHER_STAGED" ]]; then
+        for id in $OTHER_STAGED; do
+            if python3 "$REGISTRY_PY" transition --entry-id "$id" --to retired >/dev/null; then
+                log "registry: entry_id=$id -> retired (superseded staged build)"
+            else
+                log "WARN: could not retire superseded staged entry_id=$id"
+            fi
+        done
+    fi
     log "reboot persistence comes from systemd/casket-mounts.service (casket-mounts.sh --apply)"
 else
     echo "(dry-run; re-run with sudo ... --apply to remount + update registry)"

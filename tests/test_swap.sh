@@ -69,13 +69,22 @@ swap --phase a --unit 4.20
 (( RC == 0 )) && pass "older patch on its own mountpoint is allowed" \
     || { bad "older patch on its own mountpoint is allowed"; echo "$OUT" | sed 's/^/       /'; }
 
-echo "# leftover staged entries are named"
+echo "# leftover staged entries: retired for replace-in-place phases, only named for a"
 registry "$(entry 1 b-operand 4.18 live   2026-09-01T00:00:00Z "$TMP/srv/l418")" \
          "$(entry 2 b-operand 4.18 staged 2026-08-15T00:00:00Z "$TMP/srv/l418")" \
          "$(entry 3 b-operand 4.18 staged 2026-09-06T00:00:00Z "$TMP/srv/l418")"
 swap --phase b-operand --unit 4.18
-{ (( RC == 0 )) && has "never swapped: 2"; } && pass "older leftover staged entry_id is reported" \
-    || { bad "older leftover staged entry_id is reported"; echo "$OUT" | sed 's/^/       /'; }
+{ (( RC == 0 )) && has "superseded: older staged entries 2 will be retired"; } && pass "superseded staged entry_id is announced for retirement" \
+    || { bad "superseded staged entry_id is announced for retirement"; echo "$OUT" | sed 's/^/       /'; }
+grep -q '"status": *"staged"' <(python3 -c 'import json,sys; [print(json.dumps(e)) for e in json.load(open(sys.argv[1]))["artifacts"] if e["entry_id"]==2]' "$TMP/state/registry.json") \
+    && pass "dry-run leaves the registry untouched" || bad "dry-run leaves the registry untouched"
+
+registry "$(entry 1 a 4.21 live   2026-10-02T00:00:00Z "$TMP/srv/ocp4.21.34")" \
+         "$(entry 2 a 4.21 staged 2026-10-13T00:00:00Z "$TMP/srv/ocp4.21.36")" \
+         "$(entry 3 a 4.21 staged 2026-10-30T00:00:00Z "$TMP/srv/ocp4.21.37")"
+swap --phase a --unit 4.21
+{ (( RC == 0 )) && has "never swapped: 2" && ! has "superseded:"; } && pass "phase a only names other staged patches" \
+    || { bad "phase a only names other staged patches"; echo "$OUT" | sed 's/^/       /'; }
 
 if (( fail )); then
     printf '\n%d test(s) failed\n' "$fail"; exit 1
