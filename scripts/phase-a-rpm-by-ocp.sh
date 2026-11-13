@@ -58,9 +58,26 @@ trap 'rm -f "$MAP"; rm -rf "$SCRATCH"' EXIT
 log "building rpmspec bin->src map (-P $JOBS, failures expected & harmless)"
 ( cd "$SRPMS" && ls -d */ | sed 's#/##' ) | \
   MAP="$MAP" SRPMS="$SRPMS" SCRATCH="$SCRATCH" xargs -P "$JOBS" -I{} bash -c '
-    d="{}"; spec=$(ls "$SRPMS/$d"/info/*.spec 2>/dev/null | head -1); [[ -n "$spec" ]] || exit 0
+    d="{}"
+    # info/*.spec is the srpmix layout; the older rpm2cpio layout keeps the
+    # spec at the top level (dtc-1.6.0-7.el9/dtc.spec). Looking only in info/
+    # left every such entry unmapped, which is how libfdt and the ding-libs
+    # subpackages (libbasicobjects, libini_config, ...) went UNRESOLVED.
+    spec=$(ls "$SRPMS/$d"/info/*.spec "$SRPMS/$d"/*.spec 2>/dev/null | head -1); [[ -n "$spec" ]] || exit 0
     work="$SCRATCH/$d"; mkdir -p "$work" || exit 0
-    names=$(cd "$work" && rpmspec -q --define "_sourcedir $SRPMS/$d/archives" --qf "%{NAME}\n" "$spec" 2>/dev/null) || exit 0
+    if ! names=$(cd "$work" && rpmspec -q --define "_sourcedir $SRPMS/$d/archives" --qf "%{NAME}\n" "$spec" 2>/dev/null); then
+      # rpmspec failed (typically the host rpm rejecting old %patchN syntax).
+      # Read the package names off the spec text instead: Name:, plus each
+      # %package (-n X -> X, Y -> Name-Y). Names still carrying a macro after
+      # %{name} substitution are dropped rather than guessed.
+      names=$(awk '"'"'
+        tolower($1)=="name:" && !n { n=$2; print n; next }
+        $1=="%package" && n {
+          if ($2=="-n") x=$3; else x=n "-" $2
+          gsub(/%\{name\}|%name/, n, x)
+          if (x !~ /%/) print x
+        }'"'"' "$spec")
+    fi
     while read -r b; do [[ -n "$b" ]] && printf "%s\t%s\n" "$b" "$d"; done <<< "$names" >> "$MAP"
   '
 log "rpmspec mapped $(wc -l < "$MAP") binary names"
