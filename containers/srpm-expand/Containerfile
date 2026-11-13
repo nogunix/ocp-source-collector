@@ -64,6 +64,7 @@ RUN --mount=type=secret,id=rhsm /usr/local/libexec/entitled-extras.sh \
     && dnf clean all && rm -rf /var/cache/dnf
 
 COPY macros.rpmautospec /usr/lib/rpm/macros.d/macros.rpmautospec
+COPY macros.casket-prep /etc/rpm/macros.casket-prep
 
 # %prep runs as root here, and under rootless podman "root" cannot chown to
 # the high uids some tarballs record (edk2's bundled openssl: uid 113492,
