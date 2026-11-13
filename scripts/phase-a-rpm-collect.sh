@@ -10,8 +10,19 @@
 # OCP 5.0 on, where fresh installs default to it; 4.21/4.22 ship it opt-in and
 # get it too. Patches without rhel-coreos-10 are skipped by the el10 pass.
 #
+# Two rounds: every stream extracts its rpmdb tsvs first (collect.sh -E), then
+# every stream fetches. A package is fetched by the stream its dist tag names,
+# not the stream whose tsv lists it (RHCOS 10 ships some el9 builds), so the
+# el9 fetch needs the el10 tsvs to exist already.
+#
 # Usage: phase-a-rpm-collect.sh [--build-image] [--versions "4.20.32 4.22.8"]
 #                               [--majors "9 10"]
+#
+# --versions ""   skip version resolution and rpmdb extraction entirely and
+#                 fetch for the tsvs already in rpmdb-<stamp>/ (set
+#                 CASKET_COLLECT_STAMP to reuse an earlier run's directory).
+#                 This is the re-fetch path: e.g. after adding -extensions
+#                 tsvs, or retrying a failed stream.
 #
 # Prerequisites:
 #   - Host registered with subscription-manager (for /etc/pki/entitlement)
@@ -29,12 +40,13 @@ source "$SCRIPT_DIR/lib.sh"
 IMAGE_REPO="casket-srpm-collect"
 BUILD_IMAGE=0
 VERSIONS_OVERRIDE=""
+VERSIONS_GIVEN=0
 MAJORS="9 10"
 
 while (( $# )); do
     case "$1" in
         --build-image) BUILD_IMAGE=1; shift ;;
-        --versions)    VERSIONS_OVERRIDE="$2"; shift 2 ;;
+        --versions)    VERSIONS_OVERRIDE="$2"; VERSIONS_GIVEN=1; shift 2 ;;
         --majors)      MAJORS="$2"; shift 2 ;;
         -h|--help)     echo "phase-a-rpm-collect.sh [--build-image] [--versions 'ver1 ver2'] [--majors '9 10']"; exit 0 ;;
         *)             die "unknown arg: $1" ;;
@@ -61,7 +73,7 @@ done
 # because :el10 predated the -M option. Each build is labelled with a hash of
 # its build context and rebuilt when the label no longer matches.
 CTX="$SCRIPT_DIR/../containers/srpm-collect"
-src_hash=$(cat "$CTX/Containerfile" "$CTX/collect.sh" "$CTX/cdn-fetch.py" | sha256sum | cut -c1-16)
+src_hash=$(cat "$CTX/Containerfile" "$CTX/collect.sh" "$CTX/cdn-fetch.py" "$CTX/route-rows.awk" | sha256sum | cut -c1-16)
 for major in "${MAJOR_LIST[@]}"; do
     image="$IMAGE_REPO:el$major"
     have=$(podman image inspect --format '{{ index .Labels "casket.src-hash" }}' "$image" 2>/dev/null) || have=""
@@ -74,8 +86,11 @@ for major in "${MAJOR_LIST[@]}"; do
     fi
 done
 
-# Resolve versions from config if not overridden
-if [[ -z "$VERSIONS_OVERRIDE" ]]; then
+# Resolve versions from config if not given. An explicit --versions "" means
+# "no extraction, reuse the tsvs" and must not fall into this branch: it used
+# to, so the empty string was indistinguishable from "not passed" and a
+# re-fetch always re-resolved (and re-extracted) every patch.
+if (( ! VERSIONS_GIVEN )); then
     source "$SCRIPT_DIR/lib-fingerprint.sh"
     VERSIONS_OVERRIDE=""
     while IFS= read -r minor; do
@@ -87,7 +102,9 @@ if [[ -z "$VERSIONS_OVERRIDE" ]]; then
     log "resolved versions: $VERSIONS_OVERRIDE"
 fi
 
-[[ -n "$VERSIONS_OVERRIDE" ]] || die "no versions to collect"
+if (( ! VERSIONS_GIVEN )); then
+    [[ -n "$VERSIONS_OVERRIDE" ]] || die "no versions to collect"
+fi
 
 # Output goes to DATED subdirectories, never straight into srpms/.
 #
@@ -156,32 +173,51 @@ if [[ -r /etc/os-release ]]; then
     host_major=$(. /etc/os-release; [[ "${ID:-}" == rhel ]] && echo "${VERSION_ID%%.*}") || true
 fi
 
+# --log-driver=none: podman defaults to journald here, which records the
+# container output BOTH under the container name and again through podman's
+# own stdout that systemd captures -- every line appeared twice in
+# `journalctl --user -u ...`. Verified with a one-line echo container.
+run_collect() {
+    local major="$1"; shift
+    podman run --rm --log-driver=none \
+        "${ENTITLEMENT_MOUNTS[@]}" \
+        -v "$AUTHFILE:/run/pull-secret.json:ro,z" \
+        -v "$OUT_DIR:/out:z" \
+        "$IMAGE_REPO:el$major" \
+        /work/collect.sh -o /out -M "$major" \
+            -S "$SRPM_SUBDIR" -R "$RPMDB_SUBDIR" "$@"
+}
+
+# A failed stream does not stop the next one: the passes write disjoint tsvs
+# and log files, and an el10 hiccup should not cost the el9 refresh (or the
+# other way round). The failure is reported and exits non-zero.
 failed=()
+
+# Round 1: extract every stream's tsvs. No entitlement involved (it reads the
+# release payload with the pull secret), so it runs for every major.
+if [[ -n "$VERSIONS_OVERRIDE" ]]; then
+    for major in "${MAJOR_LIST[@]}"; do
+        log "extracting el$major rpmdb in $IMAGE_REPO:el$major"
+        run_collect "$major" -V "$VERSIONS_OVERRIDE" -E \
+            || { log "el$major: extract FAILED"; failed+=("el$major(extract)"); }
+    done
+else
+    log "--versions \"\": no extraction, reusing the tsvs in $OUT_DIR/$RPMDB_SUBDIR"
+fi
+find "$OUT_DIR/$RPMDB_SUBDIR" -maxdepth 1 -name '*.tsv' | grep -q . \
+    || die "no rpmdb tsvs in $OUT_DIR/$RPMDB_SUBDIR -- nothing to fetch"
+
+# Round 2: fetch. Each pass sees every stream's tsvs and takes the rows whose
+# dist tag is its own (containers/srpm-collect/route-rows.awk).
 for major in "${MAJOR_LIST[@]}"; do
     if [[ ! -f "$RHSM_ENV" && "$major" != "$host_major" ]]; then
         log "el$major: skipped -- no $RHSM_ENV, and the host's entitlement does not cover RHEL $major"
         failed+=("el$major(no-entitlement)")
         continue
     fi
-    log "running collect in $IMAGE_REPO:el$major"
-    # --log-driver=none: podman defaults to journald here, which records the
-    # container output BOTH under the container name and again through
-    # podman's own stdout that systemd captures -- every line appeared twice
-    # in `journalctl --user -u ...`. Verified with a one-line echo container.
-    #
-    # A failed stream does not stop the next one: the passes write disjoint
-    # tsvs and log files, and an el10 hiccup should not cost the el9 refresh
-    # (or the other way round). The failure is reported and exits non-zero.
-    if ! podman run --rm --log-driver=none \
-        "${ENTITLEMENT_MOUNTS[@]}" \
-        -v "$AUTHFILE:/run/pull-secret.json:ro,z" \
-        -v "$OUT_DIR:/out:z" \
-        "$IMAGE_REPO:el$major" \
-        /work/collect.sh -o /out -V "$VERSIONS_OVERRIDE" -M "$major" \
-            -S "$SRPM_SUBDIR" -R "$RPMDB_SUBDIR"; then
-        log "el$major: collect FAILED"
-        failed+=("el$major")
-    fi
+    log "fetching el$major SRPMs in $IMAGE_REPO:el$major"
+    run_collect "$major" -V "" \
+        || { log "el$major: collect FAILED"; failed+=("el$major"); }
 done
 
 # find, not `ls glob | wc`: with nothing fetched the glob does not match, ls

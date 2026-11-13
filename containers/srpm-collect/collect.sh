@@ -4,16 +4,22 @@
 # 03-fetch-eus.sh) in a single pass.
 #
 # Usage: collect.sh -o <output-dir> [-p <pull-secret>] [-V "4.20.32 4.22.8 ..."]
-#                   [-M <rhel-major>]
+#                   [-M <rhel-major>] [-E]
 #
 # -M picks the node-OS stream, and must match the image it runs in (UBI9 can
 # only see RHEL 9 repos, UBI10 only RHEL 10 -- see the Containerfile):
 #   -M 9  (default)  payload tag rhel-coreos     -> rpmdb/<patch>.tsv
 #   -M 10            payload tag rhel-coreos-10  -> rpmdb/<patch>-el10.tsv
-# Each run fetches only for its own stream's tsvs (<patch>[-extensions].tsv for
-# 9, <patch>-el10[-extensions].tsv for 10), so both passes can share one
-# rpmdb-<date>/ and srpms-<date>/. A patch whose payload has no rhel-coreos-10
-# (anything before 4.21) is skipped by the el10 pass, not failed.
+# Each run extracts only its own stream's tsvs (<patch>.tsv for 9,
+# <patch>-el10.tsv for 10), so both passes can share one rpmdb-<date>/ and
+# srpms-<date>/. A patch whose payload has no rhel-coreos-10 (anything before
+# 4.21) is skipped by the el10 pass, not failed.
+#
+# What a run FETCHES is decided per row, not per tsv: each package goes to the
+# stream its dist tag names (route-rows.awk), because an RHCOS 10 image can
+# ship an el9 build. That means the el9 pass needs the el10 tsvs too, so the
+# caller extracts every stream first (-E: extract and exit, no entitlement
+# needed) and only then runs the fetch passes.
 #
 # Entitlement: this container REGISTERS ITSELF, it does not borrow the host's.
 #
@@ -57,6 +63,8 @@ SRPM_SUBDIR="srpms"
 RPMDB_SUBDIR="rpmdb"
 RELEASE_REGISTRY="${RELEASE_REGISTRY:-quay.io/openshift-release-dev/ocp-release}"
 MAJOR=9
+EXTRACT_ONLY=0
+ROUTE_AWK="${ROUTE_AWK:-$(dirname "$0")/route-rows.awk}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -66,9 +74,10 @@ while [[ $# -gt 0 ]]; do
         -S|--srpm-subdir)  SRPM_SUBDIR="$2";  shift 2 ;;
         -R|--rpmdb-subdir) RPMDB_SUBDIR="$2"; shift 2 ;;
         -M|--major)   MAJOR="$2"; shift 2 ;;
+        -E|--extract-only) EXTRACT_ONLY=1; shift ;;
         -h|--help)
             echo "collect.sh -o <output-dir> [-p <pull-secret>] [-V 'ver1 ver2 ...']"
-            echo "           [-S srpms-<date>] [-R rpmdb-<date>] [-M 9|10]"
+            echo "           [-S srpms-<date>] [-R rpmdb-<date>] [-M 9|10] [-E]"
             exit 0 ;;
         *) echo "unknown arg: $1" >&2; exit 1 ;;
     esac
@@ -113,8 +122,11 @@ stream_tsvs() {
 # ── Phase 1: extract rpmdb ──────────────────────────────────────────────
 read -ra VERSIONS <<< "$VERSIONS_STR"
 if (( ${#VERSIONS[@]} == 0 )); then
-    echo "no versions given (-V); skipping rpmdb extraction" >&2
-    if [[ -n "$(stream_tsvs)" ]]; then
+    # The fetch round of phase-a-rpm-collect.sh always lands here. Only "no
+    # tsvs at all" is an error: an el10 pass with no -el10 tsvs can still owe
+    # rows routed in from the el9 ones, and an empty route is reported below.
+    log "no versions given (-V); skipping rpmdb extraction"
+    if compgen -G "$TSV_DIR/*.tsv" >/dev/null; then
         log "reusing existing rpmdb tsvs"
     else
         echo "no rpmdb tsvs and no versions — nothing to do" >&2; exit 1
@@ -161,6 +173,11 @@ for V in "${VERSIONS[@]}"; do
     rm -rf "$cache_dir"
 done
 
+if (( EXTRACT_ONLY )); then
+    log "extract-only (-E): $(stream_tsvs | wc -l) el$MAJOR tsvs in $TSV_DIR"
+    exit 0
+fi
+
 # ── Phase 2: enable repos ───────────────────────────────────────────────
 # NOT $OUT_DIR/srpms. That directory is the MERGE POINT of three independent
 # collection streams -- node-OS base (this script), node-OS extensions, and the
@@ -176,22 +193,30 @@ WISH="$OUT_DIR/wishlist$SUF.txt"
 FETCH_LOG="$OUT_DIR/fetch$SUF.log"
 MISSING="$OUT_DIR/missing$SUF.txt"
 
-mapfile -t STREAM_TSVS < <(stream_tsvs)
-if (( ${#STREAM_TSVS[@]} == 0 )); then
+# Every tsv, all streams: rows are routed by dist tag (route-rows.awk), so an
+# el9 build listed in an el10 tsv is fetched here by the el9 pass.
+ROWS="$OUT_DIR/rows$SUF.tsv"
+ALL_TSVS=()
+for f in "$TSV_DIR"/*.tsv; do [[ -e "$f" ]] && ALL_TSVS+=("$f"); done
+: > "$ROWS"
+if (( ${#ALL_TSVS[@]} )); then
+    route_msg=$(awk -v major="$MAJOR" -f "$ROUTE_AWK" "${ALL_TSVS[@]}" 2>&1 >"$ROWS")
+    [[ -n "$route_msg" ]] && log "$route_msg"
+fi
+if [[ ! -s "$ROWS" ]]; then
     # el10: no tracked payload ships rhel-coreos-10 (all older than 4.21).
     # Nothing to fetch is a result, not an error.
-    log "no el$MAJOR tsvs in $TSV_DIR -- nothing to fetch for this stream"
+    log "no el$MAJOR packages in $TSV_DIR -- nothing to fetch for this stream"
     exit 0
 fi
-log "stream el$MAJOR: ${#STREAM_TSVS[@]} tsvs"
+log "stream el$MAJOR: $(wc -l < "$ROWS") rows from ${#ALL_TSVS[@]} tsvs"
 
+# rhocp minors: the minor of every tsv a row came from, plus any rhaosX.Y in
+# the release fields (a 4.20 payload can ship a 4.19-built package).
 mapfile -t OCP_MINORS < <(
     {
-        printf '%s\n' "${STREAM_TSVS[@]##*/}" \
-            | sed -e 's/\.tsv$//' -e 's/-extensions$//' -e 's/-el[0-9]\+$//' \
-                  -e 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/'
-        awk -F'\t' '{print $4}' "${STREAM_TSVS[@]}" 2>/dev/null \
-            | grep -oE 'rhaos[0-9]+\.[0-9]+' | sed 's/^rhaos//'
+        cut -f1 "$ROWS"
+        cut -f5 "$ROWS" | grep -oE 'rhaos[0-9]+\.[0-9]+' | sed 's/^rhaos//'
     } | sort -u -V
 )
 log "rhocp minors: ${OCP_MINORS[*]}"
@@ -270,7 +295,7 @@ done
 
 # ── Phase 3: build wishlist and fetch SRPMs ─────────────────────────────
 log "building wishlist"
-awk -F'\t' '{printf "%s-%s-%s\n", $1, $3, $4}' "${STREAM_TSVS[@]}" | sort -u > "$WISH"
+awk -F'\t' '{printf "%s-%s-%s\n", $2, $4, $5}' "$ROWS" | sort -u > "$WISH"
 n=$(wc -l < "$WISH")
 log "wishlist: $n unique bin-RPM specs"
 

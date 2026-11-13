@@ -52,5 +52,5 @@ RUN OC_ARCH=$(uname -m) \
     && chmod +x /usr/local/bin/oc /usr/local/bin/kubectl
 
 WORKDIR /work
-COPY collect.sh cdn-fetch.py /work/
+COPY collect.sh cdn-fetch.py route-rows.awk /work/
 RUN chmod +x /work/collect.sh /work/cdn-fetch.py

@@ -71,15 +71,20 @@ cp phase-a-rpm/rpmdb-extensions-$STAMP/*-extensions.tsv phase-a-rpm/rpmdb-$STAMP
 
 # 3. A + B (and the A2 packages from step 2): rpmdb extraction + SRPM fetch
 CASKET_COLLECT_STAMP=$STAMP scripts/phase-a-rpm-collect.sh
-#   two passes: casket-srpm-collect:el9 (UBI9), then :el10 (UBI10); --majors "9" for one
+#   two streams: casket-srpm-collect:el9 (UBI9) and :el10 (UBI10); --majors "9" for one
+#   two rounds: every stream extracts its rpmdb first, then every stream fetches
 #   each image is (re)built when missing or when its sources changed (--build-image forces it)
 #   versions come from config/phase-a-rpm-minors.txt (--versions "4.20.35 …" to override)
+
+# 3'. Re-fetch only (no version resolution, no extraction), e.g. after adding
+#     more -extensions tsvs or to retry a failed stream: reuse rpmdb-$STAMP/ as is
+CASKET_COLLECT_STAMP=$STAMP scripts/phase-a-rpm-collect.sh --versions ""
 ```
 
 Step 3 writes `phase-a-rpm/srpms-$STAMP/` and `phase-a-rpm/rpmdb-$STAMP/`. **It never writes to `srpms/`**, which is the merge point (see [From scratch](#from-scratch-full-rebuild)). Inside the container, `collect.sh` does the following:
 
-1. Extracts the rpmdb for each patch: `rhel-coreos` into `rpmdb-<date>/<patch>.tsv` (el9 pass, `-M 9`), or `rhel-coreos-10` into `<patch>-el10.tsv` (el10 pass, `-M 10`; patches without the tag are skipped). A tsv that already exists is kept. Each pass reads only its own stream's tsvs from here on, and writes its own `wishlist`/`fetch`/`missing`/`cdn-unresolved` files (`-el10` suffixed for el10).
-2. Builds the wishlist from **every** `*.tsv` in that directory. That is why step 2 works: the `-extensions` tsvs are picked up. The rhocp repo minors come from both the filenames and the `rhaos<M>.<m>` dist tags, so `kata-containers-…rhaos4.19` in a 4.20 payload still resolves.
+1. **Extract round** (`collect.sh -E`, one container per stream, no entitlement needed): extracts the rpmdb for each patch, `rhel-coreos` into `rpmdb-<date>/<patch>.tsv` (`-M 9`) and `rhel-coreos-10` into `<patch>-el10.tsv` (`-M 10`; patches without the tag are skipped). A tsv that already exists is kept.
+2. **Fetch round**: each stream reads **every** `*.tsv` in that directory and takes the rows whose dist tag is its own (`containers/srpm-collect/route-rows.awk`). That is why step 2 works: the `-extensions` tsvs are picked up. The routing is per package, not per file: an RHCOS 10 image can ship an el9 build, and only the el9 container can fetch it (see [Traps](#traps)). The rhocp repo minors come from both the filenames and the `rhaos<M>.<m>` dist tags, so `kata-containers-…rhaos4.19` in a 4.20 payload still resolves. Each stream writes its own `rows`/`wishlist`/`fetch`/`missing`/`cdn-unresolved` files (`-el10` suffixed for el10).
 3. Fetches the SRPMs with `dnf download --source` in batches.
 4. Retries the micro-releases with pinned `--releasever` against EUS/E4S/HA/RS/RT/CRB/FDP.
 5. Hands the remainder to `cdn-fetch.py`. It reads each repo's own metadata once per needed releasever and downloads straight from the CDN with the entitlement cert. It also reads the releasever off each package's dist tag, so el10 or a future 9.10 need no edit.
@@ -113,6 +118,25 @@ sudo scripts/casket-swap.sh --phase a-rpm --unit all --apply
 
 Before registering, **verify that the casket's `by-ocp/` patch set matches the current upstream**. The fingerprint is computed from upstream, so if a z-stream has moved since extraction, the contents and the fingerprint will disagree.
 
+### Re-expanding `_incomplete` entries
+
+An SRPM whose `%prep` fails is still kept, as an `_incomplete` entry (archives + spec, no `pre-build/` tree). After the expansion image gains the tools those `%prep` sections need, re-expand them in place without a new collect:
+
+```bash
+# rebuild the expansion images (see containers/srpm-expand/Containerfile; --secret adds flex/bison/gettext-devel)
+for n in 9 10; do
+  podman build -f containers/srpm-expand/Containerfile \
+    --build-arg BASE=registry.access.redhat.com/ubi$n/ubi:latest \
+    --secret id=rhsm,src=$HOME/.config/casket/rhsm.env \
+    -t casket-srpm-expand:el$n containers/srpm-expand
+done
+# a dir holding the _incomplete NEVRs' .src.rpm (hardlinks from the srpms-* dirs)
+scripts/repackage-srpms-refresh.sh -m /srv/sources-ocp-srpms -s phase-a-rpm/srpms-redo-$STAMP \
+  -o /mnt/hdd/casket-ocp/casket-$STAMP-ocp-srpms.sqfs.xz -I
+```
+
+A re-expansion replaces the mounted entry only if it now completes. On 2026-11-11 this took the casket from 158 `_incomplete` entries to 1 (`bootc-1.1.6-6.el9_6`, whose spec passes `%cargo_build` options the current rust-toolset rejects). Then register and swap as in step 6.
+
 Measured on 2026-09-07 (9 patches, base only): 984 SRPMs fetched, about 4.5 hours. Of those, `cdn-fetch.py` took about 10 minutes for the EUS/E4S remainder, and 351 were left in `cdn-unresolved.txt`. The overlay expanded 95 new NEVRs and mksquashfs took about 2h20m, giving 3485 SRPMs / 18G.
 
 ---
@@ -130,6 +154,9 @@ Measured on 2026-09-07 (9 patches, base only): 984 SRPMs fetched, about 4.5 hour
 - **A host RHEL entitlement covers its own major only.** Without `rhsm.env`, the wrapper runs only the pass for the host's own RHEL major. Each other pass is reported as not collected, and the run exits non-zero.
 - **Don't expose auxiliary files to `*.tsv` globs.** `collect.sh`, `phase-a-rpm-by-ocp.sh` and the legacy `02` read their input as a bare `"$DIR"/*.tsv`. That is why the extension inventory keeps its 3-column `extensions-map.tsv` under `meta/`. Copy only the `*-extensions.tsv` files into `rpmdb-<date>/`.
 - **rhaos dist tags don't match the payload's minor.** 4.20.32's extensions carry `kata-containers-3.31.0-4.rhaos4.19.el9`, whose SRPM lives in the `rhocp-4.19` source repo. `collect.sh` derives the rhocp minors from the content as well as the filenames, so this resolves. A tool that only looks at filenames misses these packages silently.
+- **A tsv's stream is not its packages' stream.** `4.21.42-el10-extensions.tsv` (RHCOS 10) lists `kata-containers-3.25.0-7.rhaos4.21.el9`, an el9 build. When rows were routed by file name, the el10 pass got it, its UBI10 container could not see the RHEL 9 repo, and it went unfetched (2026-11-10, fetched by hand). Rows are now routed by dist tag, with the file name only as the fallback (no tag, or a tag for a stream the pipeline doesn't run). That is also why extraction runs for every stream before any fetch: the el9 fetch needs the el10 tsvs. `tests/test_route_rows.sh` covers it.
+- **`systemd-run` expands `${VAR}` in the command line itself.** Running a pipeline as `systemd-run --user … bash -c '… ; exit ${PIPESTATUS[0]}'` hands bash an already-expanded (empty) value, so the unit reports success whatever the first command did. Write `$${PIPESTATUS[0]}` (systemd's escape for a literal `$`), or put the command in a script file and run that.
+- **`UNRESOLVED` in `bin-to-src.tsv` is mostly a mapping gap, not a missing SRPM.** The casket built on 2026-11-11 has 91 UNRESOLVED rows although nearly all of their SRPMs are in it (the next refresh corrects it). `phase-a-rpm-by-ocp.sh` looked for specs only under `info/` (older entries keep `<name>.spec` at the top level), and when rpmspec could not parse a spec it mapped none of its subpackages, so ones with their own version (ding-libs → `libbasicobjects-0.1.1`) had nothing to match. It now also reads `Name:`/`%package` off the spec text. Re-run on the same data: 3 rows left, all `python-unversioned-command-3.9.21-2.el9_6.7` (4.19.55), whose `python3.9` SRPM is gone from the CDN. Before chasing an UNRESOLVED row, check whether the source is already under `srpms/`. `tests/test_byocp_spec_fallback.sh` covers this.
 - **The extension inventory and the collect run each resolve the current patches.** Run them back to back. If a z-stream lands in between, the base and the `-extensions` tsvs describe different patches. Pin both with `-v` / `--versions` if in doubt.
 
 ---
