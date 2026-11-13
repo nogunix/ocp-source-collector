@@ -1,0 +1,18 @@
+# Expansion-only stubs for cargo macros that %prep never runs.
+#
+# This image only runs `rpmbuild -bp`, but rpmbuild still PARSES the whole
+# spec, and a macro in %build is expanded at parse time. rust-toolset's
+# %cargo_build parses its own options (cargo_build(naf:)) on current UBI9
+# (1.92), while specs written for the older el9 macros pass raw cargo flags:
+# bootc-1.1.6-6.el9_6 has `%cargo_build --features rhsm` in its el9 branch
+# and dies with "Unknown option - in cargo_build(naf:)" before %prep starts,
+# so the casket kept it as _incomplete (2026-11-11).
+#
+# Plain (non-parametric) definitions accept any arguments and expand to a
+# no-op `:` line in sections -bp never executes. %cargo_prep is untouched:
+# %prep really uses it. Lives in /etc/rpm/, which rpm reads after
+# /usr/lib/rpm/macros.d/, so it overrides macros.rust-toolset. The casket
+# keeps the original spec; only this image's parse of it changes.
+%cargo_build :
+%cargo_install :
+%cargo_test :
