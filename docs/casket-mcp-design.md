@@ -7,12 +7,12 @@ Exposes casket mounts (`/srv/sources-*`) as MCP tools, enabling Claude and other
 - **Backend = hybrid**: Search for symbol definitions/references/full text uses OpenGrok REST; navigation, repo resolution, file reads, and uncovered phases use FS + ripgrep + index layer.
 - **Transport = dual-mode**: Same implementation switches between stdio (local) and HTTP (LAN sharing).
 - **Read-only**: All tools are read-only. Paths restricted to `/srv/sources-*` (traversal prevention).
-- Implementation: Python + official `mcp` SDK's **FastMCP** (decorator-based tool definitions).
+- Implementation: Python + official `mcp` SDK's **MCPServer** (decorator-based tool definitions; named FastMCP before mcp 2.0).
 
 ## Architecture
 
 ```
-Claude Code / Desktop ──(MCP: stdio or HTTP)──▶ casket-mcp (FastMCP)
+Claude Code / Desktop ──(MCP: stdio or HTTP)──▶ casket-mcp (MCPServer)
                                                   ├─ OpenGrok REST  http://localhost:8080/api/v1
                                                   │     def / symbol / full / path  (indexed phases)
                                                   └─ FS + ripgrep   /srv/sources-*
@@ -60,7 +60,7 @@ Return values are structured JSON optimized for LLM consumption (includes `path:
 
 ## Transport switching
 
-FastMCP's `mcp.run(transport=...)` provides dual-mode from the same codebase:
+MCPServer's `mcp.run(transport=...)` provides dual-mode from the same codebase:
 
 ```python
 # end of casket_mcp.py
@@ -102,7 +102,7 @@ For HTTP mode, open the firewall as with OpenGrok (`firewall-cmd --add-port=8765
 
 ```
 mcp/
-├── casket_mcp.py        FastMCP core (tool definitions + routing)
+├── casket_mcp.py        MCPServer core (tool definitions + routing)
 ├── backends.py          opengrok_search() / rg_search() / fs_resolve()
 ├── requirements.txt     mcp[cli]  (ripgrep/curl are OS-level)
 └── README.md            Registration instructions, operations (OpenGrok dependency, firewall)

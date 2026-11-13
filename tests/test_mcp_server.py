@@ -13,7 +13,7 @@ import pytest
 
 MCP_DIR = str(pathlib.Path(__file__).resolve().parent.parent / "mcp")
 
-# casket_mcp.py imports `backends` and `mcp.server.fastmcp`. The latter is a
+# casket_mcp.py imports `backends` and `mcp.server.mcpserver`. The latter is a
 # third-party package that won't be installed in CI. We stub just enough of
 # the import chain so the module loads and we can inspect its tool registrations.
 
@@ -40,23 +40,23 @@ class _FakeTool:
 
 
 def _load_casket_mcp():
-    """Load casket_mcp.py with a fake FastMCP, return (module, fake_mcp)."""
+    """Load casket_mcp.py with a fake MCPServer, return (module, fake_mcp)."""
     fake = _FakeTool()
 
-    # Stub the mcp.server.fastmcp module so the import succeeds
+    # Stub the mcp.server.mcpserver module so the import succeeds
     import types
     stub = types.ModuleType("mcp")
     stub_server = types.ModuleType("mcp.server")
-    stub_fastmcp = types.ModuleType("mcp.server.fastmcp")
-    stub_fastmcp.FastMCP = lambda name: fake
+    stub_mcpserver = types.ModuleType("mcp.server.mcpserver")
+    stub_mcpserver.MCPServer = lambda name: fake
     stub.server = stub_server
-    stub_server.fastmcp = stub_fastmcp
+    stub_server.mcpserver = stub_mcpserver
 
     saved = {}
-    for name in ("mcp", "mcp.server", "mcp.server.fastmcp"):
+    for name in ("mcp", "mcp.server", "mcp.server.mcpserver"):
         saved[name] = sys.modules.get(name)
         sys.modules[name] = {"mcp": stub, "mcp.server": stub_server,
-                             "mcp.server.fastmcp": stub_fastmcp}[name]
+                             "mcp.server.mcpserver": stub_mcpserver}[name]
 
     spec = importlib.util.spec_from_file_location(
         "casket_mcp", os.path.join(MCP_DIR, "casket_mcp.py"))
@@ -270,9 +270,12 @@ def test_coverage_report_forwards(rec):
 class _RunRecorder:
     def __init__(self):
         self.transport = None
+        self.kwargs = {}
 
-    def run(self, transport=None):
+    def run(self, transport=None, **kwargs):
+        # mcp 2.x: host/port/transport_security are run() arguments
         self.transport = transport
+        self.kwargs = kwargs
 
 
 def _run_main(monkeypatch, argv):
@@ -280,13 +283,6 @@ def _run_main(monkeypatch, argv):
     security module (the real `mcp` package is shadowed by this repo's mcp/)."""
     import types
     runner = _RunRecorder()
-
-    class _Settings:
-        host = None
-        port = None
-        transport_security = None
-
-    runner.settings = _Settings()
     monkeypatch.setattr(_mod, "mcp", runner)
     monkeypatch.setattr(sys, "argv", argv)
 
@@ -318,14 +314,14 @@ def test_main_unknown_mode_falls_back_to_stdio(monkeypatch):
 def test_main_http_mode(monkeypatch):
     runner = _run_main(monkeypatch, ["casket_mcp.py", "http"])
     assert runner.transport == "streamable-http"
-    assert runner.settings.host == "0.0.0.0"
-    assert runner.settings.port == 8765
+    assert runner.kwargs["host"] == "0.0.0.0"
+    assert runner.kwargs["port"] == 8765
 
 
 def test_main_http_disables_dns_rebinding_protection(monkeypatch):
     """LAN clients get 421 unless the default Host check is turned off."""
     runner = _run_main(monkeypatch, ["casket_mcp.py", "http"])
-    assert runner.settings.transport_security.kw == {
+    assert runner.kwargs["transport_security"].kw == {
         "enable_dns_rebinding_protection": False}
 
 

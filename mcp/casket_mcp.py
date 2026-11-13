@@ -11,12 +11,12 @@ from __future__ import annotations
 
 import sys
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
 import backends as be
 import insight as ins
 
-mcp = FastMCP("casket")
+mcp = MCPServer("casket")
 
 
 @mcp.tool()
@@ -240,17 +240,20 @@ def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "stdio"
     if mode == "http":
         from mcp.server.transport_security import TransportSecuritySettings
-        mcp.settings.host = "0.0.0.0"
-        mcp.settings.port = 8765
         # MCP streamable-http enables DNS-rebinding protection by default, which
         # only allows Host: localhost and returns 421 for LAN clients (by IP or
         # hostname). This server is read-only and path-confined, intended for a
         # trusted home LAN, so disable that check to accept LAN Host headers.
         # (Do not expose to untrusted networks — see README "Remote access".)
-        mcp.settings.transport_security = TransportSecuritySettings(
-            enable_dns_rebinding_protection=False
+        # (mcp 2.x takes these as run() arguments; 1.x read mcp.settings.)
+        mcp.run(
+            transport="streamable-http",
+            host="0.0.0.0",
+            port=8765,
+            transport_security=TransportSecuritySettings(
+                enable_dns_rebinding_protection=False
+            ),
         )
-        mcp.run(transport="streamable-http")
     else:
         mcp.run(transport="stdio")
 

@@ -14,13 +14,15 @@
 # The old `-x` check passed, casket_mcp.py died with "No module named 'mcp'",
 # and the service crash-looped for a week (175k restarts) unnoticed.
 #
-# Idempotent: no-op when the venv's python can import mcp.
+# Idempotent: no-op when the venv's python can import the server class
+# casket_mcp.py uses. That is also what makes a requirements bump (mcp 1.x ->
+# 2.x) take effect: the old venv lacks mcp.server.mcpserver and is rebuilt.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PY="$HERE/.venv/bin/python"
 
-"$PY" -c 'import mcp.server.fastmcp' >/dev/null 2>&1 && exit 0
+"$PY" -c 'import mcp.server.mcpserver' >/dev/null 2>&1 && exit 0
 
 echo "[ensure-venv] $HERE/.venv missing or cannot import mcp, rebuilding..." >&2
 # --clear: an upgraded-away lib/python3.N/ must not linger beside the new one.
