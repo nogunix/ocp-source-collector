@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+
+  path_instructions:
+    - path: "scripts/**/*.sh"
+      instructions: >
+        Scripts should source scripts/lib.sh where applicable and derive CASKET_WORK dynamically
+        (never hardcode /home paths). Check for bash -n / shellcheck -S error -e SC1091 compliance,
+        stage idempotency, and dry-run-by-default conventions (--apply required for mutations).
+    - path: "tests/**/*.sh"
+      instructions: >
+        Tests must be network-free, self-contained (clean up temporary directories on EXIT),
+        executable, and avoid external tools absent in minimal fedora:44 CI containers (such as diffutils).
+    - path: "{scripts,mcp}/**/*.py"
+      instructions: >
+        CI enforces 100% statement and branch coverage (--cov-branch --cov-fail-under=100) across
+        scripts/*.py and mcp/*.py. Flag any new branch that lacks network-free pytest coverage under tests/.
+    - path: "systemd/**/*.{service,timer}"
+      instructions: >
+        System units (no %h, not WantedBy=default.target) run under SELinux init_t and must exec a
+        system binary (e.g. /usr/bin/bash /path/to/script.sh) rather than a script under /home, or they
+        fail with 203/EXEC. Production swaps (casket-swap.sh --apply) must never be automated.
+    - path: "ansible/**/*.yml"
+      instructions: >
+        Preserve idempotency and keep ansible-lint clean (tests/test_ansible.sh asserts .ansible-lint
+        skips only one rule).
+    - path: "containers/**/Containerfile"
+      instructions: >
+        Keep container builds self-contained and reproducible in CI without host-specific paths or secrets.
+
+  tools:
+    shellcheck:
+      enabled: true
+    ruff:
+      enabled: true
+    actionlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    github-checks:
+      enabled: true
