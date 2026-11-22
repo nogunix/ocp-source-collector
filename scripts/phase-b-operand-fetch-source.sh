@@ -89,7 +89,10 @@ export AUTHFILE ARCH_FILTER RESOLVER CSV_VER
     IFS=$'"'"'\t'"'"' read -r comp image <<<"$0"
     resolve_one "$comp" "$image"
 ' > "$LABELS.tmp"
-mv "$LABELS.tmp" "$LABELS"
+# Sort deterministically after parallel xargs so step 2 always picks the same
+# first component name for any shared (repo, ref) tarball across rebuilds.
+LC_ALL=C sort -t $'\t' -k1,1 -k2,2 "$LABELS.tmp" > "$LABELS"
+rm -f "$LABELS.tmp"
 log "labels.tsv rows: $(wc -l < "$LABELS")"
 
 # 1b. Sibling-version fixup: hostpath-provisioner and hostpath-csi-driver are
