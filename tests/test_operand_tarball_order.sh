@@ -65,10 +65,11 @@ EOF
 run_step2 "$T/order-a.tsv" "$T/sorted-a.tsv" "$T/git-a.tsv"
 run_step2 "$T/order-b.tsv" "$T/sorted-b.tsv" "$T/git-b.tsv"
 
-if diff -u "$T/git-a.tsv" "$T/git-b.tsv"; then
+if [[ "$(<"$T/git-a.tsv")" == "$(<"$T/git-b.tsv")" ]]; then
     pass "two permutations produce identical git.tsv after LC_ALL=C sort"
 else
     bad "permuted inputs produced different git.tsv"
+    printf '--- order-a ---\n%s\n--- order-b ---\n%s\n' "$(<"$T/git-a.tsv")" "$(<"$T/git-b.tsv")"
 fi
 
 prom_tar=$(awk -F'\t' '$1=="acm-prometheus-config-reloader"{print $4}' "$T/git-a.tsv")
