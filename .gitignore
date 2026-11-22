@@ -20,12 +20,12 @@ scratch/
 /decks/
 
 # casket-auto-update transient state (registry.json stays tracked)
-state/auto-update.status
+state/auto-update*.status
 state/auto-update.lock
-# cadence stamp for --min-interval-days: mtime = last completed apply run.
+# cadence stamp for --min-interval-days: mtime = start time of last completed apply run.
 # Per-host and regenerable (a missing stamp just means the next timer wake
 # runs), so it is deliberately not tracked.
-state/auto-update.last-run
+state/auto-update*.last-run
 
 # Claude Code local settings (per-machine permissions)
 .claude/

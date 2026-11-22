@@ -10,11 +10,14 @@
 #
 # Cadence (--min-interval-days N): the timer wakes weekly, but since 2026-09-12
 # production only wants a run every 3 weeks, and systemd OnCalendar cannot say
-# "every 3rd week". So the unit passes --min-interval-days 21 and the run skips
+# "every 3rd week". So the unit passes --min-interval-days 18 and the run skips
 # itself (exit 0, one journal line) unless that long has passed since the last
-# COMPLETED apply run, recorded in state/auto-update.last-run. Stamping at the
-# end, not the start, is deliberate: a run killed by TimeoutStartSec leaves no
-# stamp and is retried at the next weekly wake instead of waiting 3 more weeks.
+# COMPLETED apply run started, recorded in state/auto-update.last-run. Stamping
+# at completion with the run's start time is deliberate: a run killed by
+# TimeoutStartSec leaves no stamp and is retried at the next weekly wake, while
+# a long completed run (~21h for a+b, ~55h for b-operand) won't push the 3-week
+# interval past the 21-day Friday mark (e.g. 20d 3h < 21d caused a skip on
+# 2026-11-20). Passing 18 gives 14d (week 2) < 18 <= 21d minus jitter/runtime.
 # --force bypasses the guard for a manual `systemctl --user start`.
 #
 # Split runs (--phases LIST --state NAME): since 2026-10, b-operand runs from
@@ -83,7 +86,7 @@ while (( $# )); do
         -h|--help)
             echo "casket-auto-update.sh [--apply] [--min-interval-days N] [--force] [--phases LIST] [--state NAME]"
             echo "  default: dry-run, report only"
-            echo "  --min-interval-days N  skip unless N days since the last completed apply run"
+            echo "  --min-interval-days N  skip unless N days since last completed apply run started"
             echo "  --force                ignore --min-interval-days"
             echo "  --phases LIST          comma-separated subset of config/auto-update-phases.txt"
             echo "  --state NAME           state/NAME.{last-run,status} (default: auto-update)"
@@ -111,13 +114,14 @@ flock -n 9 || { log "another auto-update run holds $LOCK_FILE; exiting"; exit 0;
 
 # Cadence guard. Only a real (--apply) run is rate-limited: a dry-run costs
 # nothing but fingerprint fetches and is the documented way to ask "what would
-# it build?" at any time.
+# it build?" at any time. Record RUN_START so completion stamps when this cycle
+# began rather than when it ended.
+RUN_START=$(date -u +%s)
 if (( ! DRY && ! FORCE )); then
     last=$(stat -c %Y "$STAMP_FILE" 2>/dev/null) || last=0
     last=${last:-0}
-    now=$(date -u +%s)
-    if ! interval_elapsed "$last" "$now" "$MIN_INTERVAL_DAYS"; then
-        log "skipping: last completed run was $(( (now - last) / 86400 ))d ago," \
+    if ! interval_elapsed "$last" "$RUN_START" "$MIN_INTERVAL_DAYS"; then
+        log "skipping: last completed run was $(( (RUN_START - last) / 86400 ))d ago," \
             "below --min-interval-days $MIN_INTERVAL_DAYS (--force to override)"
         exit 0
     fi
@@ -198,12 +202,13 @@ done < <(read_units "$PHASES_FILE")
 log "summary written to $STATUS_FILE"
 
 # Stamp a completed apply run, failures included: one unit that cannot build
-# must not silently demote the whole schedule back to weekly. A run that never
-# reaches this line (killed, timed out) leaves the old stamp and is retried at
-# the next weekly wake.
+# must not silently demote the whole schedule back to weekly. Recording RUN_START
+# (not completion time) keeps a ~21h or multi-day run from eating into the next
+# cycle's interval. A run that never reaches this line (killed, timed out)
+# leaves the old stamp and is retried at the next weekly wake.
 if (( ! DRY )); then
-    touch "$STAMP_FILE"
-    log "cadence stamp updated: $STAMP_FILE"
+    touch -d "@$RUN_START" "$STAMP_FILE"
+    log "cadence stamp updated: $STAMP_FILE (start=$RUN_START)"
 fi
 
 exit "$FAIL"

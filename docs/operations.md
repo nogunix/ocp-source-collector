@@ -40,13 +40,13 @@ sudo ./scripts/casket-swap.sh --phase a --unit 4.20 --apply    # remount in-plac
 Combines new-release detection through staged build in one flow. **Staging runs automatically every 3 weeks** (timer enabled 2026-07-16, changed from weekly to 3-weekly 2026-09-12), **swap is never automated** (human gate).
 
 ```
-systemd/casket-auto-update.service      → scripts/casket-auto-update.sh --apply --min-interval-days 21 --phases a,b,a-rpm
+systemd/casket-auto-update.service      → scripts/casket-auto-update.sh --apply --min-interval-days 18 --phases a,b,a-rpm
 systemd/casket-auto-update.timer        Wakes up every Friday 23:30 (enabled on casket-host, 2026-07-16)
 systemd/casket-auto-update-operand.service → … --phases b-operand --state auto-update-operand (split out 2026-10)
 systemd/casket-auto-update-operand.timer   Wakes up every Friday 23:50; After= makes it queue behind the a + b run
 config/auto-update-phases.txt           Phases to auto-build (default: a only. b/b-operand commented out)
 state/auto-update.status                Per-unit summary of latest run (.gitignore, registry.json tracked as before)
-state/auto-update.last-run              Cadence stamp. mtime = last **completed** apply run (.gitignore)
+state/auto-update.last-run              Cadence stamp. mtime = start time of last **completed** apply run (.gitignore)
 state/auto-update-operand.{status,last-run}  Same, for the b-operand unit
 ```
 
@@ -54,9 +54,9 @@ state/auto-update-operand.{status,last-run}  Same, for the b-operand unit
 
 > Why 3 weeks: a full run takes **2.5-3 days** end to end (08-28 23:38→08-31 15:53, 09-04 23:40→09-07 14:50). Weekly means the host spends nearly half its uptime rebuilding caskets whose contents barely changed. The reason for not running daily is the same as before: operator catalog digests rotate almost daily, so at any cadence the check reports "STALE" shortly after a swap.
 
-> **3 weeks is not expressed in the timer itself.** systemd's OnCalendar has no "every 3rd week" (week numbers aren't a field, and date ranges only approximate monthly). So the timer still wakes up every Friday, and `casket-auto-update.sh --min-interval-days 21` checks `state/auto-update.last-run` to decide "is this my turn."
+> **3 weeks is not expressed in the timer itself.** systemd's OnCalendar has no "every 3rd week" (week numbers aren't a field, and date ranges only approximate monthly). So the timer still wakes up every Friday, and `casket-auto-update.sh --min-interval-days 18` checks `state/auto-update.last-run` to decide "is this my turn." (`18` instead of `21` keeps `14d` at week 2 skipped while absorbing `RandomizedDelaySec`, `After=` wait time, and multi-day build skew — `20d 3h < 21d` caused a skipped cycle on 2026-11-20.)
 > - 2 out of 3 wakeups log `skipping: last completed run was Nd ago` and exit 0 (not a failure)
-> - The stamp is only written on **successful completion**, so a killed run retries on the **next Friday**, not 3 weeks later
+> - The stamp is written only on **successful completion**, backdated to the run's start time (`touch -d "@$RUN_START"`), so a killed run retries on the **next Friday**, not 3 weeks later, and a long run does not drift the next cycle to 4 weeks
 > - If the stamp is missing or corrupted, it fails open (runs). Use `--force` to run immediately
 > - To change the interval, modify **`--min-interval-days` in the .service**, not the .timer. When changing, also review `CASKET_STALE_AFTER_DAYS` in `scripts/lib-freshness.sh` (default 28 days) — if the window falls below the cadence, casket-check.sh goes permanently red again
 
