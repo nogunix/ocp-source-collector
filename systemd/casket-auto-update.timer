@@ -12,7 +12,7 @@
 # The 3-week interval is NOT expressed here: systemd OnCalendar has no "every
 # 3rd week" (week numbers are not a field, and day-of-month ranges only
 # approximate a month). So this stays a weekly Friday wake and
-# casket-auto-update.sh --min-interval-days 21 decides whether this week is
+# casket-auto-update.sh --min-interval-days 18 decides whether this week is
 # its week, off state/auto-update.last-run. Consequence worth knowing: two
 # wakes out of three log a one-line "skipping" and exit 0, and a run that was
 # killed mid-way leaves no stamp, so it retries the FOLLOWING Friday rather

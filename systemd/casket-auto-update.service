@@ -1,6 +1,6 @@
 # Casket freshness check + staged rebuild (build is non-destructive; swap
 # stays manual). Runs every 3 weeks via the companion .timer (which wakes
-# every Fri 23:30 and lets the --min-interval-days 21 guard below decide;
+# every Fri 23:30 and lets the --min-interval-days 18 guard below decide;
 # enabled 2026-07-16, cadence widened 2026-09-12) and can also be started by
 # hand at any time -- add --force to a hand-started run that must build now
 # regardless of the guard.
@@ -49,14 +49,17 @@ EnvironmentFile=%h/.config/casket/build.env
 # The file below stays supported and takes precedence, for a host with no gh
 # or a dedicated CI token. The leading "-" keeps the unit startable without it.
 EnvironmentFile=-%h/.config/casket/auto-update.env
-# --min-interval-days 21 is where the 3-weekly cadence actually lives; the
+# --min-interval-days 18 is where the 3-weekly cadence actually lives; the
 # timer only wakes weekly (systemd OnCalendar cannot say "every 3rd week").
-# The guard reads state/auto-update.last-run, which is stamped only when a run
-# COMPLETES, so a killed run is retried at the next weekly wake.
+# The guard reads state/auto-update.last-run, which is stamped at completion
+# with the run's start time, so a killed run is retried at the next weekly
+# wake. Passing 18 (not 21) keeps week 2 (14d) skipped while absorbing timer
+# jitter, After= queue delay, or legacy completion-time skew (on 2026-11-20 a
+# 20h36m run left a 20d 3h gap and skipped).
 #
 # b-operand is NOT run here since 2026-10: it has its own unit,
 # casket-auto-update-operand.service (see the timeout note below).
-ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-interval-days 21 --phases a,b,a-rpm
+ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-interval-days 18 --phases a,b,a-rpm
 # Builds can take a while when several minors moved at once. This limit has
 # now been raised FOUR times (4h -> 12h -> 24h -> 48h -> 72h) and every bump
 # so far was spent by the *next* growth in b-operand, so re-measure before

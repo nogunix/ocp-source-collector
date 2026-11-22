@@ -34,7 +34,7 @@ Type=oneshot
 Environment=PATH=%h/bin:/usr/local/bin:/usr/bin:/bin
 EnvironmentFile=%h/.config/casket/build.env
 EnvironmentFile=-%h/.config/casket/auto-update.env
-ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-interval-days 21 --phases b-operand --state auto-update-operand
+ExecStart=%h/ocp-source-collector/scripts/casket-auto-update.sh --apply --min-interval-days 18 --phases b-operand --state auto-update-operand
 # 9 minors x 8h30 (the slowest minor measured, 2026-10) = 76h30. 120h leaves
 # ~40% headroom and still ends well before the run 3 weeks later. Re-measure
 # when it grows rather than bumping blindly: the per-product loop runs

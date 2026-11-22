@@ -103,6 +103,26 @@ i "window 0 disables the guard"              run  "$(d 0)"  0
 i "empty window disables the guard"          run  "$(d 0)"  ""
 i "garbage window disables the guard"        run  "$(d 0)"  "three"
 
+echo "# interval_elapsed — 3-weekly cadence guard with 18d threshold (jitter/runtime slack)"
+i "7d (week 1) with min=18 -> skip"          skip "$(d 7)"  18
+i "14d (week 2) with min=18 -> skip"         skip "$(d 14)" 18
+i "17d with min=18 -> skip"                  skip "$(d 17)" 18
+i "18d with min=18 -> run"                   run  "$(d 18)" 18
+i "20d (jitter/runtime skew) min=18 -> run"  run  "$(d 20)" 18
+i "21d (week 3) with min=18 -> run"          run  "$(d 21)" 18
+
+echo "# systemd auto-update units use a 3-weekly min-interval-days in (14, 21)"
+ROOT="$(dirname "$HERE")"
+for unit in "$ROOT/systemd/casket-auto-update.service" "$ROOT/systemd/casket-auto-update-operand.service"; do
+    uname="$(basename "$unit")"
+    val=$(grep '^ExecStart=' "$unit" | sed -n 's/.*--min-interval-days \([0-9][0-9]*\).*/\1/p' | head -n 1)
+    if [[ -n "$val" ]] && (( val > 14 && val < 21 )); then
+        pass "$uname --min-interval-days=$val is in (14, 21)"
+    else
+        bad "$uname --min-interval-days='${val:-<missing>}' outside (14, 21)"
+    fi
+done
+
 echo "# age_days_of"
 [[ "$(age_days_of "" "$NOW")" == "" ]] && pass "empty timestamp -> empty" || bad "empty timestamp -> empty"
 [[ "$(age_days_of "not-a-date" "$NOW")" == "" ]] && pass "garbage timestamp -> empty" || bad "garbage timestamp -> empty"
