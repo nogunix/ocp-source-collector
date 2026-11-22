@@ -14,8 +14,11 @@ reviews:
     - path: "scripts/**/*.sh"
       instructions: >
         Scripts should source scripts/lib.sh where applicable and derive CASKET_WORK dynamically
-        (never hardcode /home paths). Check for bash -n / shellcheck -S error -e SC1091 compliance,
-        stage idempotency, and dry-run-by-default conventions (--apply required for mutations).
+        (never hardcode /home paths). Check for bash -n / shellcheck -S error -e SC1091 compliance
+        and stage idempotency. For mutating operational/maintenance drivers (casket-build.sh,
+        casket-swap.sh, casket-cleanup.sh, casket-mounts.sh, casket-auto-update.sh), preserve
+        dry-run-by-default conventions (--apply required for mutations); per-phase pipeline stage
+        scripts (discover.sh, fetch-git.sh, manifest.sh, package.sh, phase-*.sh) do not take --apply.
     - path: "tests/**/*.sh"
       instructions: >
         Tests must be network-free, self-contained (clean up temporary directories on EXIT),
